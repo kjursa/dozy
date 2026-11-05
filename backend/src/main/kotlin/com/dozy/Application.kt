@@ -19,7 +19,7 @@ fun Application.module() {
 
     routing {
         get("/hello") {
-            call.respond(HelloResponse(message = "Hello world"))
+            call.respond(HelloResponse(message = "Hello world from Dozy"))
         }
     }
 }
