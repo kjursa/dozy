@@ -46,4 +46,5 @@ Use a feature-specific package name, such as `com.dozy.features.story`. Keep sha
 - Test service logic directly by constructing the concrete service with a fake or in-memory repository. Do not add a service interface solely to mock the service.
 - Add domain or repository tests where they cover meaningful rules or behavior. Keep test fixtures under `src/test`.
 - Every behavior change must add or update an automated test that verifies it.
+- After backend code, test, or Gradle configuration changes, run `./test-all` from the repository root and report whether the tests passed. Report failures accurately; do not claim tests passed unless the command completed successfully.
 - Keep the architecture lightweight: add layers, interfaces, and shared abstractions only when they isolate real logic, external dependencies, or a needed test seam.

@@ -2,4 +2,4 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-gradle -p "$script_dir/backend" test
+exec "$script_dir/backend/gradlew" -p "$script_dir/backend" test
