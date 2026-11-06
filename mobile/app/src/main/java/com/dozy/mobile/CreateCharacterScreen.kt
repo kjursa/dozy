@@ -85,8 +85,7 @@ fun CreateCharacterScreen(onBack: () -> Unit, onSaved: () -> Unit) {
             CharacterHeader(onBack)
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = DozySpacing.x3)
-                    .padding(bottom = DozySpacing.x8 + DozySpacing.x6),
+                    .padding(horizontal = DozySpacing.x3),
                 verticalArrangement = Arrangement.spacedBy(DozySpacing.x3),
             ) {
                 CharacterPreview(name)
@@ -99,6 +98,7 @@ fun CreateCharacterScreen(onBack: () -> Unit, onSaved: () -> Unit) {
                     appearance = appearance,
                     onAppearanceChange = { appearance = it },
                 )
+                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
             }
         }
         CharacterActions(

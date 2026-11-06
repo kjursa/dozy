@@ -1,41 +1,37 @@
 package com.dozy.mobile
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
-private const val HOME_ROUTE = "home"
-private const val STORY_ROUTE = "create-story"
-private const val CHARACTER_ROUTE = "create-character"
+private const val MAIN_ROUTE = "main"
+private const val CREATE_STORY_ROUTE = "create-story"
+private const val CREATE_CHARACTER_ROUTE = "create-character"
 
 @Composable
 fun DozyApp() {
-    var route by rememberSaveable { mutableStateOf(HOME_ROUTE) }
-    var characterReturnRoute by rememberSaveable { mutableStateOf(HOME_ROUTE) }
+    val navController = rememberNavController()
 
-    when (route) {
-        STORY_ROUTE -> CreateStoryScreen(
-            onBack = { route = HOME_ROUTE },
-            onNewHero = {
-                characterReturnRoute = STORY_ROUTE
-                route = CHARACTER_ROUTE
-            },
-            onGenerate = { route = HOME_ROUTE },
-        )
-
-        CHARACTER_ROUTE -> CreateCharacterScreen(
-            onBack = { route = characterReturnRoute },
-            onSaved = { route = characterReturnRoute },
-        )
-
-        else -> HomeScreen(
-            onCreateStory = { route = STORY_ROUTE },
-            onOpenCharacters = {
-                characterReturnRoute = HOME_ROUTE
-                route = CHARACTER_ROUTE
-            },
-        )
+    NavHost(navController = navController, startDestination = MAIN_ROUTE) {
+        composable(MAIN_ROUTE) {
+            MainScreen(
+                onCreateStory = { navController.navigate(CREATE_STORY_ROUTE) },
+                onCreateCharacter = { navController.navigate(CREATE_CHARACTER_ROUTE) },
+            )
+        }
+        composable(CREATE_STORY_ROUTE) {
+            CreateStoryScreen(
+                onBack = { navController.popBackStack() },
+                onNewHero = { navController.navigate(CREATE_CHARACTER_ROUTE) },
+                onGenerate = { navController.popBackStack(MAIN_ROUTE, inclusive = false) },
+            )
+        }
+        composable(CREATE_CHARACTER_ROUTE) {
+            CreateCharacterScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
+            )
+        }
     }
 }

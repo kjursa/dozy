@@ -93,8 +93,7 @@ fun CreateStoryScreen(
             StoryHeader(onBack)
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = DozySpacing.x3)
-                    .padding(bottom = DozySpacing.x8 + DozySpacing.x8),
+                    .padding(horizontal = DozySpacing.x3),
                 verticalArrangement = Arrangement.spacedBy(DozySpacing.x4),
             ) {
                 StoryIntro()
@@ -109,6 +108,7 @@ fun CreateStoryScreen(
                     ending = ending,
                     onEndingChange = { ending = it },
                 )
+                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
             }
         }
         Button(
