@@ -57,7 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.ui.theme.DozySpacing
+import com.kjursa.composeuikit.theme.UiSpacing
 
 private data class HeroType(val label: String, val icon: ImageVector)
 
@@ -85,8 +85,8 @@ fun CreateCharacterScreen(onBack: () -> Unit, onSaved: () -> Unit) {
             CharacterHeader(onBack)
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = DozySpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x3),
+                    .padding(horizontal = UiSpacing.x3),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
             ) {
                 CharacterPreview(name)
                 HeroTypePicker(selectedType, onSelect = { selectedType = it })
@@ -119,7 +119,7 @@ private fun CharacterScreenGlows() {
 @Composable
 private fun CharacterHeader(onBack: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3, vertical = DozySpacing.x2),
+        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -138,7 +138,7 @@ private fun CharacterHeader(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.surface.copy(alpha = .8f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         ) {
-            Row(Modifier.padding(horizontal = DozySpacing.x2, vertical = DozySpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Row(Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 Text("New Character", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             }
@@ -149,9 +149,9 @@ private fun CharacterHeader(onBack: () -> Unit) {
 
 @Composable
 private fun CharacterPreview(name: String) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
         Box(Modifier.size(256.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.padding(DozySpacing.x3).fillMaxSize().background(MaterialTheme.colorScheme.tertiary.copy(alpha = .28f), CircleShape))
+            Box(Modifier.padding(UiSpacing.x3).fillMaxSize().background(MaterialTheme.colorScheme.tertiary.copy(alpha = .28f), CircleShape))
             Image(
                 painterResource(R.drawable.character_oliver),
                 contentDescription = "$name preview",
@@ -159,12 +159,12 @@ private fun CharacterPreview(name: String) {
                 contentScale = ContentScale.Fit,
             )
             Surface(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = DozySpacing.x1, bottom = DozySpacing.x1).shadow(5.dp, CircleShape),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = UiSpacing.x1, bottom = UiSpacing.x1).shadow(5.dp, CircleShape),
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary,
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
             ) {
-                Text("Preview", modifier = Modifier.padding(horizontal = DozySpacing.x2, vertical = DozySpacing.x1), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
+                Text("Preview", modifier = Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
         Text(name.ifBlank { "Your hero" }, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -174,21 +174,22 @@ private fun CharacterPreview(name: String) {
 
 @Composable
 private fun HeroTypePicker(selected: String, onSelect: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Text("WHO IS THIS HERO?", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             heroTypes.forEach { type ->
                 val isSelected = type.label == selected
+                val typeShape = MaterialTheme.shapes.medium
                 Surface(
-                    modifier = Modifier.weight(1f).clickable { onSelect(type.label) },
-                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.weight(1f).clip(typeShape).clickable { onSelect(type.label) },
+                    shape = typeShape,
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Column(
-                        Modifier.padding(vertical = DozySpacing.x2),
+                        Modifier.padding(vertical = UiSpacing.x2),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(DozySpacing.x1),
+                        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     ) {
                         Icon(type.icon, contentDescription = null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
                         Text(type.label, style = MaterialTheme.typography.bodySmall, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -215,22 +216,22 @@ private fun CharacterDetails(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         modifier = Modifier.shadow(6.dp, MaterialTheme.shapes.large),
     ) {
-        Column(Modifier.padding(DozySpacing.x3), verticalArrangement = Arrangement.spacedBy(DozySpacing.x3)) {
-            Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+        Column(Modifier.padding(UiSpacing.x3), verticalArrangement = Arrangement.spacedBy(UiSpacing.x3)) {
+            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Character name", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = name, onValueChange = onNameChange, singleLine = true)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Personality", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     listOf("Curious", "Brave", "Kind", "Funny").forEach { TraitChip(it) }
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Appearance", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     AppearanceChip("Yellow hoodie", MaterialTheme.colorScheme.tertiary)
                     AppearanceChip("Green eyes", MaterialTheme.colorScheme.secondary)
                     AppearanceChip("Brown curls", MaterialTheme.colorScheme.onSurface)
@@ -247,7 +248,7 @@ private fun CharacterInput(value: String, onValueChange: (String) -> Unit, singl
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = DozySpacing.x2, vertical = DozySpacing.x1), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), contentAlignment = Alignment.CenterStart) {
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -266,7 +267,7 @@ private fun TraitChip(label: String) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Text(label, modifier = Modifier.padding(horizontal = DozySpacing.x1, vertical = DozySpacing.x1 / 2), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, modifier = Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -277,7 +278,7 @@ private fun AppearanceChip(label: String, color: Color) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(Modifier.padding(horizontal = DozySpacing.x1, vertical = DozySpacing.x1 / 2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1 / 2)) {
+        Row(Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1 / 2)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(color))
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -287,13 +288,13 @@ private fun AppearanceChip(label: String, color: Color) {
 @Composable
 private fun CharacterActions(modifier: Modifier, onSave: () -> Unit) {
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3).navigationBarsPadding()
-            .padding(bottom = DozySpacing.x3).shadow(18.dp, RoundedCornerShape(40.dp)),
+        modifier = modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3).navigationBarsPadding()
+            .padding(bottom = UiSpacing.x3).shadow(18.dp, RoundedCornerShape(40.dp)),
         shape = RoundedCornerShape(40.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        Row(Modifier.padding(DozySpacing.x1), horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+        Row(Modifier.padding(UiSpacing.x1), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             OutlinedButton(
                 onClick = {},
                 modifier = Modifier.weight(1f).height(48.dp),
@@ -302,7 +303,7 @@ private fun CharacterActions(modifier: Modifier, onSave: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(DozySpacing.x1))
+                Spacer(Modifier.width(UiSpacing.x1))
                 Text("Generate Preview", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Button(
@@ -312,7 +313,7 @@ private fun CharacterActions(modifier: Modifier, onSave: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(DozySpacing.x1))
+                Spacer(Modifier.width(UiSpacing.x1))
                 Text("Save Character", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }

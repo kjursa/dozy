@@ -1,9 +1,9 @@
-package com.dozy.mobile.ui.theme
+package com.kjursa.composeuikit.theme
 
 import androidx.compose.ui.unit.dp
 
-/** Base spacing scale: each step adds 8 dp. */
-object DozySpacing {
+/** Eight-dp spacing scale shared by Compose UI Kit components and consuming apps. */
+object UiSpacing {
     val x1 = 8.dp
     val x2 = 16.dp
     val x3 = 24.dp

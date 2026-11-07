@@ -57,7 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dozy.mobile.ui.theme.DozySpacing
+import com.kjursa.composeuikit.theme.UiSpacing
 
 private data class StoryThemeOption(val title: String, val image: Int)
 private data class StoryHero(val name: String, val image: Int)
@@ -93,8 +93,8 @@ fun CreateStoryScreen(
             StoryHeader(onBack)
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = DozySpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x4),
+                    .padding(horizontal = UiSpacing.x3),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 StoryIntro()
                 ThemePicker(selectedTheme, onSelect = { selectedTheme = it })
@@ -114,13 +114,13 @@ fun CreateStoryScreen(
         Button(
             onClick = onGenerate,
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .navigationBarsPadding().padding(horizontal = DozySpacing.x3, vertical = DozySpacing.x3)
+                .navigationBarsPadding().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x3)
                 .height(56.dp).shadow(16.dp, CircleShape),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(DozySpacing.x1))
+            Spacer(Modifier.width(UiSpacing.x1))
             Text("Generate My Story", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp), color = MaterialTheme.colorScheme.onPrimary)
         }
     }
@@ -137,7 +137,7 @@ private fun StoryScreenGlows() {
 @Composable
 private fun StoryHeader(onBack: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3, vertical = DozySpacing.x2),
+        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -167,7 +167,7 @@ private fun StoryHeader(onBack: () -> Unit) {
 
 @Composable
 private fun StoryIntro() {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x1 / 2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1 / 2)) {
         Text("STEP 1 OF 4", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Where shall we go tonight?", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
         Text("Pick one adventure theme.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -176,9 +176,9 @@ private fun StoryIntro() {
 
 @Composable
 private fun ThemePicker(selected: Int, onSelect: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         storyThemes.chunked(2).forEachIndexed { rowIndex, rowThemes ->
-            Row(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 rowThemes.forEachIndexed { columnIndex, item ->
                     val index = rowIndex * 2 + columnIndex
                     ThemeCard(item, selected = index == selected, modifier = Modifier.weight(1f), onClick = { onSelect(index) })
@@ -196,7 +196,7 @@ private fun ThemeCard(option: StoryThemeOption, selected: Boolean, modifier: Mod
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             Box {
                 Image(
                     painterResource(option.image),
@@ -206,7 +206,7 @@ private fun ThemeCard(option: StoryThemeOption, selected: Boolean, modifier: Mod
                 )
                 if (selected) {
                     Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(DozySpacing.x1),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(UiSpacing.x1),
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary,
                         border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
@@ -222,18 +222,18 @@ private fun ThemeCard(option: StoryThemeOption, selected: Boolean, modifier: Mod
 
 @Composable
 private fun HeroPicker(selected: List<String>, onToggle: (String) -> Unit, onNewHero: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
             Text("HEROES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Who will join the adventure?", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             storyHeroes.forEach { hero ->
                 val isSelected = hero.name in selected
                 Column(
                     modifier = Modifier.clickable { onToggle(hero.name) },
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(DozySpacing.x1),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
                     Box {
                         Image(
@@ -261,7 +261,7 @@ private fun HeroPicker(selected: List<String>, onToggle: (String) -> Unit, onNew
             Column(
                 modifier = Modifier.clickable(onClick = onNewHero),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x1),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
             ) {
                 Surface(
                     modifier = Modifier.size(80.dp),
@@ -281,12 +281,12 @@ private fun HeroPicker(selected: List<String>, onToggle: (String) -> Unit, onNew
 
 @Composable
 private fun LengthPicker(selected: Int, onSelect: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
             Text("LENGTH", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("How long should the story be?", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             LengthCard("Short", "A little bedtime adventure", "3–5 min", Icons.Default.Bedtime, selected == 0, Modifier.weight(1f)) { onSelect(0) }
             LengthCard("Long", "One more chapter of magic", "8–12 min", Icons.Default.AutoAwesome, selected == 1, Modifier.weight(1f)) { onSelect(1) }
         }
@@ -302,7 +302,7 @@ private fun LengthCard(title: String, subtitle: String, length: String, icon: an
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = tint.copy(alpha = .16f)) {
                 Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp)) }
             }
@@ -317,7 +317,7 @@ private fun LengthCard(title: String, subtitle: String, length: String, icon: an
 
 @Composable
 private fun StoryPrompts(specialRequest: String, onSpecialRequestChange: (String) -> Unit, ending: String, onEndingChange: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
             Text("OPTIONAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Anything special you'd like?", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
@@ -328,14 +328,14 @@ private fun StoryPrompts(specialRequest: String, onSpecialRequestChange: (String
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
             modifier = Modifier.shadow(6.dp, MaterialTheme.shapes.large),
         ) {
-            Column(Modifier.padding(DozySpacing.x3), verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+            Column(Modifier.padding(UiSpacing.x3), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 StoryInput(
                     value = specialRequest,
                     onValueChange = onSpecialRequestChange,
                     placeholder = "Maybe the heroes discover a hidden treasure, solve a mystery, or make a new friend...",
                     minimumHeight = 96.dp,
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Text("How should it end?  (optional)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                     StoryInput(
                         value = ending,
@@ -343,7 +343,7 @@ private fun StoryPrompts(specialRequest: String, onSpecialRequestChange: (String
                         placeholder = "Oliver finds the lost treasure and shares it with his friends.",
                         minimumHeight = 64.dp,
                     )
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
                         Text("Leave empty and we'll create a surprise ending.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -360,7 +360,7 @@ private fun StoryInput(value: String, onValueChange: (String) -> Unit, placehold
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(DozySpacing.x2)) {
+        Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(UiSpacing.x2)) {
             if (value.isEmpty()) {
                 Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

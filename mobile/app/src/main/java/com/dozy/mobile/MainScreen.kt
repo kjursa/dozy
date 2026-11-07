@@ -40,7 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.dozy.mobile.ui.theme.DozySpacing
+import com.kjursa.composeuikit.theme.UiSpacing
 
 private const val HOME_TAB = "home"
 private const val STORIES_TAB = "stories"
@@ -92,14 +92,14 @@ fun MainScreen(onCreateStory: () -> Unit, onCreateCharacter: () -> Unit) {
 private fun MainBottomPanel(modifier: Modifier, selectedRoute: String, onSelect: (String) -> Unit) {
     val shape = RoundedCornerShape(40.dp)
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3)
-            .navigationBarsPadding().padding(bottom = DozySpacing.x1)
+        modifier = modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3)
+            .navigationBarsPadding().padding(bottom = UiSpacing.x1)
             .shadow(20.dp, shape),
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        Row(Modifier.padding(DozySpacing.x1), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(UiSpacing.x1), verticalAlignment = Alignment.CenterVertically) {
             MainBottomItem("Home", Icons.Default.Home, HOME_TAB, selectedRoute, onSelect, Modifier.weight(1f))
             MainBottomItem("My Stories", Icons.Default.Book, STORIES_TAB, selectedRoute, onSelect, Modifier.weight(1f))
             MainBottomItem("Characters", Icons.Default.Groups, CHARACTERS_TAB, selectedRoute, onSelect, Modifier.weight(1f))
@@ -123,9 +123,9 @@ private fun MainBottomItem(
             .clip(RoundedCornerShape(32.dp))
             .background(if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = .10f) else Color.Transparent, RoundedCornerShape(32.dp))
             .clickable { onSelect(route) }
-            .padding(vertical = DozySpacing.x2),
+            .padding(vertical = UiSpacing.x2),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(DozySpacing.x1),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
         Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(28.dp))
         Text(label, style = MaterialTheme.typography.bodySmall, color = tint)

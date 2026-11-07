@@ -46,7 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.ui.theme.DozySpacing
+import com.kjursa.composeuikit.theme.UiSpacing
 import com.dozy.mobile.ui.theme.DozyTheme
 import com.dozy.mobile.ui.theme.DozyColorScheme
 
@@ -94,8 +94,8 @@ internal fun HomeScreen(onCreateStory: () -> Unit, onAddCharacter: () -> Unit) {
         ) {
             HomeHeader()
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x4),
+                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 CreateStoryBanner(onClick = onCreateStory)
                 StoriesSection()
@@ -118,11 +118,11 @@ private fun AmbientGlow(modifier: Modifier = Modifier) {
 @Composable
 private fun HomeHeader() {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3, vertical = DozySpacing.x2),
+        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             Eyebrow("TUESDAY, 14 OCTOBER")
             Text("Good evening!", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
             Text("Ready for a new adventure?", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -152,12 +152,12 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
     ) {
-        Row(Modifier.padding(DozySpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(Modifier.padding(UiSpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 Text("Create a New Story", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimary)
                 Text("Tell us who the heroes are and we'll dream up tonight's tale.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f))
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
-                    Row(Modifier.padding(horizontal = DozySpacing.x2, vertical = DozySpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                    Row(Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Text("Create Story", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     }
@@ -170,9 +170,9 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
 
 @Composable
 private fun StoriesSection() {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("LIBRARY", "Your Stories")
-        Row(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             stories.forEach { story -> StoryCard(story, Modifier.weight(1f)) }
         }
         StoryWideCard(Story("A Journey Through the Enchanted Forest", "8 min read", R.drawable.story_forest))
@@ -198,9 +198,9 @@ private fun StoryCard(story: Story, modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
-        Column(Modifier.padding(DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             Image(painterResource(story.image), contentDescription = "${story.title} cover", modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(MaterialTheme.shapes.medium), contentScale = ContentScale.Crop)
-            Column(Modifier.padding(horizontal = DozySpacing.x1), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Column(Modifier.padding(horizontal = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(story.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 ReadTime(story.minutes)
             }
@@ -216,9 +216,9 @@ private fun StoryWideCard(story: Story) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
-        Row(Modifier.padding(DozySpacing.x2), horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(UiSpacing.x2), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2), verticalAlignment = Alignment.CenterVertically) {
             Image(painterResource(story.image), contentDescription = "${story.title} cover", modifier = Modifier.width(96.dp).aspectRatio(3f / 4f).clip(MaterialTheme.shapes.medium), contentScale = ContentScale.Crop)
-            Column(Modifier.weight(1f).padding(end = DozySpacing.x1), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Column(Modifier.weight(1f).padding(end = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(story.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 ReadTime(story.minutes)
             }
@@ -228,7 +228,7 @@ private fun StoryWideCard(story: Story) {
 
 @Composable
 private fun ReadTime(label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
         Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -242,10 +242,10 @@ internal fun StoriesTabScreen() {
             Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x4),
+                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
-                Column(Modifier.padding(top = DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Eyebrow("YOUR LIBRARY")
                     Text("My Stories", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
                     Text("Pick up where your last adventure left off.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -265,16 +265,16 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
             Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = DozySpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(DozySpacing.x4),
+                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
-                Column(Modifier.padding(top = DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Eyebrow("YOUR CAST")
                     Text("Characters", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
                     Text("Meet the heroes of your bedtime stories.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 characters.chunked(2).forEach { rowCharacters ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                         rowCharacters.forEach { character ->
                             CharacterLibraryCard(character, Modifier.weight(1f))
                         }
@@ -296,7 +296,7 @@ private fun CharacterLibraryCard(character: Character, modifier: Modifier = Modi
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
-        Column(Modifier.padding(DozySpacing.x2), verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             Image(
                 painterResource(character.image),
                 contentDescription = character.name,
@@ -316,7 +316,7 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(Modifier.padding(DozySpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(Modifier.padding(UiSpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(32.dp))
             Column {
                 Text("Add a new character", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -328,16 +328,16 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
 
 @Composable
 private fun CharactersSection(onAddCharacter: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("CAST", "Your Characters")
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(DozySpacing.x2)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Image(painterResource(character.image), contentDescription = character.name, modifier = Modifier.size(80.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color.White).padding(3.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
-            Column(Modifier.clickable(onClick = onAddCharacter), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(DozySpacing.x1)) {
+            Column(Modifier.clickable(onClick = onAddCharacter), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Surface(modifier = Modifier.size(80.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
                     Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.AddCircle, contentDescription = "Add character", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(28.dp)) }
                 }
