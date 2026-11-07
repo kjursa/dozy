@@ -40,6 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kjursa.composeuikit.theme.UiSpacing
 
 private const val HOME_TAB = "home"
@@ -69,7 +70,10 @@ fun MainScreen(onCreateStory: () -> Unit, onCreateCharacter: () -> Unit) {
                 )
             }
             composable(STORIES_TAB) { StoriesTabScreen() }
-            composable(CHARACTERS_TAB) { CharactersTabScreen(onAddCharacter = onCreateCharacter) }
+            composable(CHARACTERS_TAB) {
+                val viewModel: CharactersViewModel = viewModel()
+                CharactersTabScreen(viewModel = viewModel, onAddCharacter = onCreateCharacter)
+            }
         }
 
         MainBottomPanel(
