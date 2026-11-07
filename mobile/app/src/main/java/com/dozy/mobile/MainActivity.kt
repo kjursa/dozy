@@ -47,10 +47,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.composeuikit.mvi.MviScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dozy.mobile.ui.theme.DozyTheme
 import com.dozy.mobile.ui.theme.DozyColorScheme
-
-private data class Story(val title: String, val minutes: String, val image: Int)
 
 private val stories = listOf(
     Story("Oliver and the Secret Pirate Island", "6 min read", R.drawable.story_pirates),
@@ -169,11 +169,11 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
 }
 
 @Composable
-private fun StoriesSection() {
+private fun StoriesSection(onStorySelected: (Story) -> Unit = {}) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("LIBRARY", "Your Stories")
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            stories.forEach { story -> StoryCard(story, Modifier.weight(1f)) }
+            stories.forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
         }
         StoryWideCard(Story("A Journey Through the Enchanted Forest", "8 min read", R.drawable.story_forest))
     }
@@ -191,9 +191,9 @@ private fun SectionHeading(kicker: String, title: String) {
 }
 
 @Composable
-private fun StoryCard(story: Story, modifier: Modifier = Modifier) {
+private fun StoryCard(story: Story, modifier: Modifier = Modifier, onClick: (Story) -> Unit = {}) {
     Surface(
-        modifier = modifier.shadow(8.dp, MaterialTheme.shapes.large),
+        modifier = modifier.shadow(8.dp, MaterialTheme.shapes.large).clickable { onClick(story) },
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
@@ -209,9 +209,9 @@ private fun StoryCard(story: Story, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun StoryWideCard(story: Story) {
+private fun StoryWideCard(story: Story, onClick: (Story) -> Unit = {}) {
     Surface(
-        modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large),
+        modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable { onClick(story) },
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
@@ -236,6 +236,21 @@ private fun ReadTime(label: String) {
 
 @Composable
 internal fun StoriesTabScreen() {
+    val storiesViewModel: StoriesViewModel = viewModel()
+    MviScreen(
+        viewModel = storiesViewModel,
+        onEffect = { effect ->
+            when (effect) {
+                is StoriesEffect.OpenStory -> Unit // A story detail destination does not exist yet.
+            }
+        },
+    ) { state, dispatch ->
+        StoriesTabContent(state) { story -> dispatch(StoriesAction.StorySelected(story)) }
+    }
+}
+
+@Composable
+internal fun StoriesTabContent(state: StoriesUiState, onStorySelected: (Story) -> Unit) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
         Column(
@@ -246,11 +261,17 @@ internal fun StoriesTabScreen() {
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow("YOUR LIBRARY")
-                    Text("My Stories", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Text("Pick up where your last adventure left off.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Eyebrow(state.eyebrow)
+                    Text(state.title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Text(state.subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                StoriesSection()
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+                    SectionHeading(state.collectionEyebrow, state.collectionTitle)
+                    Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+                        state.stories.take(2).forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
+                    }
+                    state.stories.getOrNull(2)?.let { StoryWideCard(it, onStorySelected) }
+                }
             }
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
