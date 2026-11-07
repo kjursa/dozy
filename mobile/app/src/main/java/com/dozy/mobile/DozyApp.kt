@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,7 +29,9 @@ fun DozyApp() {
             )
         }
         composable(CREATE_CHARACTER_ROUTE) {
+            val characterViewModel: CreateCharacterViewModel = viewModel()
             CreateCharacterScreen(
+                viewModel = characterViewModel,
                 onBack = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() },
             )

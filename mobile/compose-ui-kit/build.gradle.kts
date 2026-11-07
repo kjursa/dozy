@@ -31,4 +31,5 @@ dependencies {
     api("androidx.compose.ui:ui")
     api("androidx.compose.material3:material3")
     api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 }

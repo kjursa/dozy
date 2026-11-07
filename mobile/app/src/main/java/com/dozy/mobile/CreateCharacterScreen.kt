@@ -43,10 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +54,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.composeuikit.mvi.MviScreen
 
 private data class HeroType(val label: String, val icon: ImageVector)
 
@@ -69,42 +66,49 @@ private val heroTypes = listOf(
 )
 
 @Composable
-fun CreateCharacterScreen(onBack: () -> Unit, onSaved: () -> Unit) {
-    var selectedType by rememberSaveable { mutableStateOf("Child") }
-    var name by rememberSaveable { mutableStateOf("Oliver") }
-    var personality by rememberSaveable {
-        mutableStateOf("Curious and brave, loves exploring mysterious places and asking ‘what’s over there?’")
-    }
-    var appearance by rememberSaveable {
-        mutableStateOf("Five years old with curly brown hair, bright green eyes, a yellow hoodie and blue sneakers.")
-    }
-
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        CharacterScreenGlows()
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            CharacterHeader(onBack)
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-                    .padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
-            ) {
-                CharacterPreview(name)
-                HeroTypePicker(selectedType, onSelect = { selectedType = it })
-                CharacterDetails(
-                    name = name,
-                    onNameChange = { name = it },
-                    personality = personality,
-                    onPersonalityChange = { personality = it },
-                    appearance = appearance,
-                    onAppearanceChange = { appearance = it },
-                )
-                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+internal fun CreateCharacterScreen(
+    viewModel: CreateCharacterViewModel,
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+) {
+    MviScreen(
+        viewModel = viewModel,
+        onEffect = { effect ->
+            when (effect) {
+                CreateCharacterEffect.NavigateBack -> onBack()
+                CreateCharacterEffect.SaveRequested -> onSaved()
+                CreateCharacterEffect.PreviewRequested -> Unit
             }
+        },
+    ) { state, dispatch ->
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            CharacterScreenGlows()
+            Column(Modifier.fillMaxSize().statusBarsPadding()) {
+                CharacterHeader { dispatch(CreateCharacterAction.BackClicked) }
+                Column(
+                    Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                        .padding(horizontal = UiSpacing.x3),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
+                ) {
+                    CharacterPreview(state.name)
+                    HeroTypePicker(state.selectedType) { dispatch(CreateCharacterAction.TypeSelected(it)) }
+                    CharacterDetails(
+                        name = state.name,
+                        onNameChange = { dispatch(CreateCharacterAction.NameChanged(it)) },
+                        personality = state.personality,
+                        onPersonalityChange = { dispatch(CreateCharacterAction.PersonalityChanged(it)) },
+                        appearance = state.appearance,
+                        onAppearanceChange = { dispatch(CreateCharacterAction.AppearanceChanged(it)) },
+                    )
+                    Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+                }
+            }
+            CharacterActions(
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
+                onSave = { dispatch(CreateCharacterAction.SaveClicked) },
+            )
         }
-        CharacterActions(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            onSave = onSaved,
-        )
     }
 }
 
@@ -286,7 +290,7 @@ private fun AppearanceChip(label: String, color: Color) {
 }
 
 @Composable
-private fun CharacterActions(modifier: Modifier, onSave: () -> Unit) {
+private fun CharacterActions(modifier: Modifier, onPreview: () -> Unit, onSave: () -> Unit) {
     Surface(
         modifier = modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3).navigationBarsPadding()
             .padding(bottom = UiSpacing.x3).shadow(18.dp, RoundedCornerShape(40.dp)),
@@ -296,7 +300,7 @@ private fun CharacterActions(modifier: Modifier, onSave: () -> Unit) {
     ) {
         Row(Modifier.padding(UiSpacing.x1), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             OutlinedButton(
-                onClick = {},
+                onClick = onPreview,
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
