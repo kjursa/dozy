@@ -57,9 +57,9 @@ private val stories = listOf(
     Story("The Mystery of the Missing Moon", "10 min read", R.drawable.story_moon),
 )
 
-private data class Character(val name: String, val image: Int)
+internal data class Character(val name: String, val image: Int)
 
-private val characters = listOf(
+internal val sampleCharacters = listOf(
     Character("Oliver", R.drawable.character_oliver),
     Character("Luna", R.drawable.character_luna),
     Character("Captain Finn", R.drawable.character_finn),
@@ -258,80 +258,11 @@ internal fun StoriesTabScreen() {
 }
 
 @Composable
-internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        AmbientGlow(Modifier.fillMaxSize())
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
-            ) {
-                Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow("YOUR CAST")
-                    Text("Characters", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Text("Meet the heroes of your bedtime stories.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                characters.chunked(2).forEach { rowCharacters ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                        rowCharacters.forEach { character ->
-                            CharacterLibraryCard(character, Modifier.weight(1f))
-                        }
-                        if (rowCharacters.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-                CharacterLibraryCard(onAddCharacter = onAddCharacter)
-            }
-            Spacer(Modifier.height(mainBottomMenuScrollSpace()))
-        }
-    }
-}
-
-@Composable
-private fun CharacterLibraryCard(character: Character, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
-    ) {
-        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Image(
-                painterResource(character.image),
-                contentDescription = character.name,
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium),
-                contentScale = ContentScale.Crop,
-            )
-            Text(character.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        }
-    }
-}
-
-@Composable
-private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onAddCharacter),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Row(Modifier.padding(UiSpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(32.dp))
-            Column {
-                Text("Add a new character", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                Text("Create another hero for your stories.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
 private fun CharactersSection(onAddCharacter: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("CAST", "Your Characters")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            characters.forEach { character ->
+            sampleCharacters.forEach { character ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Image(painterResource(character.image), contentDescription = character.name, modifier = Modifier.size(80.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color.White).padding(3.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
