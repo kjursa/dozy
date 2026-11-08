@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.dozy.mobile.domain.CharacterField
 import com.kjursa.composeuikit.mvi.MviScreen
 import com.kjursa.composeuikit.theme.UiSpacing
 
@@ -80,7 +81,7 @@ internal fun CreateCharacterScreen(
         onEffect = { effect ->
             when (effect) {
                 CreateCharacterEffect.NavigateBack -> onBack()
-                CreateCharacterEffect.SaveRequested -> onSaved()
+                CreateCharacterEffect.Saved -> onSaved()
                 CreateCharacterEffect.PreviewRequested -> Unit
             }
         },
@@ -99,7 +100,9 @@ internal fun CreateCharacterScreen(
                 ) {
                     CharacterPreview(state.name)
                     HeroTypePicker(state.selectedType) { dispatch(CreateCharacterAction.TypeSelected(it)) }
+                    state.errors[CharacterField.TYPE]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
+                        errors = state.errors,
                         name = state.name,
                         onNameChange = { dispatch(CreateCharacterAction.NameChanged(it)) },
                         personality = state.personality,
@@ -107,6 +110,25 @@ internal fun CreateCharacterScreen(
                         appearance = state.appearance,
                         onAppearanceChange = { dispatch(CreateCharacterAction.AppearanceChanged(it)) },
                     )
+                    when (state.saveStatus) {
+                        SaveStatus.SAVING -> Text("Saving character…")
+                        SaveStatus.SUCCESS ->
+                            Text(
+                                if (state.sync ==
+                                    com.dozy.mobile.domain.CharacterSync.PENDING
+                                ) {
+                                    "Saved on this device. Server sync is unavailable."
+                                } else {
+                                    "Character saved."
+                                },
+                            )
+                        SaveStatus.FAILURE ->
+                            Text(
+                                "Could not save on this device. Please try again.",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        SaveStatus.EDITING -> Unit
+                    }
                     Spacer(Modifier.height(mainBottomMenuScrollSpace()))
                 }
             }
@@ -114,6 +136,8 @@ internal fun CreateCharacterScreen(
                 modifier = Modifier.align(Alignment.BottomCenter),
                 onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
                 onSave = { dispatch(CreateCharacterAction.SaveClicked) },
+                saving = state.saveStatus == SaveStatus.SAVING,
+                saved = state.saveStatus == SaveStatus.SUCCESS,
             )
         }
     }
@@ -272,6 +296,7 @@ private fun HeroTypePicker(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun CharacterDetails(
+    errors: Map<CharacterField, String>,
     name: String,
     onNameChange: (String) -> Unit,
     personality: String,
@@ -289,10 +314,12 @@ private fun CharacterDetails(
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Character name", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = name, onValueChange = onNameChange, singleLine = true)
+                errors[CharacterField.NAME]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Personality", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
+                errors[CharacterField.PERSONALITY]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
@@ -303,6 +330,7 @@ private fun CharacterDetails(
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Appearance", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
+                errors[CharacterField.APPEARANCE]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
@@ -388,6 +416,8 @@ private fun CharacterActions(
     modifier: Modifier,
     onPreview: () -> Unit,
     onSave: () -> Unit,
+    saving: Boolean,
+    saved: Boolean,
 ) {
     Surface(
         modifier =
@@ -415,6 +445,7 @@ private fun CharacterActions(
             }
             Button(
                 onClick = onSave,
+                enabled = !saving,
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
@@ -422,7 +453,13 @@ private fun CharacterActions(
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(UiSpacing.x1))
                 Text(
-                    "Save Character",
+                    if (saving) {
+                        "Saving…"
+                    } else if (saved) {
+                        "Done"
+                    } else {
+                        "Save Character"
+                    },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onPrimary,
                     maxLines = 1,

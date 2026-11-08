@@ -29,7 +29,7 @@ fun DozyApp() {
             )
         }
         composable(CREATE_CHARACTER_ROUTE) {
-            val characterViewModel: CreateCharacterViewModel = viewModel()
+            val characterViewModel: CreateCharacterViewModel = viewModel(factory = LocalDozyViewModelFactory.current)
             CreateCharacterScreen(
                 viewModel = characterViewModel,
                 onBack = { navController.popBackStack() },

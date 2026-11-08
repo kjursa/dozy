@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,7 +65,9 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             DozyTheme {
-                DozyApp()
+                CompositionLocalProvider(LocalDozyViewModelFactory provides (application as DozyApplication).viewModelFactory) {
+                    DozyApp()
+                }
             }
         }
     }
@@ -75,7 +78,7 @@ internal fun HomeScreen(
     onCreateStory: () -> Unit,
     onAddCharacter: () -> Unit,
 ) {
-    val homeViewModel: HomeViewModel = viewModel()
+    val homeViewModel: HomeViewModel = viewModel(factory = LocalDozyViewModelFactory.current)
     MviScreen(
         viewModel = homeViewModel,
         onEffect = { effect ->
@@ -83,11 +86,15 @@ internal fun HomeScreen(
                 HomeEffect.CreateStoryRequested -> onCreateStory()
                 HomeEffect.AddCharacterRequested -> onAddCharacter()
                 is HomeEffect.OpenStory, HomeEffect.SeeAllStoriesRequested,
-                is HomeEffect.OpenCharacter, HomeEffect.OpenNotifications -> Unit
+                is HomeEffect.OpenCharacter, HomeEffect.OpenNotifications,
+                -> Unit
             }
         },
     ) { state, dispatch ->
-        HomeContent(state = state, onAction = dispatch)
+        Column {
+            if (state.characterLoadError) Text("Could not load characters.", color = MaterialTheme.colorScheme.error)
+            HomeContent(state = state, onAction = dispatch)
+        }
     }
 }
 
@@ -110,8 +117,12 @@ private fun HomeContent(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
-                StoriesSection(state.stories, onStorySelected = { onAction(HomeAction.StorySelected(it)) }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
-                CharactersSection(state.characters, onAddCharacter = { onAction(HomeAction.AddCharacterClicked) }, onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) })
+                StoriesSection(state.stories, onStorySelected = {
+                    onAction(HomeAction.StorySelected(it))
+                }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
+                CharactersSection(state.characters, onAddCharacter = {
+                    onAction(HomeAction.AddCharacterClicked)
+                }, onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) })
             }
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
@@ -144,7 +155,10 @@ private fun AmbientGlow(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun HomeHeader(state: HomeUiState, onNotificationsClick: () -> Unit) {
+private fun HomeHeader(
+    state: HomeUiState,
+    onNotificationsClick: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -228,7 +242,11 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
 }
 
 @Composable
-private fun StoriesSection(stories: List<Story>, onStorySelected: (Story) -> Unit, onSeeAll: () -> Unit) {
+private fun StoriesSection(
+    stories: List<Story>,
+    onStorySelected: (Story) -> Unit,
+    onSeeAll: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("LIBRARY", "Your Stories", onSeeAll)
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
@@ -393,7 +411,7 @@ internal fun StoriesTabContent(
 
 @Composable
 internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
-    val charactersViewModel: CharactersViewModel = viewModel()
+    val charactersViewModel: CharactersViewModel = viewModel(factory = LocalDozyViewModelFactory.current)
     MviScreen(
         viewModel = charactersViewModel,
         onEffect = { effect ->
@@ -403,7 +421,10 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
             }
         },
     ) { state, dispatch ->
-        CharactersTabContent(state, dispatch)
+        Column {
+            if (state.characterLoadError) Text("Could not load characters.", color = MaterialTheme.colorScheme.error)
+            CharactersTabContent(state, dispatch)
+        }
     }
 }
 
@@ -501,12 +522,22 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
 }
 
 @Composable
-private fun CharactersSection(characters: List<HomeCharacter>, onAddCharacter: () -> Unit, onCharacterSelected: (HomeCharacter) -> Unit) {
+private fun CharactersSection(
+    characters: List<HomeCharacter>,
+    onAddCharacter: () -> Unit,
+    onCharacterSelected: (HomeCharacter) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("CAST", "Your Characters")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
-                Column(Modifier.clickable { onCharacterSelected(character) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
+                Column(
+                    Modifier.clickable {
+                        onCharacterSelected(character)
+                    },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                ) {
                     Image(
                         painterResource(character.image),
                         contentDescription = character.name,

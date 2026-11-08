@@ -1,6 +1,10 @@
 package com.dozy.mobile
 
+import androidx.lifecycle.viewModelScope
+import com.dozy.mobile.domain.ObserveCharacters
 import com.kjursa.composeuikit.mvi.MviViewModel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
 
 internal data class HomeCharacter(
     val name: String,
@@ -17,33 +21,65 @@ internal data class HomeUiState(
             Story("The Mystery of the Missing Moon", "10 min read", R.drawable.story_moon),
             Story("A Journey Through the Enchanted Forest", "8 min read", R.drawable.story_forest),
         ),
-    val characters: List<HomeCharacter> =
-        listOf(
-            HomeCharacter("Oliver", R.drawable.character_oliver),
-            HomeCharacter("Luna", R.drawable.character_luna),
-            HomeCharacter("Captain Finn", R.drawable.character_finn),
-        ),
+    val characters: List<HomeCharacter> = emptyList(),
+    val characterLoadError: Boolean = false,
 )
 
 internal sealed interface HomeAction {
     data object CreateStoryClicked : HomeAction
-    data class StorySelected(val story: Story) : HomeAction
+
+    data class StorySelected(
+        val story: Story,
+    ) : HomeAction
+
     data object SeeAllStoriesClicked : HomeAction
-    data class CharacterSelected(val character: HomeCharacter) : HomeAction
+
+    data class CharacterSelected(
+        val character: HomeCharacter,
+    ) : HomeAction
+
     data object AddCharacterClicked : HomeAction
+
     data object NotificationsClicked : HomeAction
 }
 
 internal sealed interface HomeEffect {
     data object CreateStoryRequested : HomeEffect
-    data class OpenStory(val story: Story) : HomeEffect
+
+    data class OpenStory(
+        val story: Story,
+    ) : HomeEffect
+
     data object SeeAllStoriesRequested : HomeEffect
-    data class OpenCharacter(val character: HomeCharacter) : HomeEffect
+
+    data class OpenCharacter(
+        val character: HomeCharacter,
+    ) : HomeEffect
+
     data object AddCharacterRequested : HomeEffect
+
     data object OpenNotifications : HomeEffect
 }
 
-internal class HomeViewModel : MviViewModel<HomeUiState, HomeAction, HomeEffect>(HomeUiState()) {
+internal class HomeViewModel(
+    observeCharacters: ObserveCharacters,
+) : MviViewModel<HomeUiState, HomeAction, HomeEffect>(HomeUiState()) {
+    init {
+        viewModelScope.launch {
+            observeCharacters().catch { updateState { copy(characterLoadError = true) } }.collect { collection ->
+                updateState {
+                    copy(
+                        characters =
+                            collection.characters.map {
+                                HomeCharacter(it.details.name.value, R.drawable.character_oliver)
+                            },
+                        characterLoadError = false,
+                    )
+                }
+            }
+        }
+    }
+
     override fun onAction(action: HomeAction) {
         when (action) {
             HomeAction.CreateStoryClicked -> sendEffect(HomeEffect.CreateStoryRequested)
