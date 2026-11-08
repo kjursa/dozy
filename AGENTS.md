@@ -1,8 +1,21 @@
 # Repository guidance
 
+## Project overview
+
+This repository contains `backend/` and `mobile/` for Dozy, an app that generates bedtime stories for children using user-defined characters.
+
+## Shared engineering principles
+
+- Prefer small methods and classes with one clear responsibility (Single Responsibility Principle).
+- Provide dependencies through dependency injection, preferably constructor injection. Avoid creating repositories, services, or other collaborators inside the classes that use them.
+
 ## Backend
 
 For any task that changes files under `backend/`, read and follow `backend/AGENTS.md` in addition to these repository-level instructions.
+
+## Mobile
+
+For any task that changes files under `mobile/`, read and follow `mobile/AGENTS.md` in addition to these repository-level instructions.
 
 ## Commit messages
 

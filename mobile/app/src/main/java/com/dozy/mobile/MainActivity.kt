@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.core.view.WindowCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,24 +45,30 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.kjursa.composeuikit.theme.UiSpacing
-import com.kjursa.composeuikit.mvi.MviScreen
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.dozy.mobile.ui.theme.DozyTheme
 import com.dozy.mobile.ui.theme.DozyColorScheme
+import com.dozy.mobile.ui.theme.DozyTheme
+import com.kjursa.composeuikit.mvi.MviScreen
+import com.kjursa.composeuikit.theme.UiSpacing
 
-private val stories = listOf(
-    Story("Oliver and the Secret Pirate Island", "6 min read", R.drawable.story_pirates),
-    Story("The Mystery of the Missing Moon", "10 min read", R.drawable.story_moon),
+private val stories =
+    listOf(
+        Story("Oliver and the Secret Pirate Island", "6 min read", R.drawable.story_pirates),
+        Story("The Mystery of the Missing Moon", "10 min read", R.drawable.story_moon),
+    )
+
+private data class Character(
+    val name: String,
+    val image: Int,
 )
 
-private data class Character(val name: String, val image: Int)
-
-private val characters = listOf(
-    Character("Oliver", R.drawable.character_oliver),
-    Character("Luna", R.drawable.character_luna),
-    Character("Captain Finn", R.drawable.character_finn),
-)
+private val characters =
+    listOf(
+        Character("Oliver", R.drawable.character_oliver),
+        Character("Luna", R.drawable.character_luna),
+        Character("Captain Finn", R.drawable.character_finn),
+    )
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -84,11 +89,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-internal fun HomeScreen(onCreateStory: () -> Unit, onAddCharacter: () -> Unit) {
+internal fun HomeScreen(
+    onCreateStory: () -> Unit,
+    onAddCharacter: () -> Unit,
+) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
         Column(
-            Modifier.fillMaxSize()
+            Modifier
+                .fillMaxSize()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -110,8 +119,24 @@ internal fun HomeScreen(onCreateStory: () -> Unit, onAddCharacter: () -> Unit) {
 private fun AmbientGlow(modifier: Modifier = Modifier) {
     Box(modifier) {
         Box(Modifier.padding(top = 5.dp).size(190.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = .07f), CircleShape))
-        Box(Modifier.align(Alignment.TopEnd).offset(x = 90.dp, y = 145.dp).size(220.dp).background(MaterialTheme.colorScheme.secondary.copy(alpha = .09f), CircleShape))
-        Box(Modifier.align(Alignment.BottomStart).offset(x = (-70).dp, y = (-110).dp).size(180.dp).background(MaterialTheme.colorScheme.tertiary.copy(alpha = .14f), CircleShape))
+        Box(
+            Modifier
+                .align(
+                    Alignment.TopEnd,
+                ).offset(x = 90.dp, y = 145.dp)
+                .size(220.dp)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = .09f), CircleShape),
+        )
+        Box(
+            Modifier
+                .align(
+                    Alignment.BottomStart,
+                ).offset(
+                    x = (-70).dp,
+                    y = (-110).dp,
+                ).size(180.dp)
+                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = .14f), CircleShape),
+        )
     }
 }
 
@@ -125,7 +150,11 @@ private fun HomeHeader() {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             Eyebrow("TUESDAY, 14 OCTOBER")
             Text("Good evening!", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-            Text("Ready for a new adventure?", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Ready for a new adventure?",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Surface(
             modifier = Modifier.size(48.dp).shadow(8.dp, CircleShape),
@@ -134,7 +163,12 @@ private fun HomeHeader() {
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
+                Icon(
+                    Icons.Default.Notifications,
+                    contentDescription = "Notifications",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp),
+                )
             }
         }
     }
@@ -152,18 +186,40 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
     ) {
-        Row(Modifier.padding(UiSpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+        Row(
+            Modifier.padding(UiSpacing.x3),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+        ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 Text("Create a New Story", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimary)
-                Text("Tell us who the heroes are and we'll dream up tonight's tale.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f))
+                Text(
+                    "Tell us who the heroes are and we'll dream up tonight's tale.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
+                )
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
-                    Row(Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Row(
+                        Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                         Text("Create Story", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-            Image(painterResource(R.drawable.story_moon), contentDescription = "Open magical book", modifier = Modifier.size(92.dp), contentScale = ContentScale.Crop)
+            Image(
+                painterResource(R.drawable.story_moon),
+                contentDescription = "Open magical book",
+                modifier = Modifier.size(92.dp),
+                contentScale = ContentScale.Crop,
+            )
         }
     }
 }
@@ -180,18 +236,30 @@ private fun StoriesSection(onStorySelected: (Story) -> Unit = {}) {
 }
 
 @Composable
-private fun SectionHeading(kicker: String, title: String) {
+private fun SectionHeading(
+    kicker: String,
+    title: String,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
         Column {
             Eyebrow(kicker)
-                Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         }
-        Text("See all", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(bottom = 3.dp))
+        Text(
+            "See all",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.padding(bottom = 3.dp),
+        )
     }
 }
 
 @Composable
-private fun StoryCard(story: Story, modifier: Modifier = Modifier, onClick: (Story) -> Unit = {}) {
+private fun StoryCard(
+    story: Story,
+    modifier: Modifier = Modifier,
+    onClick: (Story) -> Unit = {},
+) {
     Surface(
         modifier = modifier.shadow(8.dp, MaterialTheme.shapes.large).clickable { onClick(story) },
         shape = MaterialTheme.shapes.large,
@@ -199,9 +267,25 @@ private fun StoryCard(story: Story, modifier: Modifier = Modifier, onClick: (Sto
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Image(painterResource(story.image), contentDescription = "${story.title} cover", modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(MaterialTheme.shapes.medium), contentScale = ContentScale.Crop)
+            Image(
+                painterResource(story.image),
+                contentDescription = "${story.title} cover",
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(
+                            3f / 4f,
+                        ).clip(MaterialTheme.shapes.medium),
+                contentScale = ContentScale.Crop,
+            )
             Column(Modifier.padding(horizontal = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(story.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    story.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 ReadTime(story.minutes)
             }
         }
@@ -209,15 +293,32 @@ private fun StoryCard(story: Story, modifier: Modifier = Modifier, onClick: (Sto
 }
 
 @Composable
-private fun StoryWideCard(story: Story, onClick: (Story) -> Unit = {}) {
+private fun StoryWideCard(
+    story: Story,
+    onClick: (Story) -> Unit = {},
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable { onClick(story) },
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
-        Row(Modifier.padding(UiSpacing.x2), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2), verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(story.image), contentDescription = "${story.title} cover", modifier = Modifier.width(96.dp).aspectRatio(3f / 4f).clip(MaterialTheme.shapes.medium), contentScale = ContentScale.Crop)
+        Row(
+            Modifier.padding(UiSpacing.x2),
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painterResource(story.image),
+                contentDescription = "${story.title} cover",
+                modifier =
+                    Modifier
+                        .width(96.dp)
+                        .aspectRatio(
+                            3f / 4f,
+                        ).clip(MaterialTheme.shapes.medium),
+                contentScale = ContentScale.Crop,
+            )
             Column(Modifier.weight(1f).padding(end = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(story.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 ReadTime(story.minutes)
@@ -229,7 +330,12 @@ private fun StoryWideCard(story: Story, onClick: (Story) -> Unit = {}) {
 @Composable
 private fun ReadTime(label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-        Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+        Icon(
+            Icons.Default.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -250,7 +356,10 @@ internal fun StoriesTabScreen() {
 }
 
 @Composable
-internal fun StoriesTabContent(state: StoriesUiState, onStorySelected: (Story) -> Unit) {
+internal fun StoriesTabContent(
+    state: StoriesUiState,
+    onStorySelected: (Story) -> Unit,
+) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
         Column(
@@ -292,7 +401,11 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
                 Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Eyebrow("YOUR CAST")
                     Text("Characters", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Text("Meet the heroes of your bedtime stories.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Meet the heroes of your bedtime stories.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 characters.chunked(2).forEach { rowCharacters ->
                     Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
@@ -310,7 +423,10 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
 }
 
 @Composable
-private fun CharacterLibraryCard(character: Character, modifier: Modifier = Modifier) {
+private fun CharacterLibraryCard(
+    character: Character,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large),
         shape = MaterialTheme.shapes.large,
@@ -337,11 +453,24 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(Modifier.padding(UiSpacing.x3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Icon(Icons.Default.AddCircle, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(32.dp))
+        Row(
+            Modifier.padding(UiSpacing.x3),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+        ) {
+            Icon(
+                Icons.Default.AddCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(32.dp),
+            )
             Column {
                 Text("Add a new character", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                Text("Create another hero for your stories.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Create another hero for your stories.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -354,17 +483,45 @@ private fun CharactersSection(onAddCharacter: () -> Unit) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Image(painterResource(character.image), contentDescription = character.name, modifier = Modifier.size(80.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color.White).padding(3.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                    Image(
+                        painterResource(character.image),
+                        contentDescription = character.name,
+                        modifier =
+                            Modifier
+                                .size(
+                                    80.dp,
+                                ).shadow(6.dp, CircleShape)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .padding(3.dp)
+                                .clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                    )
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
-            Column(Modifier.clickable(onClick = onAddCharacter), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Surface(modifier = Modifier.size(80.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.AddCircle, contentDescription = "Add character", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(28.dp)) }
+            Column(
+                Modifier.clickable(onClick = onAddCharacter),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+            ) {
+                Surface(
+                    modifier = Modifier.size(80.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.AddCircle,
+                            contentDescription = "Add character",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
                 }
                 Text("Add", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
-

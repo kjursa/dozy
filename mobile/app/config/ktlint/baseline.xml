@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<baseline version="1.0">
+    <file name="src/main/java/com/dozy/mobile/CreateCharacterScreen.kt">
+        <error line="73" column="14" source="standard:function-naming" />
+        <error line="123" column="13" source="standard:function-naming" />
+        <error line="145" column="13" source="standard:function-naming" />
+        <error line="185" column="13" source="standard:function-naming" />
+        <error line="227" column="13" source="standard:function-naming" />
+        <error line="274" column="13" source="standard:function-naming" />
+        <error line="320" column="13" source="standard:function-naming" />
+        <error line="347" column="13" source="standard:function-naming" />
+        <error line="363" column="13" source="standard:function-naming" />
+        <error line="387" column="13" source="standard:function-naming" />
+    </file>
+    <file name="src/main/java/com/dozy/mobile/CreateStoryScreen.kt">
+        <error line="85" column="5" source="standard:function-naming" />
+        <error line="148" column="13" source="standard:function-naming" />
+        <error line="170" column="13" source="standard:function-naming" />
+        <error line="202" column="13" source="standard:function-naming" />
+        <error line="211" column="13" source="standard:function-naming" />
+        <error line="228" column="13" source="standard:function-naming" />
+        <error line="280" column="13" source="standard:function-naming" />
+        <error line="366" column="13" source="standard:function-naming" />
+        <error line="401" column="13" source="standard:function-naming" />
+        <error line="441" column="13" source="standard:function-naming" />
+        <error line="501" column="13" source="standard:function-naming" />
+    </file>
+    <file name="src/main/java/com/dozy/mobile/DozyApp.kt">
+        <error line="14" column="5" source="standard:function-naming" />
+    </file>
+    <file name="src/main/java/com/dozy/mobile/MainActivity.kt">
+        <error line="92" column="14" source="standard:function-naming" />
+        <error line="119" column="13" source="standard:function-naming" />
+        <error line="144" column="13" source="standard:function-naming" />
+        <error line="178" column="13" source="standard:function-naming" />
+        <error line="183" column="13" source="standard:function-naming" />
+        <error line="228" column="13" source="standard:function-naming" />
+        <error line="239" column="13" source="standard:function-naming" />
+        <error line="258" column="13" source="standard:function-naming" />
+        <error line="296" column="13" source="standard:function-naming" />
+        <error line="331" column="13" source="standard:function-naming" />
+        <error line="344" column="14" source="standard:function-naming" />
+        <error line="359" column="14" source="standard:function-naming" />
+        <error line="391" column="14" source="standard:function-naming" />
+        <error line="426" column="13" source="standard:function-naming" />
+        <error line="449" column="13" source="standard:function-naming" />
+        <error line="480" column="13" source="standard:function-naming" />
+    </file>
+    <file name="src/main/java/com/dozy/mobile/MainScreen.kt">
+        <error line="53" column="5" source="standard:function-naming" />
+        <error line="94" column="13" source="standard:function-naming" />
+        <error line="121" column="13" source="standard:function-naming" />
+    </file>
+    <file name="src/main/java/com/dozy/mobile/ui/theme/Theme.kt">
+        <error line="18" column="5" source="standard:function-naming" />
+    </file>
+</baseline>

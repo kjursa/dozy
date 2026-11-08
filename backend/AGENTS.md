@@ -1,50 +1,101 @@
 # Backend implementation guidelines
 
-## Structure
+## Run and test
 
-Organize production code by feature. Keep each feature's HTTP API, domain, service, and data code together:
+- Start the backend from `backend/` with `./gradlew run`.
+- Run backend tests from `backend/` with `./gradlew test`.
+- Run the repository-wide test command from the repository root with `./test-all`; it runs backend and mobile tests.
+
+## Architecture
+
+Keep the backend feature-oriented and lightweight. The layers below are package boundaries; they do not require separate Gradle modules. Do not create a package or class until there is code with that responsibility.
 
 ```text
 src/main/kotlin/com/dozy/
-  di/
-    Dependencies.kt     # Application-wide composition root and Ktor DI bindings
+  config/                          # Application settings and configuration loading
+  di/                              # Application composition root and dependency wiring
+  plugins/                         # Shared Ktor plugins, such as authentication and logging
   features/<feature>/
-    api/                 # Ktor routes, HTTP request/response models, mapping extensions
-    di/                  # Ktor DI registrations owned by this feature
+    api/                           # Ktor routes, request/response models, HTTP mapping
+    application/                   # Use cases or a small feature service
     domain/
-      model/             # Framework-independent domain models
-      <Feature>Repository.kt
-    service/             # Feature logic and orchestration
-    data/                # Repository implementations and data sources
-  plugins/               # Shared Ktor plugin configuration
+      model/                        # Business models, values, and domain rules
+      repository/                   # Repository contracts required by the application
+    data/
+      repository/                   # Repository implementations
+      database/                     # Database access, schema, migrations, queries
+      remote/<provider>/            # Clients and DTOs for third-party APIs
+  infrastructure/<concern>/        # Optional shared technical integrations
 ```
 
-Use a feature-specific package name, such as `com.dozy.features.story`. Keep shared code in `shared/` only when multiple features genuinely use it. Do not create a separate Gradle module for tests; use the standard `src/test` source set.
+Use feature-specific packages such as `com.dozy.features.story` and `com.dozy.features.auth`. Keep shared code outside a feature only when multiple features genuinely use it. `infrastructure/` is optional; third-party API clients and database adapters normally belong in the feature's `data/` package.
 
-## Naming and responsibilities
+### Domain — models and contracts
 
-- Name inbound HTTP models `<Action><Feature>Request`, such as `CreateStoryRequest`.
-- Name outbound HTTP models `<Feature>Response`, such as `StoryResponse`. Request and response models belong to `api` and must not be used as domain models.
-- Put domain models in `domain/model` and give them domain names such as `Story`. Keep them independent of Ktor and HTTP serialization details.
-- Put API mapping extensions in `api`, in a feature-specific `*Mappers.kt` file. For simple, stateless conversions, use top-level extension functions such as `CreateStoryRequest.toDomain()` and `Story.toResponse()`; do not wrap them in a mapper class or `companion object`.
-- Use a mapper class only when mapping genuinely needs injected dependencies or state. Keep lookups and business decisions in the service rather than hiding them in a mapper.
-- Name the feature orchestrator `<Feature>Service`, such as `StoryService`. Implement it as a concrete class by default; it coordinates feature logic and calls repositories. Do not add a separate use-case class when it would only delegate to the service or repository.
-- Define repository interfaces in the feature's `domain` package, such as `StoryRepository`. Put implementations in `data`, named for their technology or source, such as `SqlStoryRepository`.
-- Keep routes focused on HTTP concerns: read and validate requests, call the service, and return the appropriate response and status.
-- Prefer constructor injection and simple manual wiring. Add a dependency-injection framework or extra abstraction only when the project has a concrete need for it.
-- When dependency injection is useful, use Ktor's built-in DI (`ktor-server-di` and its `dependencies {}` DSL); do not add a third-party DI framework without a concrete need.
-- Put each feature's DI registrations in `features/<feature>/di/<Feature>Dependencies.kt`, exposed as an `Application.configure<Feature>Dependencies()` function. Register that feature's repository implementation and concrete service there. Do not create an empty DI module for a feature with no dependencies to wire.
-- Keep one application-level composition root in `com.dozy.di.Dependencies.kt`, exposed as `Application.configureDependencies()`. It should register shared infrastructure dependencies and call each feature's DI registration function. Call it once from `Application.module()` before registering routes or modules that resolve dependencies. Do not register dependencies inside route handlers.
-- Register repository interfaces to their data implementations and services by their concrete class. Keep service classes concrete unless a real substitution boundary requires an interface.
+- Put business models, value objects, and domain rules in `domain.model`.
+- Put data-access contracts required by the application in `domain.repository`; group other contracts by business area.
+- Keep domain independent of other layers, frameworks, databases, and HTTP transport.
+- Keep database models and external-service DTOs outside the domain.
+
+### Application — use cases
+
+- Put business operations and orchestration here. Use a focused `<Action><Feature>UseCase` when it contains meaningful logic, coordinates dependencies, or is reused.
+- For several small, closely related operations in one feature, a single concrete `<Feature>Service` can be simpler than one class per operation. Do not create both a service and a use case when they duplicate responsibilities.
+- Receive domain contracts and other collaborators through constructors.
+- Do not create concrete repositories, network clients, or adapters inside use cases.
+- Keep SQL, HTTP, process handling, and framework configuration out of application code.
+- Name use cases for the action they perform, such as `CreateStoryUseCase`. Avoid a class that only delegates one call without adding responsibility.
+
+### Data — data access
+
+- Put repository implementations in `data.repository`.
+- Put database connections, schema, migrations, and queries in `data.database`.
+- Put third-party API clients, provider-specific DTOs, and adapters in `data.remote.<provider>`.
+- Reuse configured Ktor `HttpClient` instances; do not create a client for every request.
+- Keep provider-specific authentication, serialization, timeouts, and error translation in the remote adapter/configuration.
+- Map database and remote DTOs to domain models at the data boundary. Repositories coordinate the database and remote sources when needed.
+- Keep transactions, caching, and storage details in this layer.
+
+### API — communication boundary
+
+- Put endpoints, request/response models, and HTTP error mapping here.
+- Pass requests to application operations and map results to HTTP responses.
+- Keep business logic, database queries, and third-party integration details out of route handlers.
+- Validate input format at the API boundary; keep business rules in the domain/application layers.
+- Name inbound models `<Action><Feature>Request`, such as `CreateStoryRequest`, and outbound models `<Feature>Response`, such as `StoryResponse`.
+- Keep request/response models separate from domain models. Use simple top-level mapping extensions in feature-specific `*Mappers.kt` files; use mapper classes only when mapping needs injected dependencies or state.
+
+### Authentication and logging
+
+- Configure Ktor's Authentication plugin in shared plugin/configuration code; keep login and account operations in the `auth` feature.
+- Keep authorization decisions close to the application/domain operation that requires them, while routes declare which authentication is required.
+- Configure inbound request logging centrally with Ktor's CallLogging plugin. Do not log passwords, access tokens, cookies, or sensitive user/story content.
+- If enabling Ktor Client Logging for third-party calls, sanitize authorization headers and avoid logging sensitive request/response bodies.
+- Load secrets and environment-specific settings through config; keep secrets and local configuration outside the repository.
+
+### Config, plugins, and DI
+
+- Keep app-wide configuration and shared Ktor plugins in `config/` and `plugins/`; these are technical setup, not business layers.
+- Create objects and connect layers in `di/`, the composition root.
+- Bind interfaces explicitly to implementations and provide dependencies through constructors.
+- Do not resolve dependencies from a container inside use-case or domain methods.
+- Prefer constructor injection and simple wiring. Use Ktor's built-in DI (`ktor-server-di` and its `dependencies {}` DSL) when manual wiring becomes cumbersome; avoid third-party DI without a concrete need.
+- Keep `com.dozy.di.Dependencies.kt` as the application composition root and call it once from `Application.module()` before routes that resolve dependencies. Split bindings into feature files only when the composition root grows enough to benefit.
 - In route tests, override production DI bindings with fakes using Ktor's test application DI support.
 
-## Dependencies and testing
+### General rules
 
-- Keep dependencies flowing inward: `api` calls `service`; `service` uses `domain`; `data` implements domain repository interfaces. Domain code must not depend on Ktor or data implementations.
-- Put tests under `src/test/kotlin` using the same package structure as production code. Name them after the class or behavior under test, for example `StoryRoutesTest` and `StoryServiceTest`.
+- Keep classes focused on one responsibility and functions small and clearly named.
+- Direct dependencies inward: API depends on application, application depends on domain contracts, and data/infrastructure implement contracts. Domain does not know adapters.
+- Avoid cyclic package dependencies.
+- Add a layer, interface, or abstraction only when it separates real responsibility, external technology, or a useful test seam.
+- Organize tests like production packages under the standard `src/test` source set; do not create a separate Gradle module for tests.
+
+## Testing
+
+- Put tests under `src/test/kotlin` using the same package structure as production code. Name them after the class or behavior under test, for example `StoryRoutesTest` and `CreateStoryUseCaseTest`.
 - Test routes with Ktor's `testApplication` and inject test dependencies where practical.
-- Test service logic directly by constructing the concrete service with a fake or in-memory repository. Do not add a service interface solely to mock the service.
+- Test application operations directly with fake or in-memory repository implementations. Do not add an interface solely to mock a concrete use case or feature service.
 - Add domain or repository tests where they cover meaningful rules or behavior. Keep test fixtures under `src/test`.
 - Every behavior change must add or update an automated test that verifies it.
 - After backend code, test, or Gradle configuration changes, run `./test-all` from the repository root and report whether the tests passed. Report failures accurately; do not claim tests passed unless the command completed successfully.
-- Keep the architecture lightweight: add layers, interfaces, and shared abstractions only when they isolate real logic, external dependencies, or a needed test seam.

@@ -7,14 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
@@ -28,12 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -47,11 +47,13 @@ private const val STORIES_TAB = "stories"
 private const val CHARACTERS_TAB = "characters"
 
 @Composable
-internal fun mainBottomMenuScrollSpace(): Dp =
-    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 122.dp
+internal fun mainBottomMenuScrollSpace(): Dp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 122.dp
 
 @Composable
-fun MainScreen(onCreateStory: () -> Unit, onCreateCharacter: () -> Unit) {
+fun MainScreen(
+    onCreateStory: () -> Unit,
+    onCreateCharacter: () -> Unit,
+) {
     val tabController = rememberNavController()
     val backStackEntry by tabController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: HOME_TAB
@@ -89,12 +91,20 @@ fun MainScreen(onCreateStory: () -> Unit, onCreateCharacter: () -> Unit) {
 }
 
 @Composable
-private fun MainBottomPanel(modifier: Modifier, selectedRoute: String, onSelect: (String) -> Unit) {
+private fun MainBottomPanel(
+    modifier: Modifier,
+    selectedRoute: String,
+    onSelect: (String) -> Unit,
+) {
     val shape = RoundedCornerShape(40.dp)
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3)
-            .navigationBarsPadding().padding(bottom = UiSpacing.x1)
-            .shadow(20.dp, shape),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = UiSpacing.x3)
+                .navigationBarsPadding()
+                .padding(bottom = UiSpacing.x1)
+                .shadow(20.dp, shape),
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
@@ -119,11 +129,14 @@ private fun MainBottomItem(
     val selected = route == selectedRoute
     val tint = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(32.dp))
-            .background(if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = .10f) else Color.Transparent, RoundedCornerShape(32.dp))
-            .clickable { onSelect(route) }
-            .padding(vertical = UiSpacing.x2),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = .10f) else Color.Transparent,
+                    RoundedCornerShape(32.dp),
+                ).clickable { onSelect(route) }
+                .padding(vertical = UiSpacing.x2),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {

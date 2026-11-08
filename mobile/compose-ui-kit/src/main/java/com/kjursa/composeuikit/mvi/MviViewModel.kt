@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Base for a simple unidirectional flow: actions update state or emit one-off effects. */
-abstract class MviViewModel<State : Any, Action : Any, Effect : Any>(initialState: State) : ViewModel() {
+abstract class MviViewModel<State : Any, Action : Any, Effect : Any>(
+    initialState: State,
+) : ViewModel() {
     private val mutableState = MutableStateFlow(initialState)
     val uiState: StateFlow<State> = mutableState.asStateFlow()
 

@@ -7,8 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,17 +53,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.kjursa.composeuikit.theme.UiSpacing
 import com.kjursa.composeuikit.mvi.MviScreen
+import com.kjursa.composeuikit.theme.UiSpacing
 
-private data class HeroType(val label: String, val icon: ImageVector)
-
-private val heroTypes = listOf(
-    HeroType("Child", Icons.Default.Face),
-    HeroType("Animal", Icons.Default.Pets),
-    HeroType("Fantasy", Icons.Default.AutoAwesome),
-    HeroType("Other", Icons.Default.Stars),
+private data class HeroType(
+    val label: String,
+    val icon: ImageVector,
 )
+
+private val heroTypes =
+    listOf(
+        HeroType("Child", Icons.Default.Face),
+        HeroType("Animal", Icons.Default.Pets),
+        HeroType("Fantasy", Icons.Default.AutoAwesome),
+        HeroType("Other", Icons.Default.Stars),
+    )
 
 @Composable
 internal fun CreateCharacterScreen(
@@ -86,7 +90,10 @@ internal fun CreateCharacterScreen(
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
                 CharacterHeader { dispatch(CreateCharacterAction.BackClicked) }
                 Column(
-                    Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = UiSpacing.x3),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
                 ) {
@@ -115,8 +122,22 @@ internal fun CreateCharacterScreen(
 @Composable
 private fun CharacterScreenGlows() {
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.align(Alignment.TopEnd).offset(x = 80.dp, y = (-70).dp).size(220.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = .08f), CircleShape))
-        Box(Modifier.align(Alignment.TopStart).offset(x = (-90).dp, y = 420.dp).size(200.dp).background(MaterialTheme.colorScheme.secondary.copy(alpha = .08f), CircleShape))
+        Box(
+            Modifier
+                .align(
+                    Alignment.TopEnd,
+                ).offset(x = 80.dp, y = (-70).dp)
+                .size(220.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = .08f), CircleShape),
+        )
+        Box(
+            Modifier
+                .align(
+                    Alignment.TopStart,
+                ).offset(x = (-90).dp, y = 420.dp)
+                .size(200.dp)
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = .08f), CircleShape),
+        )
     }
 }
 
@@ -142,8 +163,17 @@ private fun CharacterHeader(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.surface.copy(alpha = .8f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         ) {
-            Row(Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Row(
+                Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+            ) {
+                Icon(
+                    Icons.Default.Stars,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
                 Text("New Character", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
@@ -153,7 +183,11 @@ private fun CharacterHeader(onBack: () -> Unit) {
 
 @Composable
 private fun CharacterPreview(name: String) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+    ) {
         Box(Modifier.size(256.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.padding(UiSpacing.x3).fillMaxSize().background(MaterialTheme.colorScheme.tertiary.copy(alpha = .28f), CircleShape))
             Image(
@@ -168,16 +202,32 @@ private fun CharacterPreview(name: String) {
                 color = MaterialTheme.colorScheme.primary,
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
             ) {
-                Text("Preview", modifier = Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimary)
+                Text(
+                    "Preview",
+                    modifier = Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
             }
         }
-        Text(name.ifBlank { "Your hero" }, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            name.ifBlank {
+                "Your hero"
+            },
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text("Curious explorer, age 5", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun HeroTypePicker(selected: String, onSelect: (String) -> Unit) {
+private fun HeroTypePicker(
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Text("WHO IS THIS HERO?", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
@@ -188,15 +238,30 @@ private fun HeroTypePicker(selected: String, onSelect: (String) -> Unit) {
                     modifier = Modifier.weight(1f).clip(typeShape).clickable { onSelect(type.label) },
                     shape = typeShape,
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                    border =
+                        BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        ),
                 ) {
                     Column(
                         Modifier.padding(vertical = UiSpacing.x2),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     ) {
-                        Icon(type.icon, contentDescription = null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                        Text(type.label, style = MaterialTheme.typography.bodySmall, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Icon(
+                            type.icon,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Text(
+                            type.label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
@@ -228,14 +293,20 @@ private fun CharacterDetails(
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Personality", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                ) {
                     listOf("Curious", "Brave", "Kind", "Funny").forEach { TraitChip(it) }
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Appearance", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                ) {
                     AppearanceChip("Yellow hoodie", MaterialTheme.colorScheme.tertiary)
                     AppearanceChip("Green eyes", MaterialTheme.colorScheme.secondary)
                     AppearanceChip("Brown curls", MaterialTheme.colorScheme.onSurface)
@@ -246,13 +317,21 @@ private fun CharacterDetails(
 }
 
 @Composable
-private fun CharacterInput(value: String, onValueChange: (String) -> Unit, singleLine: Boolean = false, minimumHeight: androidx.compose.ui.unit.Dp = 48.dp) {
+private fun CharacterInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    singleLine: Boolean = false,
+    minimumHeight: androidx.compose.ui.unit.Dp = 48.dp,
+) {
     Surface(
         shape = if (singleLine) CircleShape else MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        Box(Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1), contentAlignment = Alignment.CenterStart) {
+        Box(
+            Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
+            contentAlignment = Alignment.CenterStart,
+        ) {
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
@@ -271,18 +350,33 @@ private fun TraitChip(label: String) {
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Text(label, modifier = Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
 @Composable
-private fun AppearanceChip(label: String, color: Color) {
+private fun AppearanceChip(
+    label: String,
+    color: Color,
+) {
     Surface(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1 / 2)) {
+        Row(
+            Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    UiSpacing.x1 / 2,
+                ),
+        ) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(color))
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -290,10 +384,19 @@ private fun AppearanceChip(label: String, color: Color) {
 }
 
 @Composable
-private fun CharacterActions(modifier: Modifier, onPreview: () -> Unit, onSave: () -> Unit) {
+private fun CharacterActions(
+    modifier: Modifier,
+    onPreview: () -> Unit,
+    onSave: () -> Unit,
+) {
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3).navigationBarsPadding()
-            .padding(bottom = UiSpacing.x3).shadow(18.dp, RoundedCornerShape(40.dp)),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = UiSpacing.x3)
+                .navigationBarsPadding()
+                .padding(bottom = UiSpacing.x3)
+                .shadow(18.dp, RoundedCornerShape(40.dp)),
         shape = RoundedCornerShape(40.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
@@ -318,7 +421,13 @@ private fun CharacterActions(modifier: Modifier, onPreview: () -> Unit, onSave: 
             ) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(UiSpacing.x1))
-                Text("Save Character", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "Save Character",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
