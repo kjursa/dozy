@@ -58,18 +58,6 @@ private val stories =
         Story("The Mystery of the Missing Moon", "10 min read", R.drawable.story_moon),
     )
 
-private data class Character(
-    val name: String,
-    val image: Int,
-)
-
-private val characters =
-    listOf(
-        Character("Oliver", R.drawable.character_oliver),
-        Character("Luna", R.drawable.character_luna),
-        Character("Captain Finn", R.drawable.character_finn),
-    )
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -389,6 +377,25 @@ internal fun StoriesTabContent(
 
 @Composable
 internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
+    val charactersViewModel: CharactersViewModel = viewModel()
+    MviScreen(
+        viewModel = charactersViewModel,
+        onEffect = { effect ->
+            when (effect) {
+                is CharactersEffect.OpenCharacter -> Unit // A character detail destination does not exist yet.
+                CharactersEffect.NavigateToAddCharacter -> onAddCharacter()
+            }
+        },
+    ) { state, dispatch ->
+        CharactersTabContent(state, dispatch)
+    }
+}
+
+@Composable
+internal fun CharactersTabContent(
+    state: CharactersUiState,
+    onAction: (CharactersAction) -> Unit,
+) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
         Column(
@@ -399,23 +406,23 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow("YOUR CAST")
-                    Text("Characters", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Eyebrow(state.eyebrow)
+                    Text(state.title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
                     Text(
-                        "Meet the heroes of your bedtime stories.",
+                        state.subtitle,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                characters.chunked(2).forEach { rowCharacters ->
+                state.characters.chunked(2).forEach { rowCharacters ->
                     Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                         rowCharacters.forEach { character ->
-                            CharacterLibraryCard(character, Modifier.weight(1f))
+                            CharacterLibraryCard(character, Modifier.weight(1f)) { onAction(CharactersAction.CharacterSelected(character)) }
                         }
                         if (rowCharacters.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                CharacterLibraryCard(onAddCharacter = onAddCharacter)
+                CharacterLibraryCard(onAddCharacter = { onAction(CharactersAction.AddCharacterClicked) })
             }
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
@@ -426,9 +433,10 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
 private fun CharacterLibraryCard(
     character: Character,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large),
+        modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
@@ -481,7 +489,7 @@ private fun CharactersSection(onAddCharacter: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading("CAST", "Your Characters")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            characters.forEach { character ->
+            CharactersUiState().characters.forEach { character ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Image(
                         painterResource(character.image),
