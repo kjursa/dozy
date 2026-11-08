@@ -8,6 +8,7 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 
 - Prefer small methods and classes with one clear responsibility (Single Responsibility Principle).
 - Provide dependencies through dependency injection, preferably constructor injection. Avoid creating repositories, services, or other collaborators inside the classes that use them.
+- PRs that change application logic should include focused unit tests for the changed behavior, especially for validation, mapping, use cases, and repository logic.
 
 ## Backend
 
