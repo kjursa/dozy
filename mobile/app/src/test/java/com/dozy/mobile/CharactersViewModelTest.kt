@@ -1,5 +1,9 @@
 package com.dozy.mobile
 
+import com.dozy.mobile.domain.character.ObserveCharacters
+import com.dozy.mobile.presentation.characters.CharactersAction
+import com.dozy.mobile.presentation.characters.CharactersEffect
+import com.dozy.mobile.presentation.characters.CharactersViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -29,7 +33,7 @@ class CharactersViewModelTest {
     @Test fun initialStateExposesPersistedCharacters() {
         val viewModel =
             CharactersViewModel(
-                com.dozy.mobile.domain
+                com.dozy.mobile.domain.character
                     .ObserveCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -42,7 +46,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.domain
+                    com.dozy.mobile.domain.character
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()
@@ -59,7 +63,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.domain
+                    com.dozy.mobile.domain.character
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             val effect = async { viewModel.effects.first() }

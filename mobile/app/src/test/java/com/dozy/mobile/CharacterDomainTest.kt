@@ -1,6 +1,16 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.*
+import com.dozy.mobile.domain.character.CharacterAppearance
+import com.dozy.mobile.domain.character.CharacterId
+import com.dozy.mobile.domain.character.CharacterIdGenerator
+import com.dozy.mobile.domain.character.CharacterName
+import com.dozy.mobile.domain.character.CharacterPersonality
+import com.dozy.mobile.domain.character.CharacterRepository
+import com.dozy.mobile.domain.character.CharacterValueError
+import com.dozy.mobile.domain.character.CharacterValueException
+import com.dozy.mobile.domain.character.ObserveCharacters
+import com.dozy.mobile.domain.character.SaveCharacter
+import com.dozy.mobile.domain.character.SaveCharacterResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest

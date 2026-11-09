@@ -1,7 +1,20 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.domain.*
+import com.dozy.mobile.domain.character.Character
+import com.dozy.mobile.domain.character.CharacterId
+import com.dozy.mobile.domain.character.CharacterIdGenerator
+import com.dozy.mobile.domain.character.CharacterRepository
+import com.dozy.mobile.domain.character.ObserveCharacters
+import com.dozy.mobile.domain.character.SaveCharacter
+import com.dozy.mobile.domain.character.SavedCharacter
+import com.dozy.mobile.presentation.characters.CharactersViewModel
+import com.dozy.mobile.presentation.createcharacter.CharacterField
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterAction
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterEffect
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
+import com.dozy.mobile.presentation.createcharacter.SaveStatus
+import com.dozy.mobile.presentation.home.HomeViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -151,10 +164,10 @@ class CreateCharacterViewModelTest {
         runTest(dispatcher) {
             val failing =
                 object : CharacterRepository {
-                    override suspend fun save(character: com.dozy.mobile.domain.Character): SavedCharacter = error("unused")
+                    override suspend fun save(character: com.dozy.mobile.domain.character.Character): SavedCharacter = error("unused")
 
                     override fun observe() =
-                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.domain.Character>> { error("disk unavailable") }
+                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.domain.character.Character>> { error("disk unavailable") }
                 }
             val home = HomeViewModel(ObserveCharacters(failing))
             val characters = CharactersViewModel(ObserveCharacters(failing))

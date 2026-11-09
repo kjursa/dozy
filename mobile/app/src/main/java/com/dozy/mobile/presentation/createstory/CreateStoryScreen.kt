@@ -1,4 +1,4 @@
-package com.dozy.mobile
+package com.dozy.mobile.presentation.createstory
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -54,6 +54,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dozy.mobile.R
+import com.dozy.mobile.presentation.main.mainBottomMenuScrollSpace
 import com.kjursa.composeuikit.theme.UiSpacing
 
 private data class StoryThemeOption(

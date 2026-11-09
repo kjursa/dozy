@@ -1,15 +1,15 @@
 package com.dozy.mobile.di
 
-import com.dozy.mobile.CharactersViewModel
-import com.dozy.mobile.CreateCharacterViewModel
-import com.dozy.mobile.HomeViewModel
-import com.dozy.mobile.StoriesViewModel
-import com.dozy.mobile.data.CharacterApi
-import com.dozy.mobile.data.DefaultCharacterRepository
-import com.dozy.mobile.data.KtorCharacterApi
-import com.dozy.mobile.domain.CharacterRepository
-import com.dozy.mobile.domain.ObserveCharacters
-import com.dozy.mobile.domain.SaveCharacter
+import com.dozy.mobile.data.character.DefaultCharacterRepository
+import com.dozy.mobile.data.character.api.CharacterApi
+import com.dozy.mobile.data.character.api.KtorCharacterApi
+import com.dozy.mobile.domain.character.CharacterRepository
+import com.dozy.mobile.domain.character.ObserveCharacters
+import com.dozy.mobile.domain.character.SaveCharacter
+import com.dozy.mobile.presentation.characters.CharactersViewModel
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
+import com.dozy.mobile.presentation.home.HomeViewModel
+import com.dozy.mobile.presentation.stories.StoriesViewModel
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module

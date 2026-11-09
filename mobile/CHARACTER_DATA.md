@@ -62,3 +62,21 @@ Koin 4.1.1 is pinned for the current Kotlin 2.2.20 toolchain. The multiplatform
 `koin-compose-viewmodel` API can move with the shared graph; only Android startup
 and platform construction use `koin-android`. A future KMP migration will also
 need to move Android presentation resources out of any shared ViewModels.
+
+## Package layout
+
+- `domain.character`: shared character models, value classes, repository contract,
+  and use cases, with one named type per file.
+- `data.character`: repository implementation and entity/DTO mapping extensions;
+  `database` contains Room database, DAO, and entity files; `api` contains the API
+  contract, Ktor implementation, and DTO.
+- `presentation.createcharacter`, `home`, `characters`, and `stories`: screen
+  layouts, ViewModels, UI state, actions, effects, and presentation mapping
+  extensions in separate files. The character list uses `CharacterListItem` to
+  distinguish its presentation model from the domain `Character`.
+- `presentation.components`: UI elements reused across screens;
+  `presentation.main`: the bottom navigation shell.
+
+The Room database class moved packages; its exported schema moved to the matching
+qualified-name directory. Table definitions, schema version, and identity hash
+are unchanged, so this package refactor does not require a database migration.

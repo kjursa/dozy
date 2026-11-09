@@ -1,6 +1,11 @@
-package com.dozy.mobile.data
+package com.dozy.mobile.data.character
 
-import com.dozy.mobile.domain.*
+import com.dozy.mobile.data.character.api.CharacterApi
+import com.dozy.mobile.data.character.database.CharacterDao
+import com.dozy.mobile.domain.character.Character
+import com.dozy.mobile.domain.character.CharacterRepository
+import com.dozy.mobile.domain.character.CharacterSync
+import com.dozy.mobile.domain.character.SavedCharacter
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.map
 

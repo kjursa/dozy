@@ -1,6 +1,15 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.*
+import com.dozy.mobile.domain.character.Character
+import com.dozy.mobile.domain.character.CharacterAppearance
+import com.dozy.mobile.domain.character.CharacterDraft
+import com.dozy.mobile.domain.character.CharacterId
+import com.dozy.mobile.domain.character.CharacterName
+import com.dozy.mobile.domain.character.CharacterPersonality
+import com.dozy.mobile.domain.character.CharacterRepository
+import com.dozy.mobile.domain.character.CharacterSync
+import com.dozy.mobile.domain.character.CharacterType
+import com.dozy.mobile.domain.character.SavedCharacter
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal val validDraft =
@@ -14,7 +23,7 @@ internal val validDraft =
 internal fun character(
     id: String = "1",
     name: String = "Oliver",
-) = com.dozy.mobile.domain.Character(
+) = com.dozy.mobile.domain.character.Character(
     CharacterId(id),
     validDraft.copy(name = CharacterName.from(name)),
 )
@@ -27,7 +36,7 @@ internal class FakeCharacterRepository : CharacterRepository {
 
     override fun observe() = characters
 
-    override suspend fun save(character: com.dozy.mobile.domain.Character): SavedCharacter {
+    override suspend fun save(character: com.dozy.mobile.domain.character.Character): SavedCharacter {
         saves++
         beforeSave()
         failure?.let { throw it }

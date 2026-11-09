@@ -1,4 +1,4 @@
-package com.dozy.mobile
+package com.dozy.mobile.presentation.createcharacter
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -43,7 +43,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +53,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.domain.CharacterField
+import com.dozy.mobile.R
+import com.dozy.mobile.presentation.main.mainBottomMenuScrollSpace
 import com.kjursa.composeuikit.mvi.MviScreen
 import com.kjursa.composeuikit.theme.UiSpacing
 

@@ -1,4 +1,4 @@
-package com.dozy.mobile
+package com.dozy.mobile.presentation.main
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -40,6 +40,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.dozy.mobile.presentation.characters.CharactersTabScreen
+import com.dozy.mobile.presentation.home.HomeScreen
+import com.dozy.mobile.presentation.stories.StoriesTabScreen
 import com.kjursa.composeuikit.theme.UiSpacing
 
 private const val HOME_TAB = "home"

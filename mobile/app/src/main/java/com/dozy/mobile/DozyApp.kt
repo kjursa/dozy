@@ -4,6 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterScreen
+import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
+import com.dozy.mobile.presentation.createstory.CreateStoryScreen
+import com.dozy.mobile.presentation.main.MainScreen
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val MAIN_ROUTE = "main"
