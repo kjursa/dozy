@@ -1,17 +1,16 @@
 package com.dozy.mobile.domain.character
 
-import kotlinx.coroutines.CancellationException
+import com.dozy.mobile.core.coroutines.runCatchingSuspend
 
 class SaveCharacter(
     private val repository: CharacterRepository,
     private val ids: CharacterIdGenerator,
 ) {
     suspend operator fun invoke(draft: CharacterDraft): SaveCharacterResult =
-        try {
-            SaveCharacterResult.Success(repository.save(Character(ids.next(), draft)))
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            SaveCharacterResult.Failure
-        }
+        runCatchingSuspend {
+            repository.save(Character(ids.next(), draft))
+        }.fold(
+            onSuccess = { SaveCharacterResult.Success(it) },
+            onFailure = { SaveCharacterResult.Failure },
+        )
 }

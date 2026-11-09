@@ -1,12 +1,12 @@
 package com.dozy.mobile.data.character
 
+import com.dozy.mobile.core.coroutines.runCatchingSuspend
 import com.dozy.mobile.data.character.api.CharacterApi
 import com.dozy.mobile.data.character.database.CharacterDao
 import com.dozy.mobile.domain.character.Character
 import com.dozy.mobile.domain.character.CharacterRepository
 import com.dozy.mobile.domain.character.CharacterSync
 import com.dozy.mobile.domain.character.SavedCharacter
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.map
 
 /** Local-first: a successful save always means a durable row, even with no server. */
@@ -19,20 +19,10 @@ class DefaultCharacterRepository(
     override suspend fun save(character: Character): SavedCharacter {
         // Fail before HTTP if the device cannot persist. Never report a non-durable save as success.
         dao.upsert(character.toEntity(pendingSync = true))
-        val acknowledged =
-            try {
-                api.save(character.toDto())
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                false
-            }
+        val acknowledged = runCatchingSuspend { api.save(character.toDto()) }.getOrDefault(false)
         if (acknowledged) {
-            try {
-                dao.upsert(character.toEntity(pendingSync = false))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
+            val metadataSaved = runCatchingSuspend { dao.upsert(character.toEntity(pendingSync = false)) }
+            if (metadataSaved.isFailure) {
                 // The original row is already durable; do not encourage duplicate submissions.
                 return SavedCharacter(character, CharacterSync.PENDING)
             }
