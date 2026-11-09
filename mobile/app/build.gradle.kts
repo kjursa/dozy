@@ -34,6 +34,10 @@ android {
 }
 
 dependencies {
+    implementation(platform("io.insert-koin:koin-bom:4.1.1"))
+    implementation("io.insert-koin:koin-core")
+    implementation("io.insert-koin:koin-android")
+    implementation("io.insert-koin:koin-compose-viewmodel")
     implementation("androidx.room3:room3-runtime:3.0.3")
     ksp("androidx.room3:room3-compiler:3.0.3")
     implementation("androidx.sqlite:sqlite-bundled:2.6.2")

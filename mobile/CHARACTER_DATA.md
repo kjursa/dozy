@@ -10,7 +10,7 @@ identity, name, personality, appearance, type, and a local `pendingSync` flag. R
 2.2.20-2.0.4. The DAO uses Flow and suspend operations; the Android construction
 boundary supplies a bundled SQLite driver. The exported v1 schema is checked in.
 The domain and data operations use Kotlin types and coroutine APIs. Android-specific
-construction (including the Ktor Android engine) lives in `DozyDependencies.kt`.
+construction (including the Ktor Android engine) lives in `di/AndroidModule.kt`.
 
 ## Save outcomes
 
@@ -44,3 +44,21 @@ authentication, validation, and synchronization/retry behavior with the backend.
 No remote list endpoint is assumed: both views load the durable local collection.
 
 Artwork remains a presentation placeholder because the backend has no image contract.
+
+## Dependency injection and KMP migration
+
+Koin starts once in `DozyApplication`. `di/CharacterModule.kt` declares the shared
+repository, API, use cases, and lifecycle-managed ViewModels with constructor
+injection. It has no Android imports. `di/AndroidModule.kt` supplies the Room
+construction/DAO, HTTP engine, and ID generator; a future iOS module will supply
+the same dependency types. Domain and data collaborators do not resolve Koin
+services themselves. Composable routes use `koinViewModel()` so each navigation
+entry owns its ViewModel and supplies creation extras for `SavedStateHandle`.
+The existing constructor-based unit tests remain independent of Koin; the DI
+integration test replaces platform dependencies and checks owner-scoped ViewModel
+reuse, form state, saving, and reactive list updates.
+
+Koin 4.1.1 is pinned for the current Kotlin 2.2.20 toolchain. The multiplatform
+`koin-compose-viewmodel` API can move with the shared graph; only Android startup
+and platform construction use `koin-android`. A future KMP migration will also
+need to move Android presentation resources out of any shared ViewModels.

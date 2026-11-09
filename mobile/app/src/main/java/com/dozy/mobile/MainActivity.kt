@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,11 +46,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dozy.mobile.ui.theme.DozyColorScheme
 import com.dozy.mobile.ui.theme.DozyTheme
 import com.kjursa.composeuikit.mvi.MviScreen
 import com.kjursa.composeuikit.theme.UiSpacing
+import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,9 +64,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             DozyTheme {
-                CompositionLocalProvider(LocalDozyViewModelFactory provides (application as DozyApplication).viewModelFactory) {
-                    DozyApp()
-                }
+                DozyApp()
             }
         }
     }
@@ -78,7 +75,7 @@ internal fun HomeScreen(
     onCreateStory: () -> Unit,
     onAddCharacter: () -> Unit,
 ) {
-    val homeViewModel: HomeViewModel = viewModel(factory = LocalDozyViewModelFactory.current)
+    val homeViewModel: HomeViewModel = koinViewModel()
     MviScreen(
         viewModel = homeViewModel,
         onEffect = { effect ->
@@ -364,7 +361,7 @@ private fun ReadTime(label: String) {
 
 @Composable
 internal fun StoriesTabScreen() {
-    val storiesViewModel: StoriesViewModel = viewModel()
+    val storiesViewModel: StoriesViewModel = koinViewModel()
     MviScreen(
         viewModel = storiesViewModel,
         onEffect = { effect ->
@@ -411,7 +408,7 @@ internal fun StoriesTabContent(
 
 @Composable
 internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
-    val charactersViewModel: CharactersViewModel = viewModel(factory = LocalDozyViewModelFactory.current)
+    val charactersViewModel: CharactersViewModel = koinViewModel()
     MviScreen(
         viewModel = charactersViewModel,
         onEffect = { effect ->
