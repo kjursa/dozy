@@ -5,7 +5,6 @@ import com.dozy.mobile.domain.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -22,7 +21,6 @@ import org.junit.Test
 class CreateCharacterViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = FakeCharacterRepository()
-    private val validator = CharacterValidator()
 
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -58,7 +56,7 @@ class CreateCharacterViewModelTest {
             assertEquals("Green eyes", viewModel(handle).uiState.value.appearance)
         }
 
-    @Test fun savingSuccessAndDoneAvoidDuplicateSaves() =
+    @Test fun successfulSaveClosesImmediatelyAndAvoidsDuplicateSaves() =
         runTest(dispatcher) {
             val gate = CompletableDeferred<Unit>()
             repository.beforeSave = { gate.await() }
@@ -71,12 +69,10 @@ class CreateCharacterViewModelTest {
             assertEquals(1, repository.saves)
             gate.complete(Unit)
             advanceUntilIdle()
-            assertEquals(SaveStatus.SUCCESS, vm.uiState.value.saveStatus)
-            assertEquals(CharacterSync.PENDING, vm.uiState.value.sync)
-            val effect = async { vm.effects.first() }
+            // Success emits navigation without another Save/Done click.
+            assertEquals(CreateCharacterEffect.Saved, vm.effects.first())
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertEquals(CreateCharacterEffect.Saved, effect.await())
             assertEquals(1, repository.saves)
         }
 
@@ -90,7 +86,34 @@ class CreateCharacterViewModelTest {
             repository.failure = null
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertEquals(SaveStatus.SUCCESS, vm.uiState.value.saveStatus)
+            assertEquals(CreateCharacterEffect.Saved, vm.effects.first())
+        }
+
+    @Test fun invalidNameNeverStartsSavingAndErrorsClearOnCorrection() =
+        runTest(dispatcher) {
+            val vm = viewModel()
+            for (name in listOf("", "a".repeat(51), "Captain\nFinn")) {
+                vm.dispatch(CreateCharacterAction.NameChanged(name))
+                vm.dispatch(CreateCharacterAction.SaveClicked)
+                assertEquals(SaveStatus.EDITING, vm.uiState.value.saveStatus)
+                assertEquals(setOf(CharacterField.NAME), vm.uiState.value.errors.keys)
+            }
+            advanceUntilIdle()
+            assertEquals(0, repository.saves)
+            vm.dispatch(CreateCharacterAction.NameChanged("  Finn  "))
+            assertTrue(
+                vm.uiState.value.errors
+                    .isEmpty(),
+            )
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertEquals(
+                "Finn",
+                repository.characters.value
+                    .last()
+                    .details.name.value,
+            )
+            assertEquals(CreateCharacterEffect.Saved, vm.effects.first())
         }
 
     @Test fun savedCharacterUpdatesBothViewsAndSurvivesViewModelRecreation() =
@@ -143,7 +166,6 @@ class CreateCharacterViewModelTest {
     private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
         CreateCharacterViewModel(
             handle,
-            SaveCharacter(repository, validator, CharacterIdGenerator { CharacterId("new") }),
-            validator,
+            SaveCharacter(repository, CharacterIdGenerator { CharacterId("new") }),
         )
 }

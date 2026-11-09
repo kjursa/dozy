@@ -15,7 +15,9 @@ construction (including the Ktor Android engine) lives in `DozyDependencies.kt`.
 ## Save outcomes
 
 - Validate required name, personality, appearance and type before persistence.
-  Name is limited to 80 trimmed characters; personality and appearance to 2000 each.
+  Private value-class constructors and `from()` factories enforce these rules before
+  the use case runs. Name is a single line of 1–50 trimmed `String.length` units;
+  personality and appearance are required and limited to 2000 trimmed units each.
   These are local product rules until a backend contract is agreed.
 - Generate an identity and write a pending row before attempting HTTP. A failed
   local write reports failure and does not call the API.
@@ -23,9 +25,10 @@ construction (including the Ktor Android engine) lives in `DozyDependencies.kt`.
   HTTP errors, or an unconfigured API leave the durable row pending and return a
   successful local save. Failure to update sync metadata also preserves local success.
 - Cancellation propagates. Any row already written remains pending.
-- The form displays saving, failure/retry, and success. Local success explicitly says
-  that server sync is unavailable; Done returns to the previous destination without
-  submitting again. Home and Characters observe the database, including pending rows.
+- The form validates before calling the save use case, replaces Save with a progress
+  indicator while saving, and closes immediately after a successful local save.
+  A failed save restores the button and shows a retryable error. Home and Characters
+  observe the database, including pending rows.
 - No automatic sync worker is included. Pending rows remain on the device until a
   future sync feature implements the agreed backend contract.
 

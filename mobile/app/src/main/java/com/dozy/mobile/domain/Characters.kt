@@ -8,17 +8,49 @@ import kotlinx.coroutines.flow.map
     val value: String,
 )
 
-@JvmInline value class CharacterName(
-    val value: String,
-)
+enum class CharacterValueError { EMPTY, TOO_LONG, LINE_BREAK }
 
-@JvmInline value class CharacterPersonality(
-    val value: String,
-)
+class CharacterValueException(
+    val reason: CharacterValueError,
+) : IllegalArgumentException(reason.name)
 
-@JvmInline value class CharacterAppearance(
+@JvmInline value class CharacterName private constructor(
     val value: String,
-)
+) {
+    companion object {
+        fun from(raw: String): CharacterName {
+            val value = validatedText(raw, 50)
+            if ('\n' in value || '\r' in value) throw CharacterValueException(CharacterValueError.LINE_BREAK)
+            return CharacterName(value)
+        }
+    }
+}
+
+@JvmInline value class CharacterPersonality private constructor(
+    val value: String,
+) {
+    companion object {
+        fun from(raw: String) = CharacterPersonality(validatedText(raw, 2000))
+    }
+}
+
+@JvmInline value class CharacterAppearance private constructor(
+    val value: String,
+) {
+    companion object {
+        fun from(raw: String) = CharacterAppearance(validatedText(raw, 2000))
+    }
+}
+
+private fun validatedText(
+    raw: String,
+    limit: Int,
+): String {
+    val value = raw.trim()
+    if (value.isEmpty()) throw CharacterValueException(CharacterValueError.EMPTY)
+    if (value.length > limit) throw CharacterValueException(CharacterValueError.TOO_LONG)
+    return value
+}
 
 enum class CharacterType { CHILD, ANIMAL, FANTASY, OTHER }
 
@@ -26,7 +58,7 @@ data class CharacterDraft(
     val name: CharacterName,
     val personality: CharacterPersonality,
     val appearance: CharacterAppearance,
-    val type: CharacterType?,
+    val type: CharacterType,
 )
 
 data class Character(
@@ -35,36 +67,6 @@ data class Character(
 )
 
 enum class CharacterField { NAME, PERSONALITY, APPEARANCE, TYPE }
-
-data class CharacterValidation(
-    val errors: Map<CharacterField, String>,
-) {
-    val isValid: Boolean get() = errors.isEmpty()
-}
-
-class CharacterValidator {
-    fun validate(draft: CharacterDraft): CharacterValidation =
-        CharacterValidation(
-            buildMap {
-                checkText(CharacterField.NAME, draft.name.value, 80)
-                checkText(CharacterField.PERSONALITY, draft.personality.value, 2000)
-                checkText(CharacterField.APPEARANCE, draft.appearance.value, 2000)
-                if (draft.type == null) put(CharacterField.TYPE, "Choose a character type.")
-            },
-        )
-
-    private fun MutableMap<CharacterField, String>.checkText(
-        field: CharacterField,
-        text: String,
-        limit: Int,
-    ) {
-        if (text.isBlank()) {
-            put(field, "This field is required.")
-        } else if (text.trim().length > limit) {
-            put(field, "Use at most $limit characters.")
-        }
-    }
-}
 
 enum class CharacterSync { SYNCED, PENDING }
 
@@ -88,10 +90,6 @@ fun interface CharacterIdGenerator {
 }
 
 sealed interface SaveCharacterResult {
-    data class Invalid(
-        val validation: CharacterValidation,
-    ) : SaveCharacterResult
-
     data class Success(
         val saved: SavedCharacter,
     ) : SaveCharacterResult
@@ -101,26 +99,16 @@ sealed interface SaveCharacterResult {
 
 class SaveCharacter(
     private val repository: CharacterRepository,
-    private val validator: CharacterValidator,
     private val ids: CharacterIdGenerator,
 ) {
-    suspend operator fun invoke(draft: CharacterDraft): SaveCharacterResult {
-        val validation = validator.validate(draft)
-        if (!validation.isValid) return SaveCharacterResult.Invalid(validation)
-        val normalized =
-            draft.copy(
-                name = CharacterName(draft.name.value.trim()),
-                personality = CharacterPersonality(draft.personality.value.trim()),
-                appearance = CharacterAppearance(draft.appearance.value.trim()),
-            )
-        return try {
-            SaveCharacterResult.Success(repository.save(Character(ids.next(), normalized)))
+    suspend operator fun invoke(draft: CharacterDraft): SaveCharacterResult =
+        try {
+            SaveCharacterResult.Success(repository.save(Character(ids.next(), draft)))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             SaveCharacterResult.Failure
         }
-    }
 }
 
 /** Both lists share the same durable source; Room emits again when a character is saved. */

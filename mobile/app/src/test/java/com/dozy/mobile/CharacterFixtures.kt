@@ -5,9 +5,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 internal val validDraft =
     CharacterDraft(
-        CharacterName("Oliver"),
-        CharacterPersonality("Curious and brave"),
-        CharacterAppearance("Curly brown hair"),
+        CharacterName.from("Oliver"),
+        CharacterPersonality.from("Curious and brave"),
+        CharacterAppearance.from("Curly brown hair"),
         CharacterType.CHILD,
     )
 
@@ -16,7 +16,7 @@ internal fun character(
     name: String = "Oliver",
 ) = com.dozy.mobile.domain.Character(
     CharacterId(id),
-    validDraft.copy(name = CharacterName(name)),
+    validDraft.copy(name = CharacterName.from(name)),
 )
 
 internal class FakeCharacterRepository : CharacterRepository {

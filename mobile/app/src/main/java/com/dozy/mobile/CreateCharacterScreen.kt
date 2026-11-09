@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -112,16 +113,6 @@ internal fun CreateCharacterScreen(
                     )
                     when (state.saveStatus) {
                         SaveStatus.SAVING -> Text("Saving character…")
-                        SaveStatus.SUCCESS ->
-                            Text(
-                                if (state.sync ==
-                                    com.dozy.mobile.domain.CharacterSync.PENDING
-                                ) {
-                                    "Saved on this device. Server sync is unavailable."
-                                } else {
-                                    "Character saved."
-                                },
-                            )
                         SaveStatus.FAILURE ->
                             Text(
                                 "Could not save on this device. Please try again.",
@@ -137,7 +128,6 @@ internal fun CreateCharacterScreen(
                 onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
                 onSave = { dispatch(CreateCharacterAction.SaveClicked) },
                 saving = state.saveStatus == SaveStatus.SAVING,
-                saved = state.saveStatus == SaveStatus.SUCCESS,
             )
         }
     }
@@ -417,7 +407,6 @@ private fun CharacterActions(
     onPreview: () -> Unit,
     onSave: () -> Unit,
     saving: Boolean,
-    saved: Boolean,
 ) {
     Surface(
         modifier =
@@ -434,6 +423,7 @@ private fun CharacterActions(
         Row(Modifier.padding(UiSpacing.x1), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             OutlinedButton(
                 onClick = onPreview,
+                enabled = !saving,
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -443,28 +433,28 @@ private fun CharacterActions(
                 Spacer(Modifier.width(UiSpacing.x1))
                 Text("Generate Preview", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Button(
-                onClick = onSave,
-                enabled = !saving,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(UiSpacing.x1))
-                Text(
-                    if (saving) {
-                        "Saving…"
-                    } else if (saved) {
-                        "Done"
-                    } else {
-                        "Save Character"
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            if (saving) {
+                Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            } else {
+                Button(
+                    onClick = onSave,
+                    enabled = !saving,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(UiSpacing.x1))
+                    Text(
+                        "Save Character",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

@@ -33,11 +33,9 @@ class DozyApplication : Application() {
             }
         // No character endpoint exists in the backend yet. Enable only when its contract is agreed.
         val repository = DefaultCharacterRepository(database.characters(), KtorCharacterApi(client, baseUrl = null))
-        val validator = CharacterValidator()
         DozyViewModelFactory(
-            SaveCharacter(repository, validator, CharacterIdGenerator { CharacterId(UUID.randomUUID().toString()) }),
+            SaveCharacter(repository, CharacterIdGenerator { CharacterId(UUID.randomUUID().toString()) }),
             ObserveCharacters(repository),
-            validator,
         )
     }
 }
@@ -47,7 +45,6 @@ internal val LocalDozyViewModelFactory = staticCompositionLocalOf<ViewModelProvi
 internal class DozyViewModelFactory(
     private val saveCharacter: SaveCharacter,
     private val observeCharacters: ObserveCharacters,
-    private val validator: CharacterValidator,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(
@@ -55,7 +52,7 @@ internal class DozyViewModelFactory(
         extras: CreationExtras,
     ): T =
         when (modelClass) {
-            CreateCharacterViewModel::class.java -> CreateCharacterViewModel(extras.createSavedStateHandle(), saveCharacter, validator)
+            CreateCharacterViewModel::class.java -> CreateCharacterViewModel(extras.createSavedStateHandle(), saveCharacter)
             HomeViewModel::class.java -> HomeViewModel(observeCharacters)
             CharactersViewModel::class.java -> CharactersViewModel(observeCharacters)
             else -> error("Unknown ViewModel: $modelClass")

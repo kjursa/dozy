@@ -11,12 +11,11 @@ private const val KEY_NAME = "createCharacter.name"
 private const val KEY_PERSONALITY = "createCharacter.personality"
 private const val KEY_APPEARANCE = "createCharacter.appearance"
 
-internal enum class SaveStatus { EDITING, SAVING, SUCCESS, FAILURE }
+internal enum class SaveStatus { EDITING, SAVING, FAILURE }
 
 internal data class CreateCharacterUiState(
     val errors: Map<CharacterField, String> = emptyMap(),
     val saveStatus: SaveStatus = SaveStatus.EDITING,
-    val sync: CharacterSync? = null,
     val selectedType: String = "Child",
     val name: String = "Oliver",
     val personality: String = "Curious and brave, loves exploring mysterious places and asking ‘what’s over there?’",
@@ -58,7 +57,6 @@ internal sealed interface CreateCharacterEffect {
 internal class CreateCharacterViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val saveCharacter: SaveCharacter,
-    private val validator: CharacterValidator,
 ) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(savedStateHandle.toUiState()) {
     override fun onAction(action: CreateCharacterAction) {
         when (action) {
@@ -74,30 +72,24 @@ internal class CreateCharacterViewModel(
 
     private fun save() {
         if (uiState.value.saveStatus == SaveStatus.SAVING) return
-        if (uiState.value.saveStatus == SaveStatus.SUCCESS) {
-            sendEffect(CreateCharacterEffect.Saved)
-            return
-        }
-        val draft = uiState.value.toDraft()
-        val validation = validator.validate(draft)
-        if (!validation.isValid) {
-            updateState { copy(errors = validation.errors) }
+        val (draft, errors) = uiState.value.validateDraft()
+        if (draft == null) {
+            updateState { copy(saveStatus = SaveStatus.EDITING, errors = errors) }
             return
         }
         updateState { copy(saveStatus = SaveStatus.SAVING, errors = emptyMap()) }
         viewModelScope.launch {
-            when (val result = saveCharacter(draft)) {
-                is SaveCharacterResult.Invalid -> updateState { copy(saveStatus = SaveStatus.EDITING, errors = result.validation.errors) }
-                is SaveCharacterResult.Success -> updateState { copy(saveStatus = SaveStatus.SUCCESS, sync = result.saved.sync) }
+            when (saveCharacter(draft)) {
+                is SaveCharacterResult.Success -> sendEffect(CreateCharacterEffect.Saved)
                 SaveCharacterResult.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
             }
         }
     }
 
     private fun updateCharacterState(reducer: CreateCharacterUiState.() -> CreateCharacterUiState) {
-        if (uiState.value.saveStatus == SaveStatus.SAVING || uiState.value.saveStatus == SaveStatus.SUCCESS) return
+        if (uiState.value.saveStatus == SaveStatus.SAVING) return
         val edited = uiState.value.reducer()
-        val next = edited.copy(errors = validator.validate(edited.toDraft()).errors, saveStatus = SaveStatus.EDITING)
+        val next = edited.copy(errors = edited.validateDraft().errors, saveStatus = SaveStatus.EDITING)
         savedStateHandle[KEY_SELECTED_TYPE] = next.selectedType
         savedStateHandle[KEY_NAME] = next.name
         savedStateHandle[KEY_PERSONALITY] = next.personality
@@ -118,10 +110,41 @@ private fun SavedStateHandle.toUiState() =
                 ?: "Five years old with curly brown hair, bright green eyes, a yellow hoodie and blue sneakers.",
     )
 
-private fun CreateCharacterUiState.toDraft() =
-    CharacterDraft(
-        CharacterName(name),
-        CharacterPersonality(personality),
-        CharacterAppearance(appearance),
-        CharacterType.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
-    )
+private data class CharacterFormValidation(
+    val draft: CharacterDraft?,
+    val errors: Map<CharacterField, String>,
+)
+
+/** Build domain values before saving; invalid text never reaches the use case. */
+private fun CreateCharacterUiState.validateDraft(): CharacterFormValidation {
+    val errors = mutableMapOf<CharacterField, String>()
+    val validName = errors.validate(CharacterField.NAME, 50) { CharacterName.from(name) }
+    val validPersonality = errors.validate(CharacterField.PERSONALITY, 2000) { CharacterPersonality.from(personality) }
+    val validAppearance = errors.validate(CharacterField.APPEARANCE, 2000) { CharacterAppearance.from(appearance) }
+    val type = CharacterType.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) }
+    if (type == null) errors[CharacterField.TYPE] = "Choose a character type."
+    val draft =
+        if (validName != null && validPersonality != null && validAppearance != null && type != null) {
+            CharacterDraft(validName, validPersonality, validAppearance, type)
+        } else {
+            null
+        }
+    return CharacterFormValidation(draft, errors)
+}
+
+private inline fun <T> MutableMap<CharacterField, String>.validate(
+    field: CharacterField,
+    limit: Int,
+    create: () -> T,
+): T? =
+    try {
+        create()
+    } catch (invalid: CharacterValueException) {
+        this[field] =
+            when (invalid.reason) {
+                CharacterValueError.EMPTY -> "This field is required."
+                CharacterValueError.TOO_LONG -> "Use at most $limit characters."
+                CharacterValueError.LINE_BREAK -> "Use a single line."
+            }
+        null
+    }
