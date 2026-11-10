@@ -4,12 +4,34 @@ import com.dozy.mobile.feature.character.domain.model.*
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterErrors
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.SaveStatus
+import com.dozy.mobile.feature.character.presentation.create.validateInput
 import com.dozy.mobile.feature.character.presentation.create.withValidationErrors
 import com.kjursa.foundation.presentation.text.UiText
 import org.junit.Assert.*
 import org.junit.Test
 
 class CreateCharacterMappingTest {
+    @Test fun sampleDefaultsAreResourcesUntilInitializedAndNeverReplaceEditedText() {
+        val initial = CreateCharacterUiState()
+        assertEquals(UiText.Resource(R.string.sample_character_name), initial.displayName)
+        assertEquals(UiText.Resource(R.string.sample_character_personality), initial.displayPersonality)
+        assertEquals(UiText.Resource(R.string.sample_character_appearance), initial.displayAppearance)
+        val edited = initial.withName("").withSampleDefaults("Localized name", "Localized personality", "Localized appearance")
+        assertEquals("", edited.name)
+        assertEquals(UiText.Plain(""), edited.displayName)
+        assertEquals("Localized personality", edited.personality)
+        assertEquals(edited, edited.withSampleDefaults("Other name", "Other personality", "Other appearance"))
+    }
+
+    @Test fun stableTypeValuesValidateIndependentlyOfDisplayLabels() {
+        for (type in Character.Type.entries) {
+            val state =
+                CreateCharacterUiState(name = "Finn", personality = "Kind", appearance = "Green eyes", selectedType = type.name.lowercase())
+            val result = state.validateInput() as CreateCharacterValidation.Valid
+            assertEquals(type, result.input.type)
+        }
+    }
+
     @Test fun mapsNameErrorsToResourcesAndClearsOtherFields() {
         val cases =
             mapOf(

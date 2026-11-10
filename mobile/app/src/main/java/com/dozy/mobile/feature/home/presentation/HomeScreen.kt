@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
@@ -46,6 +47,7 @@ import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.resolve
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -67,7 +69,7 @@ internal fun HomeScreen(
         },
     ) { state, dispatch ->
         Column {
-            if (state.characterLoadError) Text("Could not load characters.", color = MaterialTheme.colorScheme.error)
+            if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
             HomeContent(state = state, onAction = dispatch)
         }
     }
@@ -115,10 +117,10 @@ private fun HomeHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-            Eyebrow(state.dateLabel)
-            Text(state.greeting, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+            Eyebrow(state.dateLabel.resolve())
+            Text(state.greeting.resolve(), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
             Text(
-                state.prompt,
+                state.prompt.resolve(),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -132,7 +134,7 @@ private fun HomeHeader(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Default.Notifications,
-                    contentDescription = "Notifications",
+                    contentDescription = stringResource(R.string.notifications),
                     tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(24.dp),
                 )
@@ -154,9 +156,13 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                Text("Create a New Story", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimary)
                 Text(
-                    "Tell us who the heroes are and we'll dream up tonight's tale.",
+                    stringResource(R.string.create_a_new_story),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Text(
+                    stringResource(R.string.tell_us_who_the_heroes_are_and_we_ll),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
                 )
@@ -172,13 +178,17 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp),
                         )
-                        Text("Create Story", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            stringResource(R.string.create_story),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
             }
             Image(
                 painterResource(R.drawable.story_moon),
-                contentDescription = "Open magical book",
+                contentDescription = stringResource(R.string.open_magical_book),
                 modifier = Modifier.size(92.dp),
                 contentScale = ContentScale.Crop,
             )
@@ -193,7 +203,7 @@ private fun StoriesSection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading("LIBRARY", "Your Stories", onSeeAll)
+        SectionHeading(stringResource(R.string.library), stringResource(R.string.your_stories), onSeeAll)
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             stories.take(2).forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
         }
@@ -208,7 +218,7 @@ private fun CharactersSection(
     onCharacterSelected: (HomeCharacter) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading("CAST", "Your Characters")
+        SectionHeading(stringResource(R.string.cast), stringResource(R.string.your_characters))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
                 Column(
@@ -249,13 +259,17 @@ private fun CharactersSection(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Default.AddCircle,
-                            contentDescription = "Add character",
+                            contentDescription = stringResource(R.string.add_character),
                             tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(28.dp),
                         )
                     }
                 }
-                Text("Add", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.add),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

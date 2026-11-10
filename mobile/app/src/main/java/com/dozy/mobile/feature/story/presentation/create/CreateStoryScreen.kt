@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,28 +60,29 @@ import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.kjursa.foundation.compose.theme.UiSpacing
 
 private data class StoryThemeOption(
-    val title: String,
+    val title: Int,
     val image: Int,
 )
 
 private data class StoryHero(
-    val name: String,
+    val id: String,
+    val name: Int,
     val image: Int,
 )
 
 private val storyThemes =
     listOf(
-        StoryThemeOption("Pirates", R.drawable.story_pirates),
-        StoryThemeOption("Detectives", R.drawable.story_detectives),
-        StoryThemeOption("Enchanted Forest", R.drawable.story_forest),
-        StoryThemeOption("Space", R.drawable.story_space),
+        StoryThemeOption(R.string.pirates, R.drawable.story_pirates),
+        StoryThemeOption(R.string.detectives, R.drawable.story_detectives),
+        StoryThemeOption(R.string.enchanted_forest, R.drawable.story_forest),
+        StoryThemeOption(R.string.space, R.drawable.story_space),
     )
 
 private val storyHeroes =
     listOf(
-        StoryHero("Oliver", R.drawable.character_oliver),
-        StoryHero("Luna", R.drawable.character_luna),
-        StoryHero("Captain Finn", R.drawable.character_finn),
+        StoryHero("oliver", R.string.oliver, R.drawable.character_oliver),
+        StoryHero("luna", R.string.luna, R.drawable.character_luna),
+        StoryHero("captain_finn", R.string.captain_finn, R.drawable.character_finn),
     )
 
 @Composable
@@ -90,7 +92,7 @@ fun CreateStoryScreen(
     onGenerate: () -> Unit,
 ) {
     var selectedTheme by rememberSaveable { mutableIntStateOf(0) }
-    val selectedHeroes = remember { mutableStateListOf("Oliver", "Captain Finn") }
+    val selectedHeroes = remember { mutableStateListOf("oliver", "captain_finn") }
     var selectedLength by rememberSaveable { mutableIntStateOf(0) }
     var specialRequest by rememberSaveable { mutableStateOf("") }
     var ending by rememberSaveable { mutableStateOf("") }
@@ -138,7 +140,7 @@ fun CreateStoryScreen(
             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(UiSpacing.x1))
             Text(
-                "Generate My Story",
+                stringResource(R.string.generate_my_story),
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                 color = MaterialTheme.colorScheme.onPrimary,
             )
@@ -182,7 +184,11 @@ private fun StoryHeader(onBack: () -> Unit) {
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.secondary)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -203,9 +209,21 @@ private fun StoryHeader(onBack: () -> Unit) {
 @Composable
 private fun StoryIntro() {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1 / 2)) {
-        Text("STEP 1 OF 4", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Where shall we go tonight?", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-        Text("Pick one adventure theme.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(R.string.step_1_of_4),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            stringResource(R.string.where_shall_we_go_tonight),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            stringResource(R.string.pick_one_adventure_theme),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -247,7 +265,7 @@ private fun ThemeCard(
             Box {
                 Image(
                     painterResource(option.image),
-                    contentDescription = option.title,
+                    contentDescription = stringResource(option.title),
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium),
                     contentScale = ContentScale.Crop,
                 )
@@ -260,7 +278,7 @@ private fun ThemeCard(
                     ) {
                         Icon(
                             Icons.Default.Check,
-                            contentDescription = "Selected",
+                            contentDescription = stringResource(R.string.selected),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(5.dp).size(16.dp),
                         )
@@ -268,7 +286,7 @@ private fun ThemeCard(
                 }
             }
             Text(
-                option.title,
+                stringResource(option.title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -286,25 +304,29 @@ private fun HeroPicker(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
-            Text("HEROES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                "Who will join the adventure?",
+                stringResource(R.string.heroes),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                stringResource(R.string.who_will_join_the_adventure),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             storyHeroes.forEach { hero ->
-                val isSelected = hero.name in selected
+                val isSelected = hero.id in selected
                 Column(
-                    modifier = Modifier.clickable { onToggle(hero.name) },
+                    modifier = Modifier.clickable { onToggle(hero.id) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
                     Box {
                         Image(
                             painterResource(hero.image),
-                            contentDescription = hero.name,
+                            contentDescription = stringResource(hero.name),
                             modifier =
                                 Modifier
                                     .size(80.dp)
@@ -324,7 +346,7 @@ private fun HeroPicker(
                             ) {
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = "Selected",
+                                    contentDescription = stringResource(R.string.selected),
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.padding(4.dp),
                                 )
@@ -332,7 +354,7 @@ private fun HeroPicker(
                         }
                     }
                     Text(
-                        hero.name,
+                        stringResource(hero.name),
                         style = MaterialTheme.typography.titleMedium,
                         color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -358,7 +380,11 @@ private fun HeroPicker(
                         )
                     }
                 }
-                Text("New hero", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.new_hero),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -371,26 +397,30 @@ private fun LengthPicker(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
-            Text("LENGTH", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                "How long should the story be?",
+                stringResource(R.string.length),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                stringResource(R.string.how_long_should_the_story_be),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             LengthCard(
-                "Short",
-                "A little bedtime adventure",
-                "3–5 min",
+                stringResource(R.string.story_length_short),
+                stringResource(R.string.a_little_bedtime_adventure),
+                stringResource(R.string.text_3_5_min),
                 Icons.Default.Bedtime,
                 selected == 0,
                 Modifier.weight(1f),
             ) { onSelect(0) }
             LengthCard(
-                "Long",
-                "One more chapter of magic",
-                "8–12 min",
+                stringResource(R.string.story_length_long),
+                stringResource(R.string.one_more_chapter_of_magic),
+                stringResource(R.string.text_8_12_min),
                 Icons.Default.AutoAwesome,
                 selected == 1,
                 Modifier.weight(1f),
@@ -448,9 +478,13 @@ private fun StoryPrompts(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Column {
-            Text("OPTIONAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                "Anything special you'd like?",
+                stringResource(R.string.optional),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                stringResource(R.string.anything_special_you_d_like),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -465,19 +499,19 @@ private fun StoryPrompts(
                 StoryInput(
                     value = specialRequest,
                     onValueChange = onSpecialRequestChange,
-                    placeholder = "Maybe the heroes discover a hidden treasure, solve a mystery, or make a new friend...",
+                    placeholder = stringResource(R.string.maybe_the_heroes_discover_a_hidden_treasure_solve_a),
                     minimumHeight = 96.dp,
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Text(
-                        "How should it end?  (optional)",
+                        stringResource(R.string.how_should_it_end_optional),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     StoryInput(
                         value = ending,
                         onValueChange = onEndingChange,
-                        placeholder = "Oliver finds the lost treasure and shares it with his friends.",
+                        placeholder = stringResource(R.string.oliver_finds_the_lost_treasure_and_shares_it_with),
                         minimumHeight = 64.dp,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
@@ -488,7 +522,7 @@ private fun StoryPrompts(
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            "Leave empty and we'll create a surprise ending.",
+                            stringResource(R.string.leave_empty_and_we_ll_create_a_surprise_ending),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

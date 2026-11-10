@@ -4,6 +4,7 @@ import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.presentation.list.CharactersAction
 import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
+import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -38,7 +39,7 @@ class CharactersViewModelTest {
             )
         dispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
-        assertEquals("Characters", state.title)
+        assertEquals(UiText.Resource(R.string.characters), state.title)
         assertEquals(listOf("Oliver", "Luna", "Captain Finn"), state.characters.map { it.name })
     }
 

@@ -25,6 +25,7 @@ import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.resolve
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -57,12 +58,20 @@ internal fun StoriesTabContent(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow(state.eyebrow)
-                    Text(state.title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Text(state.subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Eyebrow(state.eyebrow.resolve())
+                    Text(
+                        state.title.resolve(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text(
+                        state.subtitle.resolve(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                    SectionHeading(state.collectionEyebrow, state.collectionTitle)
+                    SectionHeading(state.collectionEyebrow.resolve(), state.collectionTitle.resolve())
                     Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                         state.stories.take(2).forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
                     }

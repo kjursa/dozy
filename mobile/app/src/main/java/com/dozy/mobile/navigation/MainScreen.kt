@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -36,6 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.dozy.mobile.R
 import com.dozy.mobile.feature.character.presentation.list.CharactersTabScreen
 import com.dozy.mobile.feature.home.presentation.HomeScreen
 import com.dozy.mobile.feature.story.presentation.list.StoriesTabScreen
@@ -106,9 +108,23 @@ private fun MainBottomPanel(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
         Row(Modifier.padding(UiSpacing.x1), verticalAlignment = Alignment.CenterVertically) {
-            MainBottomItem("Home", Icons.Default.Home, HOME_TAB, selectedRoute, onSelect, Modifier.weight(1f))
-            MainBottomItem("My Stories", Icons.Default.Book, STORIES_TAB, selectedRoute, onSelect, Modifier.weight(1f))
-            MainBottomItem("Characters", Icons.Default.Groups, CHARACTERS_TAB, selectedRoute, onSelect, Modifier.weight(1f))
+            MainBottomItem(stringResource(R.string.home), Icons.Default.Home, HOME_TAB, selectedRoute, onSelect, Modifier.weight(1f))
+            MainBottomItem(
+                stringResource(R.string.my_stories),
+                Icons.Default.Book,
+                STORIES_TAB,
+                selectedRoute,
+                onSelect,
+                Modifier.weight(1f),
+            )
+            MainBottomItem(
+                stringResource(R.string.characters),
+                Icons.Default.Groups,
+                CHARACTERS_TAB,
+                selectedRoute,
+                onSelect,
+                Modifier.weight(1f),
+            )
         }
     }
 }

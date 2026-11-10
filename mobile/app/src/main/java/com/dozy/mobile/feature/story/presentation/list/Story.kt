@@ -1,7 +1,9 @@
 package com.dozy.mobile.feature.story.presentation.list
 
+import com.kjursa.foundation.presentation.text.UiText
+
 internal data class Story(
-    val title: String,
-    val minutes: String,
+    val title: UiText,
+    val minutes: Int,
     val image: Int,
 )

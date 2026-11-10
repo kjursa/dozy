@@ -255,5 +255,7 @@ class CreateCharacterViewModelTest {
         CreateCharacterViewModel(
             SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
             SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
-        )
+        ).also {
+            it.dispatch(CreateCharacterAction.InitializeSamples("Oliver", "Curious and brave", "Green eyes"))
+        }
 }
