@@ -4,7 +4,7 @@ The inspected backend (`backend/src/main/kotlin/com/dozy/Application.kt`) expose
 only `GET /hello`. There is no character database model, endpoint, authentication,
 or character validation contract to mirror. This change does not add backend routes.
 
-Characters are stored in a versioned Room 3 database (`characters.db`), with string
+Characters are stored in a shared Room 3 `DozyDatabase` (`dozy.db`), with string
 identity, name, personality, appearance, type, and a local `pendingSync` flag. Room
 3.0.3 compiles with the existing Kotlin 2.2.20 / AGP 8.13.2 setup using KSP
 2.2.20-2.0.4. The DAO uses Flow and suspend operations; the Android construction
@@ -56,7 +56,11 @@ services themselves. Composable routes use `koinViewModel()` so each navigation
 entry owns its ViewModel and supplies creation extras for `SavedStateHandle`.
 The existing constructor-based unit tests remain independent of Koin; the DI
 integration test replaces platform dependencies and checks owner-scoped ViewModel
-reuse, form state, saving, and reactive list updates.
+reuse, form state, saving, and reactive list updates. A Robolectric integration
+test also exercises the production database/DAO bindings with a real Room file,
+checks every character field after reopening, and verifies Koin closes the database.
+The SQLite driver is injected at the Android boundary: production uses the bundled
+driver, while Robolectric supplies its native framework SQLite driver for JVM tests.
 
 Koin 4.1.1 is pinned for the current Kotlin 2.2.20 toolchain. The multiplatform
 `koin-compose-viewmodel` API can move with the shared graph; only Android startup
@@ -69,7 +73,7 @@ need to move Android presentation resources out of any shared ViewModels.
   creation validation; `.repository`: the CharacterRepository contract;
   `.usecase`: SaveCharacter, ObserveCharacters, and their CharacterIdGenerator dependency.
 - `feature.character.data`: repository implementation and entity/DTO mapping
-  extensions; `database` contains Room database, DAO, and entity files; `api`
+  extensions; `database` contains the feature-owned DAO and entity files; `api`
   contains the API contract, Ktor implementation, and DTO.
 - `feature.character.presentation.create` and `.list`: creation form and character
   list, each with separate ViewModel, UI state, actions, effects, and mapping files.
@@ -81,9 +85,13 @@ need to move Android presentation resources out of any shared ViewModels.
   dependencies. Story-specific cards remain in `feature.story.presentation.components`.
 - `navigation`: the application bottom navigation shell.
 
-The Room database class moved packages; its exported schema moved to the matching
-qualified-name directory. Table definitions, schema version, and identity hash
-are unchanged, so this package refactor does not require a database migration.
+The application-wide Room definition lives in `core.data.database.DozyDatabase`;
+its exported v1 schema lives in the matching qualified-name directory. Only the
+existing character table is registered. Android DI opens one `dozy.db` instance,
+provides its character DAO, and closes the database when Koin closes. Table
+definitions, schema version, and identity hash are unchanged. By product decision,
+there is no migration or copying from the former `characters.db` file: the new
+database starts empty. Existing repository and API contracts remain unchanged.
 
 ## Creation validation and field messages
 
