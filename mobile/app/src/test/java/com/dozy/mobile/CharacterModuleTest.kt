@@ -3,6 +3,7 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
@@ -51,6 +52,7 @@ class CharacterModuleTest {
             val client = HttpClient(MockEngine { error("Sync must remain disabled") })
             val platformModule =
                 module {
+                    single { ApiConfig(baseUrl = null) }
                     single<CharacterDao> { dao }
                     single<HttpClient> { client }
                     single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }

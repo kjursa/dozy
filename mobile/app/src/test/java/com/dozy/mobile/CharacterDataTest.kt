@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.api.CharacterDto
@@ -138,8 +139,7 @@ class CharacterDataTest {
                 }
             val client = HttpClient(engine) { install(ContentNegotiation) { json() } }
             try {
-                assertTrue(KtorCharacterApi(client, "https://example.test/").save(dto))
-                assertFalse(KtorCharacterApi(client, null).save(dto))
+                assertTrue(KtorCharacterApi(client, ApiConfig("https://example.test/")).save(dto))
             } finally {
                 client.close()
             }
@@ -149,7 +149,25 @@ class CharacterDataTest {
         runTest {
             val client = HttpClient(MockEngine { respond("", HttpStatusCode.NotFound) }) { install(ContentNegotiation) { json() } }
             try {
-                assertFalse(KtorCharacterApi(client, "https://example.test").save(character().toDto()))
+                assertFalse(KtorCharacterApi(client, ApiConfig("https://example.test")).save(character().toDto()))
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test fun disabledApiDoesNotSendRequests() =
+        runTest {
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine {
+                        requests++
+                        respond("", HttpStatusCode.NoContent)
+                    },
+                )
+            try {
+                assertFalse(KtorCharacterApi(client, ApiConfig(baseUrl = null)).save(character().toDto()))
+                assertEquals(0, requests)
             } finally {
                 client.close()
             }

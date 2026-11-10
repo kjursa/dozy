@@ -2,6 +2,7 @@ package com.dozy.mobile.di
 
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterDatabase
 import com.dozy.mobile.feature.character.domain.model.Character
@@ -19,6 +20,8 @@ import java.util.UUID
 /** Android construction boundary; a future iOS module supplies equivalent dependencies. */
 internal val androidModule =
     module {
+        // Enable after the backend exposes the agreed API contract.
+        single { ApiConfig(baseUrl = null) }
         single {
             Room
                 .databaseBuilder<CharacterDatabase>(androidContext(), "characters.db")

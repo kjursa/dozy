@@ -18,8 +18,7 @@ import org.koin.dsl.module
 /** Common DI graph: platform modules provide CharacterDao, HttpClient, and CharacterIdGenerator. */
 internal val characterModule =
     module {
-        // The backend has no character endpoint yet. Enable only after agreeing its contract.
-        single<CharacterApi> { KtorCharacterApi(get(), baseUrl = null) }
+        single<CharacterApi> { KtorCharacterApi(get(), get()) }
         single<CharacterRepository> { DefaultCharacterRepository(get(), get()) }
         factoryOf(::SaveCharacter)
         factoryOf(::ObserveCharacters)
