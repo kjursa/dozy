@@ -2,10 +2,10 @@ package com.dozy.mobile.feature.character.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.R
-import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CreateCharacterErrors
-import com.dozy.mobile.feature.character.domain.CreateCharacterInput
-import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterErrors
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import com.kjursa.foundation.presentation.text.UiText
 
 private const val KEY_SELECTED_TYPE = "createCharacter.selectedType"

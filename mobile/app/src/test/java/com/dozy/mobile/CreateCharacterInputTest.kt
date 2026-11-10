@@ -1,7 +1,10 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.*
-import com.dozy.mobile.feature.character.domain.Character
+import com.dozy.mobile.feature.character.domain.model.*
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterErrors
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import org.junit.Assert.*
 import org.junit.Test
 

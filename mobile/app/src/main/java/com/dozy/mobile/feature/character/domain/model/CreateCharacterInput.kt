@@ -1,4 +1,4 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.model
 
 /** Only validated creation requests may reach the save use case. Existing records use Character.Details. */
 class CreateCharacterInput private constructor(

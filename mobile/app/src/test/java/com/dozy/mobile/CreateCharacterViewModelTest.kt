@@ -1,12 +1,12 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
-import com.dozy.mobile.feature.character.domain.CharacterRepository
-import com.dozy.mobile.feature.character.domain.ObserveCharacters
-import com.dozy.mobile.feature.character.domain.SaveCharacter
-import com.dozy.mobile.feature.character.domain.SavedCharacter
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.SavedCharacter
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
@@ -163,11 +163,15 @@ class CreateCharacterViewModelTest {
         runTest(dispatcher) {
             val failing =
                 object : CharacterRepository {
-                    override suspend fun save(character: com.dozy.mobile.feature.character.domain.Character): SavedCharacter =
+                    override suspend fun save(character: com.dozy.mobile.feature.character.domain.model.Character): SavedCharacter =
                         error("unused")
 
                     override fun observe() =
-                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.feature.character.domain.Character>> { error("disk unavailable") }
+                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.feature.character.domain.model.Character>> {
+                            error(
+                                "disk unavailable",
+                            )
+                        }
                 }
             val home = HomeViewModel(ObserveCharacters(failing))
             val characters = CharactersViewModel(ObserveCharacters(failing))

@@ -1,6 +1,6 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.presentation.list.CharactersAction
 import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
@@ -33,7 +33,7 @@ class CharactersViewModelTest {
     @Test fun initialStateExposesPersistedCharacters() {
         val viewModel =
             CharactersViewModel(
-                com.dozy.mobile.feature.character.domain
+                com.dozy.mobile.feature.character.domain.usecase
                     .ObserveCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -46,7 +46,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.feature.character.domain
+                    com.dozy.mobile.feature.character.domain.usecase
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()
@@ -63,7 +63,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.feature.character.domain
+                    com.dozy.mobile.feature.character.domain.usecase
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             val effect = async { viewModel.effects.first() }

@@ -1,4 +1,4 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.model
 
 sealed interface CreateCharacterValidation {
     data class Valid(

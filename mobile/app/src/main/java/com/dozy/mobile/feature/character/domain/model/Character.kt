@@ -1,4 +1,4 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.model
 
 /** An existing character. Creation rules are enforced by CreateCharacterInput. */
 data class Character(

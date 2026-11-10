@@ -1,6 +1,6 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.home.presentation.HomeAction
 import com.dozy.mobile.feature.home.presentation.HomeEffect
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
@@ -33,7 +33,7 @@ class HomeViewModelTest {
     @Test fun initialStateContainsHomeHeaderAndPersistedCollections() {
         val viewModel =
             HomeViewModel(
-                com.dozy.mobile.feature.character.domain
+                com.dozy.mobile.feature.character.domain.usecase
                     .ObserveCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -53,7 +53,7 @@ class HomeViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 HomeViewModel(
-                    com.dozy.mobile.feature.character.domain
+                    com.dozy.mobile.feature.character.domain.usecase
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()

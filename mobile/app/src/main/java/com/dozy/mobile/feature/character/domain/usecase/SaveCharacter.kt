@@ -1,5 +1,9 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.usecase
 
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.model.SavedCharacter
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 
 class SaveCharacter(

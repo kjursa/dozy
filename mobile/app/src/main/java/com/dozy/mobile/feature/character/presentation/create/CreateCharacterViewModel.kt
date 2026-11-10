@@ -2,8 +2,8 @@ package com.dozy.mobile.feature.character.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
-import com.dozy.mobile.feature.character.domain.SaveCharacter
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import kotlinx.coroutines.launch
 

@@ -65,8 +65,9 @@ need to move Android presentation resources out of any shared ViewModels.
 
 ## Package layout
 
-- `feature.character.domain`: shared character models, value classes, creation
-  validation, repository contract, and use cases, with one named type per file.
+- `feature.character.domain.model`: character models, nested value types, and
+  creation validation; `.repository`: the CharacterRepository contract;
+  `.usecase`: SaveCharacter, ObserveCharacters, and their CharacterIdGenerator dependency.
 - `feature.character.data`: repository implementation and entity/DTO mapping
   extensions; `database` contains Room database, DAO, and entity files; `api`
   contains the API contract, Ktor implementation, and DTO.

@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.*
+import com.dozy.mobile.feature.character.domain.model.*
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterErrors
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.withErrors
 import com.kjursa.foundation.presentation.text.UiText

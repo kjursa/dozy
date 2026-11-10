@@ -1,5 +1,7 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.usecase
 
+import com.dozy.mobile.feature.character.domain.model.CharacterCollection
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

@@ -1,4 +1,4 @@
-package com.dozy.mobile.feature.character.domain
+package com.dozy.mobile.feature.character.domain.model
 
 data class CreateCharacterErrors(
     val name: Name? = null,

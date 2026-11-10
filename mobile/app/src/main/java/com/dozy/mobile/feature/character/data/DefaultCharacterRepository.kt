@@ -2,10 +2,10 @@ package com.dozy.mobile.feature.character.data
 
 import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.database.CharacterDao
-import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterRepository
-import com.dozy.mobile.feature.character.domain.CharacterSync
-import com.dozy.mobile.feature.character.domain.SavedCharacter
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
+import com.dozy.mobile.feature.character.domain.model.SavedCharacter
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 import kotlinx.coroutines.flow.map
 

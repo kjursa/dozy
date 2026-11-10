@@ -2,7 +2,7 @@ package com.dozy.mobile.feature.character.data
 
 import com.dozy.mobile.feature.character.data.api.CharacterDto
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
-import com.dozy.mobile.feature.character.domain.Character
+import com.dozy.mobile.feature.character.domain.model.Character
 
 fun Character.toEntity(pendingSync: Boolean) =
     CharacterEntity(

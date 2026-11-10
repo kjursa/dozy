@@ -9,7 +9,7 @@ import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.data.toDomain
 import com.dozy.mobile.feature.character.data.toDto
 import com.dozy.mobile.feature.character.data.toEntity
-import com.dozy.mobile.feature.character.domain.CharacterSync
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond

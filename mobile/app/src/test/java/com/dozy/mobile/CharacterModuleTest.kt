@@ -6,9 +6,9 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
-import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
-import com.dozy.mobile.feature.character.domain.CharacterRepository
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel

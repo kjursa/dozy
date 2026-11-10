@@ -1,11 +1,11 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterRepository
-import com.dozy.mobile.feature.character.domain.CharacterSync
-import com.dozy.mobile.feature.character.domain.CreateCharacterInput
-import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
-import com.dozy.mobile.feature.character.domain.SavedCharacter
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.model.SavedCharacter
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal val validDetails =
@@ -19,7 +19,7 @@ internal val validDetails =
 internal fun character(
     id: String = "1",
     name: String = "Oliver",
-) = com.dozy.mobile.feature.character.domain.Character(
+) = com.dozy.mobile.feature.character.domain.model.Character(
     Character.Id(id),
     validDetails.copy(name = Character.Name(name)),
 )
@@ -32,7 +32,7 @@ internal class FakeCharacterRepository : CharacterRepository {
 
     override fun observe() = characters
 
-    override suspend fun save(character: com.dozy.mobile.feature.character.domain.Character): SavedCharacter {
+    override suspend fun save(character: com.dozy.mobile.feature.character.domain.model.Character): SavedCharacter {
         saves++
         beforeSave()
         failure?.let { throw it }
