@@ -1,6 +1,6 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.CharacterRepository
 import com.dozy.mobile.feature.character.domain.ObserveCharacters
@@ -18,7 +18,7 @@ class CharacterDomainTest {
             val repository = FakeCharacterRepository()
             val result = save(repository)(createInput("  Finn  ")) as SaveCharacterResult.Success
             assertEquals("Finn", result.saved.character.details.name.value)
-            assertEquals(CharacterId("new"), result.saved.character.id)
+            assertEquals(Character.Id("new"), result.saved.character.id)
             assertEquals(result.saved.character, ObserveCharacters(repository)().first().characters.last())
         }
 
@@ -38,5 +38,5 @@ class CharacterDomainTest {
             }
         }
 
-    private fun save(repository: CharacterRepository) = SaveCharacter(repository, CharacterIdGenerator { CharacterId("new") })
+    private fun save(repository: CharacterRepository) = SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") })
 }

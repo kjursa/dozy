@@ -1,11 +1,11 @@
 package com.dozy.mobile.feature.character.domain
 
-/** Only validated creation requests may reach the save use case. Existing records use CharacterDraft. */
+/** Only validated creation requests may reach the save use case. Existing records use Character.Details. */
 class CreateCharacterInput private constructor(
-    val name: CharacterName,
-    val personality: CharacterPersonality,
-    val appearance: CharacterAppearance,
-    val type: CharacterType,
+    val name: Character.Name,
+    val personality: Character.Personality,
+    val appearance: Character.Appearance,
+    val type: Character.Type,
 ) {
     companion object {
         const val NAME_MAX_LENGTH = 50
@@ -15,7 +15,7 @@ class CreateCharacterInput private constructor(
             name: String,
             personality: String,
             appearance: String,
-            type: CharacterType?,
+            type: Character.Type?,
         ): CreateCharacterValidation {
             val normalizedName = name.trim()
             val normalizedPersonality = personality.trim()
@@ -36,9 +36,9 @@ class CreateCharacterInput private constructor(
             if (!errors.isEmpty) return CreateCharacterValidation.Invalid(errors)
             return CreateCharacterValidation.Valid(
                 CreateCharacterInput(
-                    CharacterName(normalizedName),
-                    CharacterPersonality(normalizedPersonality),
-                    CharacterAppearance(normalizedAppearance),
+                    Character.Name(normalizedName),
+                    Character.Personality(normalizedPersonality),
+                    Character.Appearance(normalizedAppearance),
                     requireNotNull(type),
                 ),
             )

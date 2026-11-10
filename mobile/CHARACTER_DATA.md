@@ -92,7 +92,7 @@ field. Its constructor is private and it has no data-class copy method, so calle
 cannot construct an unchecked creation request. `SaveCharacter` accepts only this
 validated request.
 
-Existing `CharacterDraft` values read from storage/API are separate from creation
+Existing `Character.Details` values read from storage/API are separate from creation
 requests. Their value classes wrap stored values without trimming or reapplying
 current creation limits, so a legacy 55-character name can still be displayed.
 Technical schema/serialization failures remain data-layer failures.
@@ -110,3 +110,10 @@ Reusable technical APIs are collected in the single `:foundation` Android librar
 spacing, and the theme entry point. The app retains its feature code, visual
 branding, and screen-specific UI helpers. Coroutine tests live in the foundation
 module; app tests exercise the library through the feature integrations.
+
+Character value types are nested in the domain entity: `Character.Id`, `.Name`,
+`.Personality`, `.Appearance`, `.Type`, and `.Details`. They can be used without
+an enclosing Character instance. Existing records use `Character.Details`; the
+creation-only validation remains in `CreateCharacterInput`. Operation and contract
+names such as `SaveCharacter` and `CharacterRepository` stay explicit and live in
+separate files.

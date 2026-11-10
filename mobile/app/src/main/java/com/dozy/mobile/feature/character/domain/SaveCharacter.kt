@@ -8,7 +8,7 @@ class SaveCharacter(
 ) {
     suspend operator fun invoke(input: CreateCharacterInput): SaveCharacterResult =
         runCatchingSuspend {
-            repository.save(Character(ids.next(), CharacterDraft(input.name, input.personality, input.appearance, input.type)))
+            repository.save(Character(ids.next(), Character.Details(input.name, input.personality, input.appearance, input.type)))
         }.fold(
             onSuccess = { SaveCharacterResult.Success(it) },
             onFailure = { SaveCharacterResult.Failure },

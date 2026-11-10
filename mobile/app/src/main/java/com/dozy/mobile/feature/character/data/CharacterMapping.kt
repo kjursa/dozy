@@ -3,12 +3,6 @@ package com.dozy.mobile.feature.character.data
 import com.dozy.mobile.feature.character.data.api.CharacterDto
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterAppearance
-import com.dozy.mobile.feature.character.domain.CharacterDraft
-import com.dozy.mobile.feature.character.domain.CharacterId
-import com.dozy.mobile.feature.character.domain.CharacterName
-import com.dozy.mobile.feature.character.domain.CharacterPersonality
-import com.dozy.mobile.feature.character.domain.CharacterType
 
 fun Character.toEntity(pendingSync: Boolean) =
     CharacterEntity(
@@ -22,12 +16,12 @@ fun Character.toEntity(pendingSync: Boolean) =
 
 fun CharacterEntity.toDomain() =
     Character(
-        CharacterId(id),
-        CharacterDraft(
-            CharacterName(name),
-            CharacterPersonality(personality),
-            CharacterAppearance(appearance),
-            CharacterType.valueOf(type),
+        Character.Id(id),
+        Character.Details(
+            Character.Name(name),
+            Character.Personality(personality),
+            Character.Appearance(appearance),
+            Character.Type.valueOf(type),
         ),
     )
 

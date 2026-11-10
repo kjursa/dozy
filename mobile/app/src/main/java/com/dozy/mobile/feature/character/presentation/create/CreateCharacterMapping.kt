@@ -2,9 +2,9 @@ package com.dozy.mobile.feature.character.presentation.create
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.R
+import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterDescriptionError
 import com.dozy.mobile.feature.character.domain.CharacterNameError
-import com.dozy.mobile.feature.character.domain.CharacterType
 import com.dozy.mobile.feature.character.domain.CharacterTypeError
 import com.dozy.mobile.feature.character.domain.CreateCharacterErrors
 import com.dozy.mobile.feature.character.domain.CreateCharacterInput
@@ -34,7 +34,7 @@ internal fun CreateCharacterUiState.validateInput(): CreateCharacterValidation =
         name = name,
         personality = personality,
         appearance = appearance,
-        type = CharacterType.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
+        type = Character.Type.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
     )
 
 internal fun CreateCharacterUiState.withErrors(errors: CreateCharacterErrors = CreateCharacterErrors()) =

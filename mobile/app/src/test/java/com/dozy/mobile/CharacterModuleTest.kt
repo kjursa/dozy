@@ -6,7 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
-import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.CharacterRepository
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
@@ -50,7 +50,7 @@ class CharacterModuleTest {
                 module {
                     single<CharacterDao> { dao }
                     single<HttpClient> { client }
-                    single<CharacterIdGenerator> { CharacterIdGenerator { CharacterId("injected-id") } }
+                    single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
                 }
             val app = koinApplication { modules(characterModule, homeModule, storyModule, platformModule) }
             val owner = ViewModelStore()

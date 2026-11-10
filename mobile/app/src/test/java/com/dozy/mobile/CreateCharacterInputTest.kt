@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.character.domain.*
+import com.dozy.mobile.feature.character.domain.Character
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -10,7 +11,7 @@ class CreateCharacterInputTest {
         assertEquals("Finn", input.name.value)
         assertEquals("Kind", input.personality.value)
         assertEquals("Green eyes", input.appearance.value)
-        assertEquals(CharacterType.CHILD, input.type)
+        assertEquals(Character.Type.CHILD, input.type)
     }
 
     @Test fun nameRulesReturnOneTypedError() {
@@ -68,6 +69,6 @@ class CreateCharacterInputTest {
         name: String = "Oliver",
         personality: String = "Kind",
         appearance: String = "Green eyes",
-        type: CharacterType? = CharacterType.CHILD,
+        type: Character.Type? = Character.Type.CHILD,
     ) = CreateCharacterInput.from(name, personality, appearance, type)
 }

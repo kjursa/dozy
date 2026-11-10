@@ -2,7 +2,6 @@ package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterId
 import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.CharacterRepository
 import com.dozy.mobile.feature.character.domain.ObserveCharacters
@@ -188,6 +187,6 @@ class CreateCharacterViewModelTest {
     private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
         CreateCharacterViewModel(
             handle,
-            SaveCharacter(repository, CharacterIdGenerator { CharacterId("new") }),
+            SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
         )
 }

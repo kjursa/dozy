@@ -4,7 +4,7 @@ import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterDatabase
-import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -32,5 +32,5 @@ internal val androidModule =
                 install(HttpTimeout) { requestTimeoutMillis = 5000 }
             }
         } onClose { it?.close() }
-        single<CharacterIdGenerator> { CharacterIdGenerator { CharacterId(UUID.randomUUID().toString()) } }
+        single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id(UUID.randomUUID().toString()) } }
     }
