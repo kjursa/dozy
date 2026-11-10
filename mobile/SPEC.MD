@@ -34,6 +34,10 @@ Warianty widoczne w HTML-ach opisano przy każdym ekranie. Wspólne stany i doda
 - Zmiana danych postaci lub miejsca nie przepisuje tekstu ani okładki wcześniej zapisanych bajek.
 - Gotowość bajki oznacza przygotowanie tekstu i okładki. To aktualne założenie propozycji do zatwierdzenia.
 
+### Lokalne przechowywanie danych
+
+Aplikacja korzysta z jednej bazy `DozyDatabase` w pliku `dozy.db`. Obecnie zawiera ona tylko tabelę postaci; DAO i encje pozostają w funkcji postaci. Dane z poprzedniego pliku `characters.db` nie są migrowane ani kopiowane — nowa baza może rozpocząć pracę pusta.
+
 ## 3. Nawigacja i zachowanie wspólne
 
 ### Główne sekcje

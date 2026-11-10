@@ -1,10 +1,11 @@
 package com.dozy.mobile.di
 
 import androidx.room3.Room
+import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.character.data.database.CharacterDao
-import com.dozy.mobile.feature.character.data.database.CharacterDatabase
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import io.ktor.client.HttpClient
@@ -22,13 +23,14 @@ internal val androidModule =
     module {
         // Enable after the backend exposes the agreed API contract.
         single { ApiConfig(baseUrl = null) }
+        single<SQLiteDriver> { BundledSQLiteDriver() }
         single {
             Room
-                .databaseBuilder<CharacterDatabase>(androidContext(), "characters.db")
-                .setDriver(BundledSQLiteDriver())
+                .databaseBuilder<DozyDatabase>(androidContext(), "dozy.db")
+                .setDriver(get())
                 .build()
         } onClose { it?.close() }
-        single<CharacterDao> { get<CharacterDatabase>().characters() }
+        single<CharacterDao> { get<DozyDatabase>().characters() }
         single {
             HttpClient(Android) {
                 install(ContentNegotiation) { json() }
