@@ -1,9 +1,9 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.character.ObserveCharacters
-import com.dozy.mobile.presentation.home.HomeAction
-import com.dozy.mobile.presentation.home.HomeEffect
-import com.dozy.mobile.presentation.home.HomeViewModel
+import com.dozy.mobile.feature.character.domain.ObserveCharacters
+import com.dozy.mobile.feature.home.presentation.HomeAction
+import com.dozy.mobile.feature.home.presentation.HomeEffect
+import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -33,7 +33,7 @@ class HomeViewModelTest {
     @Test fun initialStateContainsHomeHeaderAndPersistedCollections() {
         val viewModel =
             HomeViewModel(
-                com.dozy.mobile.domain.character
+                com.dozy.mobile.feature.character.domain
                     .ObserveCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -53,7 +53,7 @@ class HomeViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 HomeViewModel(
-                    com.dozy.mobile.domain.character
+                    com.dozy.mobile.feature.character.domain
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()

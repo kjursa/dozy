@@ -1,15 +1,15 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.data.character.DefaultCharacterRepository
-import com.dozy.mobile.data.character.api.CharacterApi
-import com.dozy.mobile.data.character.api.CharacterDto
-import com.dozy.mobile.data.character.api.KtorCharacterApi
-import com.dozy.mobile.data.character.database.CharacterDao
-import com.dozy.mobile.data.character.database.CharacterEntity
-import com.dozy.mobile.data.character.toDomain
-import com.dozy.mobile.data.character.toDto
-import com.dozy.mobile.data.character.toEntity
-import com.dozy.mobile.domain.character.CharacterSync
+import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
+import com.dozy.mobile.feature.character.data.api.CharacterApi
+import com.dozy.mobile.feature.character.data.api.CharacterDto
+import com.dozy.mobile.feature.character.data.api.KtorCharacterApi
+import com.dozy.mobile.feature.character.data.database.CharacterDao
+import com.dozy.mobile.feature.character.data.database.CharacterEntity
+import com.dozy.mobile.feature.character.data.toDomain
+import com.dozy.mobile.feature.character.data.toDto
+import com.dozy.mobile.feature.character.data.toEntity
+import com.dozy.mobile.feature.character.domain.CharacterSync
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond

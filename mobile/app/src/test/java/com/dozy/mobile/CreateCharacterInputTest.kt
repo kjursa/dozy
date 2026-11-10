@@ -1,6 +1,6 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.character.*
+import com.dozy.mobile.feature.character.domain.*
 import org.junit.Assert.*
 import org.junit.Test
 

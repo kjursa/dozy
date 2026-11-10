@@ -3,18 +3,20 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
-import com.dozy.mobile.data.character.database.CharacterDao
-import com.dozy.mobile.data.character.database.CharacterEntity
-import com.dozy.mobile.di.characterModule
-import com.dozy.mobile.domain.character.CharacterId
-import com.dozy.mobile.domain.character.CharacterIdGenerator
-import com.dozy.mobile.domain.character.CharacterRepository
-import com.dozy.mobile.presentation.characters.CharactersViewModel
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterAction
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterEffect
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
-import com.dozy.mobile.presentation.home.HomeViewModel
-import com.dozy.mobile.presentation.stories.StoriesViewModel
+import com.dozy.mobile.feature.character.data.database.CharacterDao
+import com.dozy.mobile.feature.character.data.database.CharacterEntity
+import com.dozy.mobile.feature.character.di.characterModule
+import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
+import com.dozy.mobile.feature.character.domain.CharacterRepository
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
+import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
+import com.dozy.mobile.feature.home.di.homeModule
+import com.dozy.mobile.feature.home.presentation.HomeViewModel
+import com.dozy.mobile.feature.story.di.storyModule
+import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +52,7 @@ class CharacterModuleTest {
                     single<HttpClient> { client }
                     single<CharacterIdGenerator> { CharacterIdGenerator { CharacterId("injected-id") } }
                 }
-            val app = koinApplication { modules(characterModule, platformModule) }
+            val app = koinApplication { modules(characterModule, homeModule, storyModule, platformModule) }
             val owner = ViewModelStore()
             val otherOwner = ViewModelStore()
             try {

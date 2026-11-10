@@ -2,10 +2,10 @@ package com.dozy.mobile.di
 
 import androidx.room3.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import com.dozy.mobile.data.character.database.CharacterDao
-import com.dozy.mobile.data.character.database.CharacterDatabase
-import com.dozy.mobile.domain.character.CharacterId
-import com.dozy.mobile.domain.character.CharacterIdGenerator
+import com.dozy.mobile.feature.character.data.database.CharacterDao
+import com.dozy.mobile.feature.character.data.database.CharacterDatabase
+import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout

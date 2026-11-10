@@ -1,8 +1,8 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.presentation.stories.StoriesAction
-import com.dozy.mobile.presentation.stories.StoriesEffect
-import com.dozy.mobile.presentation.stories.StoriesViewModel
+import com.dozy.mobile.feature.story.presentation.list.StoriesAction
+import com.dozy.mobile.feature.story.presentation.list.StoriesEffect
+import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async

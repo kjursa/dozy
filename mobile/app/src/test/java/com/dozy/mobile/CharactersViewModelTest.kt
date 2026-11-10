@@ -1,9 +1,9 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.character.ObserveCharacters
-import com.dozy.mobile.presentation.characters.CharactersAction
-import com.dozy.mobile.presentation.characters.CharactersEffect
-import com.dozy.mobile.presentation.characters.CharactersViewModel
+import com.dozy.mobile.feature.character.domain.ObserveCharacters
+import com.dozy.mobile.feature.character.presentation.list.CharactersAction
+import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
+import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -33,7 +33,7 @@ class CharactersViewModelTest {
     @Test fun initialStateExposesPersistedCharacters() {
         val viewModel =
             CharactersViewModel(
-                com.dozy.mobile.domain.character
+                com.dozy.mobile.feature.character.domain
                     .ObserveCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -46,7 +46,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.domain.character
+                    com.dozy.mobile.feature.character.domain
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()
@@ -63,7 +63,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.domain.character
+                    com.dozy.mobile.feature.character.domain
                         .ObserveCharacters(FakeCharacterRepository()),
                 )
             val effect = async { viewModel.effects.first() }

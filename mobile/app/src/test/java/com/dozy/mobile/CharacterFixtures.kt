@@ -1,17 +1,17 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.domain.character.Character
-import com.dozy.mobile.domain.character.CharacterAppearance
-import com.dozy.mobile.domain.character.CharacterDraft
-import com.dozy.mobile.domain.character.CharacterId
-import com.dozy.mobile.domain.character.CharacterName
-import com.dozy.mobile.domain.character.CharacterPersonality
-import com.dozy.mobile.domain.character.CharacterRepository
-import com.dozy.mobile.domain.character.CharacterSync
-import com.dozy.mobile.domain.character.CharacterType
-import com.dozy.mobile.domain.character.CreateCharacterInput
-import com.dozy.mobile.domain.character.CreateCharacterValidation
-import com.dozy.mobile.domain.character.SavedCharacter
+import com.dozy.mobile.feature.character.domain.Character
+import com.dozy.mobile.feature.character.domain.CharacterAppearance
+import com.dozy.mobile.feature.character.domain.CharacterDraft
+import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.CharacterName
+import com.dozy.mobile.feature.character.domain.CharacterPersonality
+import com.dozy.mobile.feature.character.domain.CharacterRepository
+import com.dozy.mobile.feature.character.domain.CharacterSync
+import com.dozy.mobile.feature.character.domain.CharacterType
+import com.dozy.mobile.feature.character.domain.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.SavedCharacter
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal val validDraft =
@@ -25,7 +25,7 @@ internal val validDraft =
 internal fun character(
     id: String = "1",
     name: String = "Oliver",
-) = com.dozy.mobile.domain.character.Character(
+) = com.dozy.mobile.feature.character.domain.Character(
     CharacterId(id),
     validDraft.copy(name = CharacterName(name)),
 )
@@ -38,7 +38,7 @@ internal class FakeCharacterRepository : CharacterRepository {
 
     override fun observe() = characters
 
-    override suspend fun save(character: com.dozy.mobile.domain.character.Character): SavedCharacter {
+    override suspend fun save(character: com.dozy.mobile.feature.character.domain.Character): SavedCharacter {
         saves++
         beforeSave()
         failure?.let { throw it }

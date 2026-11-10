@@ -47,9 +47,9 @@ Artwork remains a presentation placeholder because the backend has no image cont
 
 ## Dependency injection and KMP migration
 
-Koin starts once in `DozyApplication`. `di/CharacterModule.kt` declares the shared
-repository, API, use cases, and lifecycle-managed ViewModels with constructor
-injection. It has no Android imports. `di/AndroidModule.kt` supplies the Room
+Koin starts once in `DozyApplication`. `feature/character/di/CharacterModule.kt` declares the shared
+repository, API, use cases, and character ViewModels with constructor
+injection. Home and Story have their own feature DI modules. It has no Android imports. `di/AndroidModule.kt` supplies the Room
 construction/DAO, HTTP engine, and ID generator; a future iOS module will supply
 the same dependency types. Domain and data collaborators do not resolve Koin
 services themselves. Composable routes use `koinViewModel()` so each navigation
@@ -65,17 +65,20 @@ need to move Android presentation resources out of any shared ViewModels.
 
 ## Package layout
 
-- `domain.character`: shared character models, value classes, repository contract,
-  and use cases, with one named type per file.
-- `data.character`: repository implementation and entity/DTO mapping extensions;
-  `database` contains Room database, DAO, and entity files; `api` contains the API
-  contract, Ktor implementation, and DTO.
-- `presentation.createcharacter`, `home`, `characters`, and `stories`: screen
-  layouts, ViewModels, UI state, actions, effects, and presentation mapping
-  extensions in separate files. The character list uses `CharacterListItem` to
-  distinguish its presentation model from the domain `Character`.
-- `presentation.components`: UI elements reused across screens;
-  `presentation.main`: the bottom navigation shell.
+- `feature.character.domain`: shared character models, value classes, creation
+  validation, repository contract, and use cases, with one named type per file.
+- `feature.character.data`: repository implementation and entity/DTO mapping
+  extensions; `database` contains Room database, DAO, and entity files; `api`
+  contains the API contract, Ktor implementation, and DTO.
+- `feature.character.presentation.create` and `.list`: creation form and character
+  list, each with separate ViewModel, UI state, actions, effects, and mapping files.
+- `feature.home.presentation` and `feature.story.presentation`: Home and Story
+  screens and their presentation models; each feature declares its own DI module.
+- `core.coroutines`: cancellation-safe coroutine helpers such as `runCatchingSuspend`.
+- `core.presentation.text`: `UiText` and its `resolve()` extension.
+- `core.presentation.components` and `.layout`: generic UI helpers with no feature
+  dependencies. Story-specific cards remain in `feature.story.presentation.components`.
+- `navigation`: the application bottom navigation shell.
 
 The Room database class moved packages; its exported schema moved to the matching
 qualified-name directory. Table definitions, schema version, and identity hash

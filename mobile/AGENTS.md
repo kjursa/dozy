@@ -11,7 +11,7 @@
 
 ## Architecture
 
-- Keep the architecture simple and organize code by `presentation`, `domain`, and `data` responsibilities. Prefer packages first; create extra Gradle modules only when a real boundary or reuse need justifies them.
+- Organize packages by feature first: `feature.<area>.domain`, `feature.<area>.data`, and `feature.<area>.presentation`. Group screens within their feature. Keep shared technical utilities in `core` (for example, `core.coroutines` and `core.presentation.text`); core must not depend on features. Prefer packages first; create extra Gradle modules only when a real boundary or reuse need justifies them.
 - `presentation` owns Compose screens, screen-specific UI state/actions/effects, and ViewModels. Keep screen content stateless where practical and connect MVI screens with `MviScreen` from `:compose-ui-kit`.
 - `domain` contains pure Kotlin business models and repository contracts. It must not depend on Android, AndroidX, Compose, platform SDKs, or data-layer implementations. Keep business rules independent of framework types.
 - Represent domain concepts backed by a primitive or `String` with distinct `@JvmInline value class` types, such as `Name` and `Description`, so values with different meanings cannot be accidentally swapped. Use `data class` models to group cohesive use case inputs and results, and pass those models to use cases instead of several unrelated parameters. When construction must enforce invariants, provide a named factory in the value class's companion object. Do not add value classes for primitives that have no distinct domain meaning.

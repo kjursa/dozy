@@ -1,20 +1,20 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.domain.character.Character
-import com.dozy.mobile.domain.character.CharacterId
-import com.dozy.mobile.domain.character.CharacterIdGenerator
-import com.dozy.mobile.domain.character.CharacterRepository
-import com.dozy.mobile.domain.character.ObserveCharacters
-import com.dozy.mobile.domain.character.SaveCharacter
-import com.dozy.mobile.domain.character.SavedCharacter
-import com.dozy.mobile.presentation.characters.CharactersViewModel
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterAction
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterEffect
-import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
-import com.dozy.mobile.presentation.createcharacter.SaveStatus
-import com.dozy.mobile.presentation.home.HomeViewModel
-import com.dozy.mobile.presentation.text.UiText
+import com.dozy.mobile.core.presentation.text.UiText
+import com.dozy.mobile.feature.character.domain.Character
+import com.dozy.mobile.feature.character.domain.CharacterId
+import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
+import com.dozy.mobile.feature.character.domain.CharacterRepository
+import com.dozy.mobile.feature.character.domain.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.SaveCharacter
+import com.dozy.mobile.feature.character.domain.SavedCharacter
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
+import com.dozy.mobile.feature.character.presentation.create.SaveStatus
+import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
+import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -164,10 +164,11 @@ class CreateCharacterViewModelTest {
         runTest(dispatcher) {
             val failing =
                 object : CharacterRepository {
-                    override suspend fun save(character: com.dozy.mobile.domain.character.Character): SavedCharacter = error("unused")
+                    override suspend fun save(character: com.dozy.mobile.feature.character.domain.Character): SavedCharacter =
+                        error("unused")
 
                     override fun observe() =
-                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.domain.character.Character>> { error("disk unavailable") }
+                        kotlinx.coroutines.flow.flow<List<com.dozy.mobile.feature.character.domain.Character>> { error("disk unavailable") }
                 }
             val home = HomeViewModel(ObserveCharacters(failing))
             val characters = CharactersViewModel(ObserveCharacters(failing))
