@@ -1,407 +1,407 @@
-# Dozy — specyfikacja aplikacji mobilnej
+# Dozy — mobile application specification
 
-## 1. Czym jest aplikacja
+## 1. What the app does
 
-Dozy tworzy personalizowane bajki na dobranoc. Aplikację obsługuje przede wszystkim rodzic: definiuje postacie, przygotowuje przygodę i czyta gotową historię dziecku. Bohaterami mogą być dzieci rodzica, zwierzęta albo wymyślone postacie. Miejsca pomagają osadzić opowieść w znajomym lub fantastycznym świecie.
+Dozy creates personalized bedtime stories. The app is primarily operated by a parent, who defines characters, prepares an adventure, and reads the finished story to their child. Heroes can be the parent's children, animals, or imaginary characters. Places help set the story in a familiar or fantastical world.
 
-Użytkownik może podać własny pomysł albo wybrać „Zaskocz mnie”, aby niczego nie wpisywać. Powstaje tekst i jedna ilustracja okładkowa. Ta sama ilustracja służy jako miniatura w bibliotece oraz pierwszy obraz podczas czytania. W treści nie generujemy kolejnych ilustracji.
+The user can provide an idea or choose “Surprise me” without typing anything. Generation produces text and one cover illustration. The same illustration serves as the library thumbnail and the opening image in the reader. No additional illustrations are generated within the story.
 
-Każda bajka jest niezależną, automatycznie zapisaną historią. Nie można jej edytować. Akcja „Nowa przygoda z tymi postaciami” zachowuje obsadę, ale nie kontynuuje wydarzeń poprzedniej bajki. Nie ma podziału na części ani kolekcji kolejnych rozdziałów jednej fabuły.
+Each story is independent and saved automatically. It cannot be edited. “New adventure with these heroes” keeps the cast but does not continue the previous story's events. There are no numbered parts or collections of successive chapters in one plot.
 
-### Status dokumentu
+### Document status
 
-Dokument opisuje docelowe zachowanie na podstawie ustaleń i obecnych projektów. Nie oznacza, że wszystkie funkcje są już zaimplementowane w aplikacji lub prototypie.
+This document describes intended behavior based on the agreed requirements and current designs. It does not mean that every feature has already been implemented in the app or prototype.
 
-Aktualne makiety: [indeks ekranów](design/screens/index.html). Ich angielskie etykiety odpowiadają polskim nazwom używanym tutaj. Starsze propozycje nie są źródłem wymagań, jeśli są sprzeczne z tym dokumentem.
+Current mockups: [screen index](design/screens/index.html). Their English labels correspond to the names used here. Older proposals are not a source of requirements where they conflict with this document.
 
-Warianty widoczne w HTML-ach opisano przy każdym ekranie. Wspólne stany i dodatkowe przypadki potrzebne w działającej aplikacji opisano osobno. Nierozstrzygnięte decyzje znajdują się na końcu dokumentu.
+The HTML variants are described with each screen. Shared states and additional cases needed in the working app are described separately. Unresolved decisions are listed at the end of the document.
 
-## 2. Główne pojęcia i zasady
+## 2. Core concepts and rules
 
-| Pojęcie | Znaczenie |
+| Concept | Meaning |
 | --- | --- |
-| Postać | Nazwa, typ, osobowość, wygląd i awatar generowany na podstawie opisu. Można używać jej w wielu bajkach. |
-| Miejsce / Places | Nazwa, krótki opis i opcjonalny opis tego, kogo można tam spotkać. Sceneria, a nie fabuła. |
-| Gotowe miejsce | Jedna z dostępnych od początku propozycji aplikacji. |
-| Własne miejsce | Miejsce utworzone przez użytkownika, dostępne również do edycji. |
-| Bajka | Zapisany tekst, tytuł, okładka i informacje o wykorzystanych bohaterach. |
-| Generowanie | Zadanie przygotowania tekstu i okładki, niezależne od otwartego ekranu. |
+| Character | Name, type, personality, appearance, and an avatar generated from the description. Can be reused across stories. |
+| Place / Places | Name, short description, and an optional description of who might be encountered there. A setting rather than a plot. |
+| Predefined place | One of the app's suggestions available from the start. |
+| Custom place | A place created by the user, which they can also edit. |
+| Story | Saved text, title, cover, and information about the heroes used. |
+| Generation | A job that prepares the text and cover independently of the open screen. |
 
-- Mieszkańcy miejsca są inspiracją dla generatora. Nie zastępują jawnie wybranych głównych bohaterów i nie wymagają tworzenia osobnych zapisanych postaci.
-- W Places jest jedna kolekcja: najpierw miejsca użytkownika, potem gotowe. Bez nagłówków rozdzielających je według pochodzenia.
-- Tylko własne miejsca mają „Edit this place”. Generowanie ilustracji miejsca nie jest wymagane; obecne miniatury to przykładowe zasoby.
-- Miejsca są kompaktowe: mała kwadratowa miniatura, nazwa i opis. W makietach miniatura ma 48 × 48 px.
-- Zmiana danych postaci lub miejsca nie przepisuje tekstu ani okładki wcześniej zapisanych bajek.
-- Gotowość bajki oznacza przygotowanie tekstu i okładki. To aktualne założenie propozycji do zatwierdzenia.
+- A place's inhabitants inspire the generator. They do not replace explicitly selected main heroes and do not require separate saved character records.
+- Places is one collection: custom places first, then predefined ones. There are no headings separating them by source.
+- Only custom places have “Edit this place”. Generated place illustrations are not required; current thumbnails are example assets.
+- Places use a compact layout: a small square thumbnail, name, and description. Mockup thumbnails are 48 × 48 px.
+- Editing character or place data does not rewrite the text or cover of previously saved stories.
+- A story is ready when both its text and cover are complete. This is the current proposal assumption, pending confirmation.
 
-### Lokalne przechowywanie danych
+### Local data storage
 
-Aplikacja korzysta z jednej bazy `DozyDatabase` w pliku `dozy.db`. Obecnie zawiera ona tylko tabelę postaci; DAO i encje pozostają w funkcji postaci. Dane z poprzedniego pliku `characters.db` nie są migrowane ani kopiowane — nowa baza może rozpocząć pracę pusta.
+The app uses a single `DozyDatabase` in the `dozy.db` file. It currently contains only the character table; DAOs and entities remain in the character feature. Data from the previous `characters.db` file is neither migrated nor copied — the new database may start empty.
 
-## 3. Nawigacja i zachowanie wspólne
+## 3. Navigation and shared behavior
 
-### Główne sekcje
+### Main sections
 
-Dolna nawigacja zawiera **Home**, **My Stories** i **Characters**. Places są dostępne z Home oraz formularza bajki, bez osobnej dolnej zakładki. Zmiana zakładki zachowuje stan i pozycję poprzedniej sekcji.
+Bottom navigation contains **Home**, **My Stories**, and **Characters**. Places is accessible from Home and the story form, without a separate bottom tab. Switching tabs preserves the previous section's state and scroll position.
 
-Pozostałe widoki otwierają się nad główną nawigacją. „Wstecz” i systemowe cofnięcie wracają do ekranu wejścia. Wyjście z nakładki zamyka nakładkę, pozostawiając ekran pod nią.
+Other screens open above the main navigation. “Back” and system back return to the entry screen. Dismissing an overlay closes it while retaining the underlying screen.
 
-### Formularze i powroty
+### Forms and return paths
 
-- Otworzenie wyboru miejsca albo dodawania postaci z formularza bajki zachowuje wybraną obsadę, długość, tryb i wpisane życzenia.
-- Zapis pomocniczego obiektu wraca do formularza bajki, jeśli stamtąd rozpoczęto operację. Nowa postać zostaje zaznaczona; nowe miejsce zostaje wybrane.
-- Cofnięcie bez zapisu nie tworzy obiektu i zachowuje poprzedni wybór w formularzu bajki. Zasady trwałego przechowywania niezapisanych formularzy wymagają doprecyzowania.
-- Błędy walidacji pojawiają się przy odpowiednich polach. Błąd operacji nie usuwa wpisanych danych.
-- Podczas wysyłania zapisu lub zlecania generowania akcja jest blokowana i pokazuje postęp, aby nie tworzyć duplikatów przez ponowne kliknięcie.
+- Opening place selection or character creation from the story form preserves the selected cast, length, mode, and entered wishes.
+- Saving a supporting object returns to the story form if the operation started there. A new character is selected; a new place becomes the selected setting.
+- Going back without saving creates no object and preserves the previous selection in the story form. Persistence rules for unsaved forms need clarification.
+- Validation errors appear beside the corresponding fields. An operation failure does not erase entered data.
+- While saving or submitting a generation request, the action is disabled and shows progress to prevent duplicate operations from repeated taps.
 
-### Stany wspólne
+### Shared states
 
-Poniższe stany uzupełniają warianty makiet i dotyczą ekranów korzystających z danych lub operacji sieciowych:
+The following states supplement the mockup variants and apply to screens using data or network operations:
 
-| Stan | Zachowanie i akcje |
+| State | Behavior and actions |
 | --- | --- |
-| Pierwsze ładowanie | Wskaźnik lub placeholdery; brak chwilowego komunikatu „brak danych”. Nawigacja pozostaje dostępna. |
-| Odświeżanie znanych danych | Zachowanie istniejącej zawartości, bez zastępowania jej pustym ekranem. |
-| Brak danych | Komunikat i właściwa akcja rozpoczęcia, opisane przy konkretnym ekranie. |
-| Błąd ładowania | Czytelny komunikat i „Spróbuj ponownie”; znane dane pozostają widoczne, jeśli są dostępne. |
-| Brak połączenia | Zapisane i dostępne lokalnie dane można przeglądać. Operacje wymagające sieci pokazują błąd i ponowienie, bez utraty formularza. |
-| Obiekt niedostępny | Zamiast pustych szczegółów informacja, że obiektu nie można otworzyć, oraz powrót do kolekcji. |
+| Initial loading | An indicator or placeholders; no brief “no data” message. Navigation remains available. |
+| Refreshing known data | Preserve existing content instead of replacing it with an empty screen. |
+| Empty | A message and an appropriate starting action, described for each screen. |
+| Loading failure | A clear message and “Try again”; known data remains visible when available. |
+| Offline | Saved, locally available data can be viewed. Operations requiring the network show an error and retry without losing the form. |
+| Object unavailable | Explain that the object cannot be opened and provide a return to the collection instead of empty details. |
 
-Nie każdy ekran musi mieć osobny pełnoekranowy projekt dla każdej kombinacji. Np. Home może jednocześnie pokazywać zapisane bajki i błąd nowego generowania.
+Not every combination needs a separate full-screen design. For example, Home can show saved stories and a new generation failure at the same time.
 
 ## 4. Home
 
-Makieta: [home.html](design/screens/home.html).
+Mockup: [home.html](design/screens/home.html).
 
-### Zawartość
+### Content
 
-Powitanie, akcja utworzenia bajki, ostatnie bajki, postacie oraz na dole sekcja **Places** z „See all”. Własne miejsca poprzedzają gotowe. Jeśli trwa zadanie albo wymaga uwagi, nad zawartością pojawia się karta jego statusu.
+A greeting, story creation action, recent stories, characters, and a **Places** section at the bottom with “See all”. Custom places precede predefined ones. A job status card appears above the content when a job is in progress or needs attention.
 
-### Warianty
+### Variants
 
-| Wariant | Zawartość / zachowanie |
+| Variant | Content / behavior |
 | --- | --- |
-| Z danymi | Ostatnie bajki, bohaterowie i kompaktowe Places. |
-| Pierwsze uruchomienie | Brak postaci i bajek. Główna zachęta do utworzenia pierwszej postaci oraz krótkie objaśnienie flow. Gotowe Places są nadal dostępne. |
-| Są postacie, brak bajek | Postacie i miejsca pozostają widoczne; sekcja bajek zachęca do utworzenia pierwszej historii. Przypadek docelowy, bez osobnego wariantu HTML. |
-| Generowanie | Karta informuje o przygotowaniu nowej historii; można otworzyć postęp i nadal korzystać z aplikacji. |
-| Bajka gotowa | Karta gotowości z akcją otwarcia konkretnej bajki. Historia jest też w bibliotece. |
-| Błąd generowania | Komunikat i ponowienie z dotychczasowymi ustawieniami. Inne dane pozostają dostępne. |
-| Ładowanie / błąd danych | Wspólne zasady z rozdziału 3. |
+| Populated | Recent stories, heroes, and compact Places. |
+| First launch | No characters or stories. The main prompt encourages creating the first character and briefly explains the flow. Predefined Places remain available. |
+| Characters exist, no stories | Characters and places remain visible; the story section encourages creating the first story. An intended case without a separate HTML variant. |
+| Generating | A card explains that a new story is being prepared; the user can open progress and continue using the app. |
+| Story ready | A ready card with an action to open that specific story. The story is also in the library. |
+| Generation failure | A message and retry with the existing configuration. Other data remains available. |
+| Loading / data failure | Shared rules from section 3. |
 
-### Akcje i przejścia
+### Actions and destinations
 
-| Akcja | Cel |
+| Action | Destination |
 | --- | --- |
-| Create a story | Tworzenie bajki; przy braku postaci jego wariant bez bohaterów. |
-| Bajka / Read your story | Czytnik wybranej bajki. |
-| See all przy bajkach | My Stories. |
-| Postać | Szczegóły postaci. |
-| See all przy postaciach | Characters. |
-| Utworzenie pierwszej postaci | Pusty formularz postaci. |
-| See all przy Places | Lista miejsc. |
-| Karta miejsca | Tworzenie bajki z wybraną scenerią. |
-| View progress | Generowanie. |
-| Try again na karcie zadania | Ponowienie zadania; po przyjęciu ponownie stan generowania. |
-| Dolna zakładka | Odpowiednia główna sekcja. |
+| Create a story | Story creation; the no-heroes variant if there are no characters. |
+| Story / Read your story | Reader for the selected story. |
+| See all for stories | My Stories. |
+| Character | Character details. |
+| See all for characters | Characters. |
+| Create the first character | Empty character form. |
+| See all for Places | Place list. |
+| Place card | Story creation with the selected setting. |
+| View progress | Generation. |
+| Try again on a job card | Retry the job; once accepted, return to the generating state. |
+| Bottom tab | Corresponding main section. |
 
-Dzwonek w makiecie jest skrótem do podglądu gotowości. Osobne centrum powiadomień nie zostało zaprojektowane.
+The mockup bell is a shortcut for previewing completion. A separate notification center has not been designed.
 
-## 5. My Stories — biblioteka bajek
+## 5. My Stories — story library
 
-Makieta: [stories.html](design/screens/stories.html).
+Mockup: [stories.html](design/screens/stories.html).
 
-### Zawartość i warianty
+### Content and variants
 
-- **Z bajkami:** lista zapisanych historii z okładką, tytułem i orientacyjnym czasem czytania. Każda pozycja jest niezależną bajką.
-- **Pusta biblioteka:** wyjaśnienie, że pojawią się tu zapisane bajki, oraz „Create your first story”. Wariant HTML zakłada istniejące postacie; jeśli ich nie ma, formularz bajki prowadzi do stworzenia bohatera.
-- **Ładowanie / błąd:** wspólne zasady; błąd nie jest pustą biblioteką.
+- **Populated:** saved stories with covers, titles, and estimated reading times. Each item is an independent story.
+- **Empty library:** explain that saved stories will appear here and offer “Create your first story”. The HTML variant assumes characters already exist; otherwise, the story form leads to hero creation.
+- **Loading / failure:** shared rules apply; a failure is not an empty library.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- Wybranie bajki → czytnik tej bajki.
-- „＋” lub utworzenie pierwszej historii → formularz bajki.
-- „Wstecz” → Home; dolne zakładki → wybrana sekcja.
+- Select a story → its reader.
+- “＋” or create the first story → story form.
+- “Back” → Home; bottom tabs → selected section.
 
-Nie ma edycji bajki, widoku kolejnych części ani ustalonej akcji usuwania bajek.
+There is no story editing, view of successive parts, or agreed story deletion action.
 
-## 6. Characters — lista postaci
+## 6. Characters — character list
 
-Makieta: [characters.html](design/screens/characters.html).
+Mockup: [characters.html](design/screens/characters.html).
 
-### Zawartość i warianty
+### Content and variants
 
-- **Z postaciami:** awatary, nazwy i krótkie charakterystyki; karta dodania nowej postaci.
-- **Pusta lista:** zachęta do opisania pierwszego bohatera oraz informacja o awatarze powstającym z opisu.
-- **Ładowanie / błąd:** wspólne zasady.
+- **Populated:** avatars, names, and short descriptions; a card to add a new character.
+- **Empty list:** encourage describing the first hero and explain that the avatar is generated from the description.
+- **Loading / failure:** shared rules apply.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- Postać → jej szczegóły.
-- „＋”, „Add a character” lub akcja pustego stanu → pusty formularz postaci.
-- „Wstecz” → Home; dolne zakładki → wybrana sekcja.
-- Po zapisaniu lub usunięciu obiektu lista prezentuje aktualne dane. Usunięcie jednej z kilku postaci nie może powodować pustego stanu całej kolekcji.
+- Character → its details.
+- “＋”, “Add a character”, or the empty-state action → empty character form.
+- “Back” → Home; bottom tabs → selected section.
+- After an object is saved or deleted, the list shows current data. Deleting one of several characters must not put the entire collection into an empty state.
 
-## 7. Tworzenie i edycja postaci
+## 7. Creating and editing a character
 
-Makieta: [character-form.html](design/screens/character-form.html).
+Mockup: [character-form.html](design/screens/character-form.html).
 
-### Pola i podpowiedzi
+### Fields and hints
 
-| Pole | Znaczenie |
+| Field | Meaning |
 | --- | --- |
-| Typ | Child, Animal, Fantasy lub Other. |
-| Nazwa | Imię albo bajkowy pseudonim. |
-| Osobowość | Cechy, zainteresowania i zachowanie bohatera. |
-| Wygląd | Opis, na podstawie którego można wyobrazić sobie postać i jej awatar. |
+| Type | Child, Animal, Fantasy, or Other. |
+| Name | A given name or storybook nickname. |
+| Personality | The hero's traits, interests, and behavior. |
+| Appearance | A description from which the character and avatar can be imagined. |
 
-Pusty formularz zawiera hint: dziecko użytkownika może zostać bohaterem bajki. Placeholdery podpowiadają zainteresowania, usposobienie i charakterystyczny wygląd. Nie wymagamy zdjęcia dziecka; awatar jest generowany z opisu.
+The empty form includes a hint that the user's child can become a story hero. Placeholders suggest interests, temperament, and distinctive appearance. A photo of the child is not required; the avatar is generated from the description.
 
-Aktualne ograniczenie nazwy to niepusta wartość o długości do 50 znaków (`String.length`). W HTML osobowość i wygląd są również wymagane; szczegółowe limity tych opisów nie zostały ostatecznie ustalone.
+The current name restriction is a nonempty value of up to 50 characters (`String.length`). The HTML also requires personality and appearance; detailed limits for these descriptions have not been finalized.
 
-### Warianty
+### Variants
 
-| Wariant | Zawartość / dostępne akcje |
+| Variant | Content / available actions |
 | --- | --- |
-| Nowa postać, pusty formularz | Podpowiedź inspiracyjna, placeholdery, miejsce na przyszły awatar. |
-| Dane wpisane, brak awatara | Opisy gotowe; można uruchomić generowanie. |
-| Błąd walidacji | Błędy przy polach; poprawienie danych i ponowienie, bez uruchamiania generowania dla błędnego formularza. |
-| Awatar w trakcie | Wskaźnik w podglądzie; brak drugiego zlecenia generowania i zapisu niegotowej postaci. |
-| Awatar gotowy | Podgląd, możliwość regeneracji i zapisania. |
-| Błąd awatara | Opisy pozostają; komunikat i ponowienie generowania. |
-| Opis zmieniony po podglądzie | Awatar wymaga odświeżenia, z widoczną informacją. Zakres zmian wymagających regeneracji pozostaje do ustalenia. |
-| Edycja | Istniejące dane i awatar, możliwość zmiany oraz zapisu. Bez inspiracyjnego hintu dla pustej nowej postaci. |
-| Zapis trwa / błąd zapisu | Postęp zamiast aktywnego zapisu; przy błędzie dane i awatar pozostają, można ponowić. |
+| New character, empty form | An inspirational hint, placeholders, and space for a future avatar. |
+| Input entered, no avatar | Descriptions are ready; generation can be started. |
+| Validation failure | Field errors; correct the input and retry without starting generation for an invalid form. |
+| Avatar in progress | An indicator in the preview; no second generation request or saving an unfinished character. |
+| Avatar ready | Preview, regenerate, and save. |
+| Avatar failure | Descriptions remain; a message and generation retry. |
+| Description changed after preview | The avatar needs refreshing, with a visible explanation. Which changes require regeneration remains undecided. |
+| Editing | Existing data and avatar, with editing and saving available. No inspirational hint for a new empty character. |
+| Saving / save failure | Progress replaces the active save action; on failure, data and avatar remain and retry is available. |
 
-Obowiązek wygenerowania i obejrzenia awatara przed zapisem jest aktualnym założeniem makiety, do zatwierdzenia jako reguła produktu.
+Requiring an avatar to be generated and reviewed before saving is the current mockup assumption, pending confirmation as a product rule.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- „Generate avatar” / regeneracja → stan oczekiwania → gotowy awatar albo błąd.
-- Zapis nowej postaci otwartej z Home/listy → szczegóły nowej postaci.
-- Zapis postaci dodawanej podczas tworzenia bajki → poprzedni formularz bajki z nową postacią zaznaczoną i zachowanymi danymi.
-- Zapis edycji → szczegóły postaci z aktualnymi danymi.
-- „Wstecz” → ekran wejścia, bez zapisania zmian. Wyjście podczas generowania awatara wymaga doprecyzowania; nie zakładamy tu automatycznie takiego samego zachowania jak dla generowania bajki.
+- “Generate avatar” / regenerate → waiting → ready avatar or failure.
+- Save a new character opened from Home/list → new character details.
+- Save a character added during story creation → the previous story form with the new character selected and input preserved.
+- Save edits → character details with updated data.
+- “Back” → entry screen without saving changes. Leaving during avatar generation needs clarification; the behavior is not automatically assumed to match story generation.
 
-## 8. Szczegóły postaci
+## 8. Character details
 
-Makieta: [character.html](design/screens/character.html).
+Mockup: [character.html](design/screens/character.html).
 
-### Warianty
+### Variants
 
-- **Dostępna postać:** awatar, nazwa, typ, osobowość i wygląd.
-- **Potwierdzenie usunięcia:** dialog z konsekwencjami oraz akcjami usunięcia i pozostawienia postaci.
-- **Usuwanie / błąd usunięcia:** zablokowanie ponownego żądania; przy błędzie postać pozostaje i można ponowić.
-- **Ładowanie / obiekt niedostępny:** wspólne zasady.
+- **Available character:** avatar, name, type, personality, and appearance.
+- **Deletion confirmation:** a dialog explaining the consequences, with delete and keep actions.
+- **Deleting / deletion failure:** prevent repeated requests; on failure, retain the character and allow retry.
+- **Loading / object unavailable:** shared rules apply.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- „Create a story with…” → formularz bajki z tą postacią zaznaczoną.
-- „Edit character” lub ikona edycji → formularz edycji.
-- „Delete character” → dialog potwierdzenia.
-- Potwierdzenie → usunięcie; po sukcesie lista postaci, pusta tylko jeśli nie ma już innych postaci.
-- Anulowanie / zamknięcie dialogu → te same szczegóły.
-- „Wstecz” → ekran, z którego otwarto szczegóły.
+- “Create a story with…” → story form with this character selected.
+- “Edit character” or the edit icon → edit form.
+- “Delete character” → confirmation dialog.
+- Confirm → delete; on success, open the character list, empty only if no other characters remain.
+- Cancel / dismiss dialog → the same details.
+- “Back” → the screen from which details were opened.
 
-Aktualne założenie: usunięta postać nie jest dostępna dla nowych bajek, ale zapisane historie pozostają czytelne. Zachowanie akcji ponownego użycia obsady zawierającej usuniętą postać wymaga decyzji.
+Current assumption: a deleted character is unavailable for new stories, but saved stories remain readable. Reusing a cast containing a deleted character requires a decision.
 
-## 9. Places — wybór i przegląd miejsc
+## 9. Places — browsing and selecting places
 
-Makieta: [places.html](design/screens/places.html).
+Mockup: [places.html](design/screens/places.html).
 
-### Zawartość
+### Content
 
-Jedna lista: własne miejsca najpierw, gotowe później, bez podziału nagłówkami. Małe kwadratowe miniatury, nazwa, krótki opis i opcjonalne informacje o mieszkańcach. Tylko własne miejsca mają „Edit this place”. Dostępne są także „Add new” i losowy wybór miejsca.
+One list: custom places first, predefined ones afterwards, without separating headings. Small square thumbnails, names, short descriptions, and optional inhabitant information. Only custom places have “Edit this place”. “Add new” and a random place option are also available.
 
-### Warianty
+### Variants
 
-- **Z własnymi miejscami:** własne na początku, następnie gotowe.
-- **Bez własnych miejsc:** nadal wyświetlane są gotowe miejsca; krótka zachęta do stworzenia własnego. To nie jest pusty ekran całej kolekcji.
-- **Bez opisu mieszkańców:** pomijamy ten fragment karty, bez pustej etykiety.
-- **Ładowanie / błąd kolekcji:** wspólne zasady; dostępne już gotowe lub zapisane miejsca pozostają widoczne.
-- **Brak jakichkolwiek dostępnych miejsc:** przypadek awaryjny, jeśli nie uda się uzyskać nawet gotowych propozycji; ponowienie, utworzenie własnego lub „Zaskocz mnie”. Bez osobnej makiety.
+- **With custom places:** custom places first, followed by predefined ones.
+- **No custom places:** predefined places remain visible, with a short invitation to create a custom place. This is not an empty screen for the entire collection.
+- **No inhabitant description:** omit that part of the card without an empty label.
+- **Loading / collection failure:** shared rules apply; already available predefined or saved places remain visible.
+- **No places available at all:** a fallback if even predefined suggestions cannot be obtained; offer retry, custom creation, or “Surprise me”. No separate mockup.
 
-### Akcje i przejścia
+### Actions and destinations
 
-| Akcja | Cel |
+| Action | Destination |
 | --- | --- |
-| Miejsce wybrane podczas tworzenia bajki | Powrót do tego formularza z wybraną scenerią i zachowanymi pozostałymi danymi. |
-| Miejsce wybrane po wejściu z Home | Nowy formularz bajki z wybraną scenerią. |
-| Surprise me with a place | Formularz bajki z losową scenerią; nie wymusza automatycznego trybu całej fabuły. |
-| Add new / Create a place | Pusty formularz miejsca, z zachowanym kontekstem wejścia. |
-| Edit this place | Edycja wybranego własnego miejsca. |
-| Wstecz | Formularz bajki albo Home, zależnie od miejsca wejścia. Bez zmiany wcześniejszego wyboru. |
+| Select a place during story creation | Return to that form with the setting selected and other input preserved. |
+| Select a place after entering from Home | New story form with the setting selected. |
+| Surprise me with a place | Story form with a random setting; does not force automatic mode for the entire plot. |
+| Add new / Create a place | Empty place form, preserving entry context. |
+| Edit this place | Edit the selected custom place. |
+| Back | Story form or Home, depending on the entry context. Does not change the previous selection. |
 
-Gotowe miejsca nie mają bezpośredniej edycji. Kopiowanie gotowego miejsca do własnej wersji nie jest jeszcze zaprojektowane.
+Predefined places cannot be edited directly. Copying a predefined place into a custom version has not been designed yet.
 
-## 10. Tworzenie i edycja miejsca
+## 10. Creating and editing a place
 
-Makieta: [place-form.html](design/screens/place-form.html).
+Mockup: [place-form.html](design/screens/place-form.html).
 
-### Pola
+### Fields
 
-| Pole | Znaczenie |
+| Field | Meaning |
 | --- | --- |
-| Nazwa | Np. „Ogród babci”. |
-| Krótki opis | Wygląd, atmosfera, charakterystyczne elementy miejsca. |
-| Kogo można spotkać? | Opcjonalne zwierzęta, mieszkańcy, stworzenia lub inne inspiracje. |
+| Name | For example, “Grandma's garden”. |
+| Short description | Appearance, atmosphere, and distinctive features of the place. |
+| Who might you meet? | Optional animals, inhabitants, creatures, or other inspiration. |
 
-Nie wymagamy obrazu miejsca. Nazwa i krótki opis są wymagane. Obecna makieta ogranicza nazwę do 80 znaków, a oba opisy do 500; to robocze limity do zatwierdzenia.
+A place image is not required. Name and short description are required. The current mockup limits the name to 80 characters and each description to 500; these are provisional limits pending confirmation.
 
-### Warianty
+### Variants
 
-- **Nowy, pusty:** placeholdery i objaśnienie opcjonalnych mieszkańców.
-- **Wypełniony:** dane oczekujące na zapis; opis mieszkańców może pozostać pusty.
-- **Edycja:** istniejące dane własnego miejsca.
-- **Błąd walidacji:** komunikaty przy polach, bez utraty pozostałych danych.
-- **Zapisywanie / błąd zapisu:** postęp i blokada powtórnego żądania; po błędzie możliwość ponowienia.
+- **New, empty:** placeholders and an explanation of optional inhabitants.
+- **Populated:** input awaiting save; the inhabitant description can remain empty.
+- **Editing:** existing custom place data.
+- **Validation failure:** messages beside fields without losing other input.
+- **Saving / save failure:** progress and prevention of repeated requests; retry after failure.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- „Save & use this place” podczas przygotowywania bajki → zapis i powrót do formularza bajki z tym miejscem wybranym.
-- Ta sama akcja po rozpoczęciu z Home/listy → zapis i otwarcie formularza nowej bajki z wybranym miejscem, zgodnie z obecną propozycją.
-- Edycja zapisuje zmiany w miejscu; wcześniejsze bajki pozostają bez zmian. Aktualna akcja również prowadzi do formularza bajki z tym miejscem.
-- „Wstecz” → lista miejsc, bez zapisania zmian, z zachowaniem kontekstu wcześniejszego formularza bajki.
+- “Save & use this place” while preparing a story → save and return to the story form with this place selected.
+- The same action after entering from Home/list → save and open a new story form with the place selected, according to the current proposal.
+- Editing saves changes to the place; earlier stories remain unchanged. The current action also leads to the story form with that place.
+- “Back” → place list without saving changes, preserving the context of the earlier story form.
 
-Usuwanie miejsc nie ma jeszcze projektu ani uzgodnionej akcji.
+Place deletion has neither a design nor an agreed action yet.
 
-## 11. Tworzenie bajki / nowej przygody
+## 11. Creating a story / new adventure
 
-Makieta: [create-story.html](design/screens/create-story.html).
+Mockup: [create-story.html](design/screens/create-story.html).
 
-### Dane wejściowe
+### Input
 
-- Co najmniej jedna zapisana postać, z możliwością zaznaczenia wielu.
-- Tryb własnego pomysłu albo „Zaskocz mnie”.
-- W trybie własnego pomysłu: wybrane miejsce lub losowa sceneria, opcjonalny opis przygody i opcjonalne zakończenie.
-- Długość: krótka, około 3–5 minut, lub dłuższa, około 8–12 minut. Są to orientacyjne czasy czytania.
+- At least one saved character, with multiple selection available.
+- Own-idea mode or “Surprise me”.
+- In own-idea mode: a selected place or random setting, an optional adventure description, and an optional ending.
+- Length: short, about 3–5 minutes, or longer, about 8–12 minutes. These are estimated reading times.
 
-Miejsce opisuje scenerię. Opis przygody określa wydarzenia. Nie mieszamy obu pojęć w jednej liście motywów. Własny pomysł nie wymaga wpisywania tekstu, jeśli użytkownik chce oprzeć się tylko na postaciach i miejscu.
+A place describes the setting. The adventure description defines events. These concepts are not mixed into one theme list. Own-idea mode does not require text input if the user wants to rely only on characters and a place.
 
-### Warianty
+### Variants
 
-| Wariant | Zachowanie |
+| Variant | Behavior |
 | --- | --- |
-| Zwykły formularz | Wybór obsady, scenerii, długości i opcjonalnych życzeń. |
-| Surprise me | Generator wymyśla miejsce, wydarzenia i zakończenie. Użytkownik wybiera tylko postacie i długość. Ręczne opisy/sceneria są ukryte i nie są wysyłane w tym trybie. |
-| Nowa przygoda z czytnika | Obsada poprzedniej bajki zaznaczona; nowa fabuła, bez poprzednich wydarzeń, numeru części i wymogu zachowania miejsca. |
-| Wejście ze szczegółów postaci | Wybrana ta postać; można dołączyć inne. |
-| Wejście z miejsca | Wybrana sceneria; użytkownik dobiera bohaterów i długość. |
-| Brak postaci | Generowanie nieaktywne; komunikat i akcja utworzenia pierwszego bohatera. |
-| Są postacie, żadna niezaznaczona | Błąd przy obsadzie po próbie generowania; formularz pozostaje. |
-| Powrót po dodaniu postaci/miejsca | Zachowane wcześniejsze dane, nowy obiekt zaznaczony. |
-| Zlecanie generowania | Wskaźnik i blokada kolejnego zlecenia. |
-| Błąd zlecenia | Formularz z zachowanymi danymi i możliwością ponowienia. |
+| Standard form | Select cast, setting, length, and optional wishes. |
+| Surprise me | The generator invents the place, events, and ending. The user selects only characters and length. Manual descriptions/setting are hidden and are not submitted in this mode. |
+| New adventure from the reader | The previous story's cast is selected; a new plot without previous events, a part number, or a requirement to keep the place. |
+| Entry from character details | That character is selected; others can be added. |
+| Entry from a place | The setting is selected; the user chooses heroes and length. |
+| No characters | Generation is disabled; a message and an action to create the first hero. |
+| Characters exist, none selected | A cast error after attempting generation; the form remains. |
+| Return after adding a character/place | Previous input preserved, new object selected. |
+| Submitting generation | An indicator and prevention of another submission. |
+| Submission failure | Form with input preserved and retry available. |
 
-Zmiana trybu może zachować ręczne pola roboczo, aby wrócić do nich po przełączeniu. Ukryte wartości nie mogą wpływać na automatyczną historię.
+Switching modes may retain manual fields as draft input so the user can return to them. Hidden values must not affect an automatically generated story.
 
-### Akcje i przejścia
+### Actions and destinations
 
-- Zaznaczenie postaci, zmiana trybu, opisów lub długości → pozostanie w formularzu.
-- Dodanie bohatera → tworzenie postaci → zapis wraca z zaznaczoną nową postacią.
-- Wybór miejsca → Places → wybór wraca do tego formularza.
-- „Generate my story” → walidacja → zlecenie zadania → ekran generowania po przyjęciu zadania.
-- „Wstecz” → ekran wejścia, np. Home, bibliotekę, czytnik, szczegóły postaci albo Places.
+- Select characters or change mode, descriptions, or length → remain in the form.
+- Add a hero → create character → save returns with the new character selected.
+- Choose a place → Places → selection returns to this form.
+- “Generate my story” → validation → job submission → generation screen once the job is accepted.
+- “Back” → entry screen, such as Home, library, reader, character details, or Places.
 
-## 12. Generowanie bajki
+## 12. Story generation
 
-Makieta: [generating.html](design/screens/generating.html).
+Mockup: [generating.html](design/screens/generating.html).
 
-### Zawartość i warianty
+### Content and variants
 
-| Stan | Zachowanie |
+| State | Behavior |
 | --- | --- |
-| Zadanie przyjęte / oczekiwanie | Potwierdzenie rozpoczęcia; nie sugerujemy nieistniejącego procentu ukończenia. |
-| Tworzenie tekstu | Wskaźnik i opis bieżącego etapu. |
-| Tworzenie okładki | Informacja o przygotowaniu jednego obrazu okładkowego. |
-| Gotowe | Bajka jest zapisana i dostępna do otwarcia. Home pokazuje gotowość, biblioteka zawiera historię. |
-| Błąd zadania | Komunikat i ponowienie z zachowaną konfiguracją. |
-| Brak aktualnego statusu, np. offline | Informacja o problemie z odczytem postępu. Nie traktujemy braku połączenia jako dowodu, że samo zadanie się nie powiodło. |
+| Job accepted / queued | Confirm that generation has started; do not imply a nonexistent completion percentage. |
+| Creating text | An indicator and explanation of the current stage. |
+| Creating the cover | Explain that one cover image is being prepared. |
+| Ready | The story is saved and can be opened. Home shows readiness and the library contains the story. |
+| Job failure | A message and retry with the configuration preserved. |
+| Current status unavailable, for example offline | Explain that progress cannot be retrieved. Lack of connectivity is not evidence that the job itself failed. |
 
-### Akcje i przejścia
+### Actions and destinations
 
-- „Back to Home” → Home ze statusem zadania.
-- Systemowe cofnięcie → opuszczenie postępu; nie anuluje generowania. Nie wracamy do aktywnego zlecenia w formularzu, które przypadkowo uruchomiłoby tę samą operację drugi raz.
-- Gotowa bajka / akcja otwarcia → jej czytnik. Sposób prezentacji ukończenia podczas pozostania na ekranie wymaga wyboru; nie zakładamy automatycznego przełączenia bez decyzji.
-- Ponowienie → nowe wykonanie z zachowanymi parametrami, bez ponownego wpisywania pomysłu.
-- Zamknięcie aplikacji → zadanie trwa dalej. Po powrocie odtwarzamy jego faktyczny status.
+- “Back to Home” → Home with job status.
+- System back → leave progress without canceling generation. Do not return to an active submission in the form that could accidentally trigger the same operation again.
+- Ready story / open action → its reader. How completion is presented while remaining on the screen needs a decision; automatic navigation is not assumed without one.
+- Retry → a new execution with preserved parameters, without retyping the idea.
+- Close the app → the job continues. On return, restore its actual status.
 
-Po ukończeniu użytkownik dostaje powiadomienie, jeśli zezwolił na nie systemowo. Dotknięcie powiadomienia otwiera konkretną gotową bajkę, także przy nieuruchomionej aplikacji. Brak zgody nie blokuje generowania; wynik pozostaje na Home i w bibliotece.
+On completion, the user receives a notification if they have granted system permission. Tapping it opens the specific ready story, even if the app is not running. Denied permission does not block generation; the result remains available on Home and in the library.
 
-## 13. Czytnik bajki
+## 13. Story reader
 
-Makieta: [reader.html](design/screens/reader.html).
+Mockup: [reader.html](design/screens/reader.html).
 
-### Zawartość
+### Content
 
-Tytuł, bohaterowie, orientacyjny czas czytania, jedna okładka na początku oraz przewijany tekst. Brak ilustracji pomiędzy akapitami. Na końcu akcja nowej przygody z tymi samymi postaciami i powrót do biblioteki.
+Title, heroes, estimated reading time, one opening cover, and scrollable text. No illustrations between paragraphs. At the end, offer a new adventure with the same characters and a return to the library.
 
-### Warianty i nakładki
+### Variants and overlays
 
-| Wariant | Zachowanie / wyjście |
+| Variant | Behavior / exit |
 | --- | --- |
-| Standardowe czytanie | Jasne tło, tekst i okładka. |
-| Tryb wieczorny | Ciemniejsza, spokojna kolorystyka; ta sama zawartość i akcje. |
-| Ustawienia Aa | Nakładka z małym, średnim i dużym tekstem oraz przełącznikiem trybu wieczornego. Zamknięcie wraca do tego samego fragmentu historii. |
-| Powiększona okładka | Pełnoekranowy podgląd; zamknięcie/cofnięcie wraca do czytnika. |
-| Koniec historii | „New adventure with these heroes” i powrót do biblioteki; nie jest to kontynuowanie fabuły. |
-| Ładowanie / brak dostępnej bajki | Wspólne zasady; przy błędzie ponowienie albo powrót do biblioteki. |
+| Standard reading | Light background, text, and cover. |
+| Evening mode | A darker, calm palette; the same content and actions. |
+| Aa settings | An overlay with small, medium, and large text and an evening-mode switch. Closing returns to the same part of the story. |
+| Enlarged cover | Full-screen preview; close/back returns to the reader. |
+| End of story | “New adventure with these heroes” and return to the library; this is not a plot continuation. |
+| Loading / story unavailable | Shared rules apply; on failure, retry or return to the library. |
 
-### Akcje i przejścia
+### Actions and destinations
 
-- Dotknięcie okładki → powiększony podgląd.
-- Aa → ustawienia; zmiana rozmiaru lub motywu aktualizuje czytnik.
-- „New adventure with these heroes” → formularz bajki z tą obsadą, bez poprzedniej fabuły.
-- „Back to your stories” → biblioteka.
-- „Wstecz” → ekran wejścia, np. Home lub biblioteka. Po wejściu z powiadomienia bez wcześniejszego stosu nawigacji → Home.
+- Tap cover → enlarged preview.
+- Aa → settings; changing size or theme updates the reader.
+- “New adventure with these heroes” → story form with that cast and no previous plot.
+- “Back to your stories” → library.
+- “Back” → entry screen, such as Home or library. After entry from a notification without an existing navigation stack → Home.
 
-Zapamiętywanie miejsca czytania i preferencji czytnika jest proponowanym udogodnieniem; szczegóły trwałości nie są jeszcze ustalone.
+Remembering reading position and reader preferences is a proposed convenience; persistence details have not been settled yet.
 
-## 14. Najważniejsze flow
+## 14. Key flows
 
-### Pierwsza bajka
+### First story
 
-Home bez danych → utworzenie postaci → opis → generowanie awatara → zapis → szczegóły postaci → tworzenie bajki → wybór miejsca lub „Zaskocz mnie” → generowanie → czytanie.
+Empty Home → create character → description → generate avatar → save → character details → create story → choose a place or “Surprise me” → generate → read.
 
-### Bajka bez wpisywania pomysłu
+### Story without typing an idea
 
-Home / biblioteka → tworzenie bajki → zaznaczenie postaci → „Zaskocz mnie” → długość → generowanie → gotowa historia. Losowe miejsce nie wymaga tworzenia i zapisania osobnego obiektu użytkownika.
+Home / library → create story → select characters → “Surprise me” → length → generate → ready story. A random setting does not require creating and saving a separate user-owned place.
 
-### Dodanie bohatera w trakcie przygotowania bajki
+### Adding a hero while preparing a story
 
-Formularz bajki → dodanie postaci → wygenerowanie awatara i zapis → ten sam formularz z nowym bohaterem. Pozostałe wybory i wpisane teksty zostają.
+Story form → add character → generate avatar and save → the same form with the new hero. Other choices and entered text remain.
 
-### Własne miejsce podczas tworzenia bajki
+### Custom place during story creation
 
-Formularz bajki → Places → utworzenie miejsca → nazwa, opis i opcjonalni mieszkańcy → zapis → formularz bajki z tym miejscem. Miejsce jest później dostępne na początku wspólnej kolekcji.
+Story form → Places → create place → name, description, and optional inhabitants → save → story form with that place. The place is subsequently available at the start of the shared collection.
 
-### Powrót po generowaniu w tle
+### Returning after background generation
 
-Zlecenie → generowanie → Home lub zamknięcie aplikacji → ukończenie → powiadomienie / karta Home / biblioteka → czytnik konkretnej bajki.
+Submit → generation → Home or close app → completion → notification / Home card / library → reader for the specific story.
 
-### Nowa przygoda ulubionych bohaterów
+### New adventure for favorite heroes
 
-Czytnik → „Nowa przygoda z tymi postaciami” → nowy formularz z obsadą → nowy pomysł lub tryb automatyczny → generowanie → niezależna zapisana bajka. Poprzednia pozostaje bez zmian.
+Reader → “New adventure with these heroes” → new form with the cast → new idea or automatic mode → generation → independent saved story. The previous story remains unchanged.
 
-## 15. Granice prototypu i otwarte decyzje
+## 15. Prototype boundaries and open decisions
 
-### Czego nie traktujemy jako elementu aplikacji
+### What is not part of the app
 
-- `index.html` jest katalogiem projektów, nie ekranem produktu.
-- Boczne przełączniki wariantów i kontrolki symulacji są narzędziami przeglądu, poza makietą aplikacji.
-- HTML-y nie realizują prawdziwego generowania, powiadomień ani trwałego zapisu kolekcji.
-- Przykładowa grafika nie oznacza wymogu generowania ilustracji każdego miejsca.
-- Uproszczone linki, np. zawsze do Home albo pustej listy po usunięciu, nie zastępują opisanych powrotów do kontekstu wejścia i rzeczywistej zawartości list.
+- `index.html` is a design catalog, not a product screen.
+- Sidebar variant selectors and simulation controls are review tools outside the app mockup.
+- The HTML files do not perform real generation, notifications, or durable collection persistence.
+- Example artwork does not imply a requirement to generate illustrations for every place.
+- Simplified links, such as always returning to Home or showing an empty list after deletion, do not replace the specified return-to-origin behavior and actual list contents.
 
-### Do ustalenia przed implementacją odpowiednich funkcji
+### Decisions required before implementing the relevant features
 
-1. Czy zapis postaci zawsze wymaga gotowego awatara? Które zmiany danych wymagają jego regeneracji? Co dzieje się po opuszczeniu formularza w trakcie generowania awatara?
-2. Ostateczne limity opisów postaci, miejsca i życzeń dotyczących bajki. Limity HTML są robocze, poza uzgodnioną nazwą postaci do 50 znaków.
-3. Czy i jak usuwa się bajki oraz własne miejsca; kopiowanie gotowych miejsc do własnych wersji.
-4. Zachowanie ponownego użycia obsady, gdy część bohaterów została usunięta. Czytanie istniejącej bajki pozostaje możliwe.
-5. Trwałość niezapisanych formularzy, miejsca czytania i preferencji czytnika; ewentualne potwierdzenie porzucenia zmian.
-6. Limit jednoczesnych generowań, możliwość anulowania i sposób prezentacji kilku zadań na Home. Makiety pokazują jedno zadanie, bez akcji anulowania.
-7. Czy ekran generowania po sukcesie pokazuje akcję otwarcia, czy automatycznie przechodzi do czytnika; moment proszenia o zgodę na powiadomienia.
-8. Kolejność w obrębie własnych miejsc, gotowych miejsc i zapisanych bajek oraz źródło docelowych małych miniatur Places.
+1. Does saving a character always require a ready avatar? Which data changes require regeneration? What happens when leaving the form during avatar generation?
+2. Final limits for character descriptions, place descriptions, and story wishes. HTML limits are provisional except for the agreed character name limit of 50 characters.
+3. Whether and how stories and custom places can be deleted; copying predefined places into custom versions.
+4. Reusing a cast when some heroes have been deleted. Reading the existing story must remain possible.
+5. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
+6. The limit on simultaneous generation jobs, cancellation, and presentation of multiple jobs on Home. Mockups show one job without a cancel action.
+7. Whether the generation screen shows an open action after success or automatically navigates to the reader; when to request notification permission.
+8. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
 
-Audio, edycja treści bajek, serie fabularne, płatności i osobne centrum powiadomień nie są częścią opisanych obecnie ekranów.
+Audio, story text editing, plot-based series, payments, and a separate notification center are not part of the currently described screens.
