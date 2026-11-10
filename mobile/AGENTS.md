@@ -69,6 +69,7 @@
 
 ## UI
 
+- Screen descriptions, states, actions, and navigation flows are documented in `SPEC.MD`. For tasks involving UI changes, read the relevant sections before implementation.
 - Follow Compose best practices and consider recomposition performance, but do not optimize at the expense of clarity or maintainability.
 - Keep composable functions stateless where practical. Hoist state and event handling to the caller when doing so makes the UI easier to reuse, test, or reason about.
 - When the main layout contains a logically distinct section, extract that section into a separate composable in the same file to keep the screen structure readable.

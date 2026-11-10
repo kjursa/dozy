@@ -1,0 +1,7 @@
+# Dozy cloud wordmark
+
+Generated with the built-in imagegen tool. Asset: `dozy-cloud-wordmark.png`. The sleepy cloud replaces the letter o.
+
+## Prompt
+
+Use case: logo-brand. Create a single horizontal wordmark for Dozy, a warm bedtime storytelling app. Exact lettering: lowercase d, a sleepy cloud standing IN PLACE OF the letter o, then lowercase z and y. The composition must unmistakably read 'dozy'. The cloud IS the o within the word, not an icon to the left, not above the lettering, no separate letter o. Typography: very simple bold rounded lowercase custom sans serif, friendly and clean, substantial strokes, dark charcoal #2D3436. The cloud occupies the same approximate width and x-height as the o would, with a slightly wider three-lobed soft cloud silhouette, muted teal #4ECDC4 fill, two short curved closed eyes and a tiny relaxed smile in charcoal. Cloud may be redesigned for seamless integration with the letters; tiny coral cheek dots optional, no other details. Harmonious optical spacing between d/cloud/z/y, a coherent professionally designed logo easily readable when small. Single flat vector-like logo, crisp smooth edges, no gradients, no texture, no shading, no drop shadows, no 3D, no borders. Completely uniform opaque warm cream background #FAF5EB edge to edge, matching the app background. Wide horizontal composition, logo centered and large with balanced generous margins. No tagline, no additional text, no mockup, no stars, no moon, no Zzz.
