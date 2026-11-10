@@ -166,22 +166,22 @@ The current name restriction is a nonempty value of up to 50 characters (`String
 | New character, empty form | An inspirational hint, placeholders, and space for a future avatar. |
 | Input entered, no avatar | Descriptions are ready; generation can be started. |
 | Validation failure | Field errors; correct the input and retry without starting generation for an invalid form. |
-| Avatar in progress | An indicator in the preview; no second generation request or saving an unfinished character. |
+| Avatar in progress | Block form fields and other form actions. Replace the Generate avatar button content with a circular progress indicator; prevent duplicate generation and saving. Back/system back remains available to leave without saving. |
 | Avatar ready | Preview, regenerate, and save. |
-| Avatar failure | Descriptions remain; a message and generation retry. |
-| Description changed after preview | The avatar needs refreshing, with a visible explanation. Which changes require regeneration remains undecided. |
+| Avatar failure | Unblock the form, retain descriptions, show an error, and allow retry. Do not save the character. Without a successfully generated avatar, Save remains disabled. |
+| Fields changed after preview | Keep the current avatar and allow saving valid current input with that avatar. No field change automatically generates or invalidates the avatar. |
 | Editing | Existing data and avatar, with editing and saving available. No inspirational hint for a new empty character. |
 | Saving / save failure | Progress replaces the active save action; on failure, data and avatar remain and retry is available. |
 
-Requiring an avatar to be generated and reviewed before saving is the current mockup assumption, pending confirmation as a product rule.
+A successfully generated avatar is required before a new character can be saved. Entering or changing fields never triggers generation. Only explicitly pressing Generate avatar (or Regenerate avatar) starts it, using the current input. Generation success updates the preview and enables Save; it never saves the character automatically. After success, changing any fields keeps the current avatar and does not disable Save as long as the input is valid. Saving uses the current field values and the current avatar, even if that avatar was generated from earlier descriptions. While generation is running, Save is disabled.
 
 ### Actions and destinations
 
-- “Generate avatar” / regenerate → waiting → ready avatar or failure.
+- “Generate avatar” / regenerate → validate input → block the form and show circular progress in the button → ready avatar or failure; unblock the form when the attempt finishes. This action does not create or update a saved character.
 - Save a new character opened from Home/list → new character details.
 - Save a character added during story creation → the previous story form with the new character selected and input preserved.
 - Save edits → character details with updated data.
-- “Back” → entry screen without saving changes. Leaving during avatar generation needs clarification; the behavior is not automatically assumed to match story generation.
+- “Back” → entry screen without saving changes, including when generation is running. Stop observing the abandoned attempt and ignore late responses: leaving must not create a character, update an existing character, or trigger a delayed save when generation finishes. Any existing saved character remains unchanged. Unlike story generation, this flow does not save a result in the background.
 
 ## 8. Character details
 
@@ -395,13 +395,12 @@ Reader → “New adventure with these heroes” → new form with the cast → 
 
 ### Decisions required before implementing the relevant features
 
-1. Does saving a character always require a ready avatar? Which data changes require regeneration? What happens when leaving the form during avatar generation?
-2. Final limits for character descriptions, place descriptions, and story wishes. HTML limits are provisional except for the agreed character name limit of 50 characters.
-3. Whether and how stories and custom places can be deleted; copying predefined places into custom versions.
-4. Reusing a cast when some heroes have been deleted. Reading the existing story must remain possible.
-5. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
-6. The limit on simultaneous generation jobs, cancellation, and presentation of multiple jobs on Home. Mockups show one job without a cancel action.
-7. Whether the generation screen shows an open action after success or automatically navigates to the reader; when to request notification permission.
-8. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
+1. Final limits for character descriptions, place descriptions, and story wishes. HTML limits are provisional except for the agreed character name limit of 50 characters.
+2. Whether and how stories and custom places can be deleted; copying predefined places into custom versions.
+3. Reusing a cast when some heroes have been deleted. Reading the existing story must remain possible.
+4. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
+5. The limit on simultaneous generation jobs, cancellation, and presentation of multiple jobs on Home. Mockups show one job without a cancel action.
+6. Whether the generation screen shows an open action after success or automatically navigates to the reader; when to request notification permission.
+7. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
 
 Audio, story text editing, plot-based series, payments, and a separate notification center are not part of the currently described screens.
