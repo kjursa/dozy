@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="character_name_required">Enter a character name.</string>
+    <string name="character_name_too_long">Use at most %1$d characters for the name.</string>
+    <string name="character_name_single_line">Use a single line for the name.</string>
+    <string name="character_description_required">This field is required.</string>
+    <string name="character_description_too_long">Use at most %1$d characters.</string>
+    <string name="character_type_required">Choose a character type.</string>
+    <string name="character_save_failed">Could not save on this device. Please try again.</string>
+</resources>

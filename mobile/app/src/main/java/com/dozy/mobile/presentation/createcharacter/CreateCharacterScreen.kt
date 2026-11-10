@@ -51,10 +51,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.presentation.main.mainBottomMenuScrollSpace
+import com.dozy.mobile.presentation.text.UiText
+import com.dozy.mobile.presentation.text.resolve
 import com.kjursa.composeuikit.mvi.MviScreen
 import com.kjursa.composeuikit.theme.UiSpacing
 
@@ -101,9 +104,11 @@ internal fun CreateCharacterScreen(
                 ) {
                     CharacterPreview(state.name)
                     HeroTypePicker(state.selectedType) { dispatch(CreateCharacterAction.TypeSelected(it)) }
-                    state.errors[CharacterField.TYPE]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    state.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
-                        errors = state.errors,
+                        nameError = state.nameError,
+                        personalityError = state.personalityError,
+                        appearanceError = state.appearanceError,
                         name = state.name,
                         onNameChange = { dispatch(CreateCharacterAction.NameChanged(it)) },
                         personality = state.personality,
@@ -115,7 +120,7 @@ internal fun CreateCharacterScreen(
                         SaveStatus.SAVING -> Text("Saving character…")
                         SaveStatus.FAILURE ->
                             Text(
-                                "Could not save on this device. Please try again.",
+                                stringResource(R.string.character_save_failed),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         SaveStatus.EDITING -> Unit
@@ -286,7 +291,9 @@ private fun HeroTypePicker(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun CharacterDetails(
-    errors: Map<CharacterField, String>,
+    nameError: UiText?,
+    personalityError: UiText?,
+    appearanceError: UiText?,
     name: String,
     onNameChange: (String) -> Unit,
     personality: String,
@@ -304,12 +311,12 @@ private fun CharacterDetails(
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Character name", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = name, onValueChange = onNameChange, singleLine = true)
-                errors[CharacterField.NAME]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                nameError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Personality", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
-                errors[CharacterField.PERSONALITY]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                personalityError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
@@ -320,7 +327,7 @@ private fun CharacterDetails(
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text("Appearance", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
-                errors[CharacterField.APPEARANCE]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                appearanceError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),

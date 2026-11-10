@@ -2,6 +2,7 @@ package com.dozy.mobile.presentation.createcharacter
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.dozy.mobile.domain.character.CreateCharacterValidation
 import com.dozy.mobile.domain.character.SaveCharacter
 import com.dozy.mobile.domain.character.SaveCharacterResult
 import com.kjursa.composeuikit.mvi.MviViewModel
@@ -25,14 +26,17 @@ internal class CreateCharacterViewModel(
 
     private fun save() {
         if (uiState.value.saveStatus == SaveStatus.SAVING) return
-        val (draft, errors) = uiState.value.validateDraft()
-        if (draft == null) {
-            updateState { copy(saveStatus = SaveStatus.EDITING, errors = errors) }
-            return
-        }
-        updateState { copy(saveStatus = SaveStatus.SAVING, errors = emptyMap()) }
+        val input =
+            when (val validation = uiState.value.validateInput()) {
+                is CreateCharacterValidation.Valid -> validation.input
+                is CreateCharacterValidation.Invalid -> {
+                    updateState { withErrors(validation.errors).copy(saveStatus = SaveStatus.EDITING) }
+                    return
+                }
+            }
+        updateState { withErrors().copy(saveStatus = SaveStatus.SAVING) }
         viewModelScope.launch {
-            when (saveCharacter(draft)) {
+            when (saveCharacter(input)) {
                 is SaveCharacterResult.Success -> sendEffect(CreateCharacterEffect.Saved)
                 SaveCharacterResult.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
             }
@@ -42,7 +46,12 @@ internal class CreateCharacterViewModel(
     private fun updateCharacterState(reducer: CreateCharacterUiState.() -> CreateCharacterUiState) {
         if (uiState.value.saveStatus == SaveStatus.SAVING) return
         val edited = uiState.value.reducer()
-        val next = edited.copy(errors = edited.validateDraft().errors, saveStatus = SaveStatus.EDITING)
+        val validated =
+            when (val validation = edited.validateInput()) {
+                is CreateCharacterValidation.Valid -> edited.withErrors()
+                is CreateCharacterValidation.Invalid -> edited.withErrors(validation.errors)
+            }
+        val next = validated.copy(saveStatus = SaveStatus.EDITING)
         next.saveTo(savedStateHandle)
         updateState { next }
     }

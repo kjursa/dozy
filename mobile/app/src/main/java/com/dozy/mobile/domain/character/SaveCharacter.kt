@@ -6,9 +6,9 @@ class SaveCharacter(
     private val repository: CharacterRepository,
     private val ids: CharacterIdGenerator,
 ) {
-    suspend operator fun invoke(draft: CharacterDraft): SaveCharacterResult =
+    suspend operator fun invoke(input: CreateCharacterInput): SaveCharacterResult =
         runCatchingSuspend {
-            repository.save(Character(ids.next(), draft))
+            repository.save(Character(ids.next(), CharacterDraft(input.name, input.personality, input.appearance, input.type)))
         }.fold(
             onSuccess = { SaveCharacterResult.Success(it) },
             onFailure = { SaveCharacterResult.Failure },

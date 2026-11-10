@@ -24,9 +24,9 @@ fun CharacterEntity.toDomain() =
     Character(
         CharacterId(id),
         CharacterDraft(
-            CharacterName.from(name),
-            CharacterPersonality.from(personality),
-            CharacterAppearance.from(appearance),
+            CharacterName(name),
+            CharacterPersonality(personality),
+            CharacterAppearance(appearance),
             CharacterType.valueOf(type),
         ),
     )

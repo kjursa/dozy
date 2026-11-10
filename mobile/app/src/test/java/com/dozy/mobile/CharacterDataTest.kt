@@ -33,6 +33,14 @@ class CharacterDataTest {
         assertEquals(CharacterDto("1", "Oliver", "Curious and brave", "Curly brown hair", "CHILD"), character.toDto())
     }
 
+    @Test fun existingRecordsKeepValuesOutsideCurrentCreationRules() {
+        val legacy = CharacterEntity("legacy", "x".repeat(55), "", "legacy description", "CHILD", false)
+        val domain = legacy.toDomain()
+        assertEquals(legacy.name, domain.details.name.value)
+        assertEquals(legacy, domain.toEntity(false))
+        assertEquals(legacy.name, domain.toDto().name)
+    }
+
     @Test fun persistsBeforeApiThenMarksAcknowledgedRowSynced() =
         runTest {
             val dao = FakeDao()

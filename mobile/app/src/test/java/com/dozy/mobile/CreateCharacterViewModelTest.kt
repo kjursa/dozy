@@ -9,12 +9,12 @@ import com.dozy.mobile.domain.character.ObserveCharacters
 import com.dozy.mobile.domain.character.SaveCharacter
 import com.dozy.mobile.domain.character.SavedCharacter
 import com.dozy.mobile.presentation.characters.CharactersViewModel
-import com.dozy.mobile.presentation.createcharacter.CharacterField
 import com.dozy.mobile.presentation.createcharacter.CreateCharacterAction
 import com.dozy.mobile.presentation.createcharacter.CreateCharacterEffect
 import com.dozy.mobile.presentation.createcharacter.CreateCharacterViewModel
 import com.dozy.mobile.presentation.createcharacter.SaveStatus
 import com.dozy.mobile.presentation.home.HomeViewModel
+import com.dozy.mobile.presentation.text.UiText
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,16 +53,16 @@ class CreateCharacterViewModelTest {
             vm.dispatch(CreateCharacterAction.TypeSelected("Unknown"))
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertEquals(CharacterField.entries.toSet(), vm.uiState.value.errors.keys)
+            assertEquals(UiText.Resource(R.string.character_name_required), vm.uiState.value.nameError)
+            assertEquals(UiText.Resource(R.string.character_description_required), vm.uiState.value.personalityError)
+            assertEquals(UiText.Resource(R.string.character_description_required), vm.uiState.value.appearanceError)
+            assertEquals(UiText.Resource(R.string.character_type_required), vm.uiState.value.typeError)
             assertEquals(0, repository.saves)
             vm.dispatch(CreateCharacterAction.NameChanged("Finn"))
             vm.dispatch(CreateCharacterAction.PersonalityChanged("Kind"))
             vm.dispatch(CreateCharacterAction.AppearanceChanged("Green eyes"))
             vm.dispatch(CreateCharacterAction.TypeSelected("Fantasy"))
-            assertTrue(
-                vm.uiState.value.errors
-                    .isEmpty(),
-            )
+            assertNoFieldErrors(vm)
             assertEquals("Finn", viewModel(handle).uiState.value.name)
             assertEquals("Fantasy", viewModel(handle).uiState.value.selectedType)
             assertEquals("Kind", viewModel(handle).uiState.value.personality)
@@ -109,15 +109,15 @@ class CreateCharacterViewModelTest {
                 vm.dispatch(CreateCharacterAction.NameChanged(name))
                 vm.dispatch(CreateCharacterAction.SaveClicked)
                 assertEquals(SaveStatus.EDITING, vm.uiState.value.saveStatus)
-                assertEquals(setOf(CharacterField.NAME), vm.uiState.value.errors.keys)
+                assertNotNull(vm.uiState.value.nameError)
+                assertNull(vm.uiState.value.personalityError)
+                assertNull(vm.uiState.value.appearanceError)
+                assertNull(vm.uiState.value.typeError)
             }
             advanceUntilIdle()
             assertEquals(0, repository.saves)
             vm.dispatch(CreateCharacterAction.NameChanged("  Finn  "))
-            assertTrue(
-                vm.uiState.value.errors
-                    .isEmpty(),
-            )
+            assertNoFieldErrors(vm)
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
             assertEquals(
@@ -175,6 +175,14 @@ class CreateCharacterViewModelTest {
             assertTrue(home.uiState.value.characterLoadError)
             assertTrue(characters.uiState.value.characterLoadError)
         }
+
+    private fun assertNoFieldErrors(vm: CreateCharacterViewModel) {
+        val state = vm.uiState.value
+        assertNull(state.nameError)
+        assertNull(state.personalityError)
+        assertNull(state.appearanceError)
+        assertNull(state.typeError)
+    }
 
     private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
         CreateCharacterViewModel(

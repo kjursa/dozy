@@ -1,7 +1,12 @@
 package com.dozy.mobile.presentation.createcharacter
 
+import com.dozy.mobile.presentation.text.UiText
+
 internal data class CreateCharacterUiState(
-    val errors: Map<CharacterField, String> = emptyMap(),
+    val nameError: UiText? = null,
+    val personalityError: UiText? = null,
+    val appearanceError: UiText? = null,
+    val typeError: UiText? = null,
     val saveStatus: SaveStatus = SaveStatus.EDITING,
     val selectedType: String = "Child",
     val name: String = "Oliver",

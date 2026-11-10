@@ -15,8 +15,8 @@ construction (including the Ktor Android engine) lives in `di/AndroidModule.kt`.
 ## Save outcomes
 
 - Validate required name, personality, appearance and type before persistence.
-  Private value-class constructors and `from()` factories enforce these rules before
-  the use case runs. Name is a single line of 1–50 trimmed `String.length` units;
+  The private constructor of `CreateCharacterInput` and its `from()` factory enforce
+  creation rules before the use case runs. Name is a single line of 1–50 trimmed `String.length` units;
   personality and appearance are required and limited to 2000 trimmed units each.
   These are local product rules until a backend contract is agreed.
 - Generate an identity and write a pending row before attempting HTTP. A failed
@@ -80,3 +80,24 @@ need to move Android presentation resources out of any shared ViewModels.
 The Room database class moved packages; its exported schema moved to the matching
 qualified-name directory. Table definitions, schema version, and identity hash
 are unchanged, so this package refactor does not require a database migration.
+
+## Creation validation and field messages
+
+`CreateCharacterInput.from()` returns either a valid creation request or typed
+errors grouped by name, personality, appearance, and type, with one error per
+field. Its constructor is private and it has no data-class copy method, so callers
+cannot construct an unchecked creation request. `SaveCharacter` accepts only this
+validated request.
+
+Existing `CharacterDraft` values read from storage/API are separate from creation
+requests. Their value classes wrap stored values without trimming or reapplying
+current creation limits, so a legacy 55-character name can still be displayed.
+Technical schema/serialization failures remain data-layer failures.
+
+Presentation maps domain errors to `UiText.Resource` values in the four nullable
+UI-state fields (`nameError`, `personalityError`, `appearanceError`, `typeError`).
+`UiText.Plain` can carry an API message intended for users. The `resolve()`
+Composable extension selects current localized resources and formatting arguments
+or returns the plain text. Domain code contains no resource IDs or UI text.
+Resource IDs currently use Android resources; switching the presentation to
+Compose Multiplatform resources belongs to the future KMP migration.

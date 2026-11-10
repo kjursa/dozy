@@ -1,9 +1,6 @@
 package com.dozy.mobile.domain.character
 
-@JvmInline value class CharacterPersonality private constructor(
+/** A value read from an existing character; creation rules belong to CreateCharacterInput. */
+@JvmInline value class CharacterPersonality(
     val value: String,
-) {
-    companion object {
-        fun from(raw: String) = CharacterPersonality(validatedText(raw, 2000))
-    }
-}
+)

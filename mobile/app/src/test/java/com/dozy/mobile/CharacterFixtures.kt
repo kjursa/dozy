@@ -9,14 +9,16 @@ import com.dozy.mobile.domain.character.CharacterPersonality
 import com.dozy.mobile.domain.character.CharacterRepository
 import com.dozy.mobile.domain.character.CharacterSync
 import com.dozy.mobile.domain.character.CharacterType
+import com.dozy.mobile.domain.character.CreateCharacterInput
+import com.dozy.mobile.domain.character.CreateCharacterValidation
 import com.dozy.mobile.domain.character.SavedCharacter
 import kotlinx.coroutines.flow.MutableStateFlow
 
 internal val validDraft =
     CharacterDraft(
-        CharacterName.from("Oliver"),
-        CharacterPersonality.from("Curious and brave"),
-        CharacterAppearance.from("Curly brown hair"),
+        CharacterName("Oliver"),
+        CharacterPersonality("Curious and brave"),
+        CharacterAppearance("Curly brown hair"),
         CharacterType.CHILD,
     )
 
@@ -25,7 +27,7 @@ internal fun character(
     name: String = "Oliver",
 ) = com.dozy.mobile.domain.character.Character(
     CharacterId(id),
-    validDraft.copy(name = CharacterName.from(name)),
+    validDraft.copy(name = CharacterName(name)),
 )
 
 internal class FakeCharacterRepository : CharacterRepository {
@@ -44,3 +46,6 @@ internal class FakeCharacterRepository : CharacterRepository {
         return SavedCharacter(character, CharacterSync.PENDING)
     }
 }
+
+internal fun createInput(name: String = "Oliver"): CreateCharacterInput =
+    (CreateCharacterInput.from(name, "Curious and brave", "Curly brown hair", CharacterType.CHILD) as CreateCharacterValidation.Valid).input
