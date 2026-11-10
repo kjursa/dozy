@@ -118,3 +118,16 @@ an enclosing Character instance. Existing records use `Character.Details`; the
 creation-only validation remains in `CreateCharacterInput`. Operation and contract
 names such as `SaveCharacter` and `CharacterRepository` stay explicit and live in
 separate files.
+
+## Form restoration
+
+The form state uses Kotlin serialization. All raw input fields are saved under one
+`STATE` key through the optional foundation persistence hook in `MviViewModel`.
+Koin supplies `SavedStatePersistence` with the screen's SavedStateHandle and state
+serializer. The ViewModel no longer writes fields to individual keys or depends on
+SavedStateHandle directly. New serializable state fields are included automatically.
+
+Field errors and saving/failure status are transient and restore to null/EDITING,
+so a system-recreated form retains its input without stale errors or stuck progress.
+This restores the form input, not an in-flight save operation. Unit tests recreate
+ViewModels from the serialized snapshot; device process-death checks have not been run.

@@ -11,12 +11,14 @@ import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.feature.home.di.homeModule
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.story.di.storyModule
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
+import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
@@ -68,7 +71,17 @@ class CharacterModuleTest {
                 assertNotSame(stories, storiesViewModel(otherOwner))
                 val form =
                     app.koin.get<CreateCharacterViewModel> {
-                        parametersOf(SavedStateHandle(mapOf("createCharacter.name" to "Koin hero")))
+                        parametersOf(
+                            SavedStateHandle(
+                                mapOf(
+                                    SavedStatePersistence.DEFAULT_KEY to
+                                        Json.encodeToString(
+                                            CreateCharacterUiState.serializer(),
+                                            CreateCharacterUiState(name = "Koin hero"),
+                                        ),
+                                ),
+                            ),
+                        )
                     }
                 assertSame(app.koin.get<CharacterRepository>(), app.koin.get<CharacterRepository>())
                 val home =

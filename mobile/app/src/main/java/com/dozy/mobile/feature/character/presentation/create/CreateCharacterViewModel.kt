@@ -1,25 +1,28 @@
 package com.dozy.mobile.feature.character.presentation.create
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.kjursa.foundation.compose.mvi.MviViewModel
+import com.kjursa.foundation.compose.mvi.StatePersistence
 import kotlinx.coroutines.launch
 
 internal class CreateCharacterViewModel(
-    private val savedStateHandle: SavedStateHandle,
+    statePersistence: StatePersistence<CreateCharacterUiState>,
     private val saveCharacter: SaveCharacter,
-) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(savedStateHandle.toUiState()) {
+) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(
+        initialState = CreateCharacterUiState(),
+        statePersistence = statePersistence,
+    ) {
     override fun onAction(action: CreateCharacterAction) {
         when (action) {
             CreateCharacterAction.BackClicked -> sendEffect(CreateCharacterEffect.NavigateBack)
             CreateCharacterAction.SaveClicked -> save()
             CreateCharacterAction.PreviewClicked -> sendEffect(CreateCharacterEffect.PreviewRequested)
-            is CreateCharacterAction.TypeSelected -> updateCharacterState { copy(selectedType = action.type) }
-            is CreateCharacterAction.NameChanged -> updateCharacterState { copy(name = action.name) }
-            is CreateCharacterAction.PersonalityChanged -> updateCharacterState { copy(personality = action.personality) }
-            is CreateCharacterAction.AppearanceChanged -> updateCharacterState { copy(appearance = action.appearance) }
+            is CreateCharacterAction.TypeSelected -> updateCharacterState { withType(action.type) }
+            is CreateCharacterAction.NameChanged -> updateCharacterState { withName(action.name) }
+            is CreateCharacterAction.PersonalityChanged -> updateCharacterState { withPersonality(action.personality) }
+            is CreateCharacterAction.AppearanceChanged -> updateCharacterState { withAppearance(action.appearance) }
         }
     }
 
@@ -29,7 +32,7 @@ internal class CreateCharacterViewModel(
             when (val validation = uiState.value.validateInput()) {
                 is CreateCharacterValidation.Valid -> validation.input
                 is CreateCharacterValidation.Invalid -> {
-                    updateState { withErrors(validation.errors).copy(saveStatus = SaveStatus.EDITING) }
+                    updateState { withValidationErrors(validation.errors).copy(saveStatus = SaveStatus.EDITING) }
                     return
                 }
             }
@@ -48,10 +51,9 @@ internal class CreateCharacterViewModel(
         val validated =
             when (val validation = edited.validateInput()) {
                 is CreateCharacterValidation.Valid -> edited.withErrors()
-                is CreateCharacterValidation.Invalid -> edited.withErrors(validation.errors)
+                is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
         val next = validated.copy(saveStatus = SaveStatus.EDITING)
-        next.saveTo(savedStateHandle)
         updateState { next }
     }
 }
