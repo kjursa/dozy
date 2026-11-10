@@ -79,3 +79,8 @@
 - Keep application-specific palette, fonts, assets, navigation, and screen behavior in `:app`.
 - Use Material 3 components directly unless the library adds distinct reusable behavior or styling; avoid wrappers that only duplicate Material APIs.
 - Before changing public library APIs, read `foundation/AGENTS.md` and update `foundation/README.md` as needed.
+
+### Localized UI copy
+
+- Do not hardcode static user-facing strings in UI code, ViewModels, or UI state. Define them in `res/values/strings.xml`, use `stringResource` in Composables, and supply presentation-state copy through `UiText.Resource`, resolved when rendering.
+- Keep actual user-entered and backend-provided content dynamic. Use stable IDs or enums for selections and saved state rather than translated display labels.

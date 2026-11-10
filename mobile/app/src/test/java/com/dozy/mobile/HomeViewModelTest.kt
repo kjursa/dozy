@@ -4,6 +4,7 @@ import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.home.presentation.HomeAction
 import com.dozy.mobile.feature.home.presentation.HomeEffect
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
+import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -39,11 +40,15 @@ class HomeViewModelTest {
         dispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
 
-        assertEquals("TUESDAY, 14 OCTOBER", state.dateLabel)
-        assertEquals("Good evening!", state.greeting)
-        assertEquals("Ready for a new adventure?", state.prompt)
+        assertEquals(UiText.Resource(R.string.tuesday_14_october), state.dateLabel)
+        assertEquals(UiText.Resource(R.string.good_evening), state.greeting)
+        assertEquals(UiText.Resource(R.string.ready_for_a_new_adventure), state.prompt)
         assertEquals(
-            listOf("Oliver and the Secret Pirate Island", "The Mystery of the Missing Moon", "A Journey Through the Enchanted Forest"),
+            listOf(
+                UiText.Resource(R.string.oliver_and_the_secret_pirate_island),
+                UiText.Resource(R.string.the_mystery_of_the_missing_moon),
+                UiText.Resource(R.string.a_journey_through_the_enchanted_forest),
+            ),
             state.stories.map { it.title },
         )
         assertEquals(listOf("Oliver", "Luna", "Captain Finn"), state.characters.map { it.name })

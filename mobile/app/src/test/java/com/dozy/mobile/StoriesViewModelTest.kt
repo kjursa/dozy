@@ -3,6 +3,7 @@ package com.dozy.mobile
 import com.dozy.mobile.feature.story.presentation.list.StoriesAction
 import com.dozy.mobile.feature.story.presentation.list.StoriesEffect
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
+import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -31,9 +32,13 @@ class StoriesViewModelTest {
 
     @Test fun initialStateExposesSampleStories() {
         val viewModel = StoriesViewModel()
-        assertEquals("My Stories", viewModel.uiState.value.title)
+        assertEquals(UiText.Resource(R.string.my_stories), viewModel.uiState.value.title)
         assertEquals(
-            listOf("Oliver and the Secret Pirate Island", "The Mystery of the Missing Moon", "A Journey Through the Enchanted Forest"),
+            listOf(
+                UiText.Resource(R.string.oliver_and_the_secret_pirate_island),
+                UiText.Resource(R.string.the_mystery_of_the_missing_moon),
+                UiText.Resource(R.string.a_journey_through_the_enchanted_forest),
+            ),
             viewModel.uiState.value.stories
                 .map { it.title },
         )

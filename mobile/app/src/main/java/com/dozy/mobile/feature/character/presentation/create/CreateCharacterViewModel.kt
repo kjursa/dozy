@@ -16,6 +16,10 @@ internal class CreateCharacterViewModel(
     ) {
     override fun onAction(action: CreateCharacterAction) {
         when (action) {
+            is CreateCharacterAction.InitializeSamples ->
+                updateState {
+                    withSampleDefaults(action.name, action.personality, action.appearance)
+                }
             CreateCharacterAction.BackClicked -> sendEffect(CreateCharacterEffect.NavigateBack)
             CreateCharacterAction.SaveClicked -> save()
             CreateCharacterAction.PreviewClicked -> sendEffect(CreateCharacterEffect.PreviewRequested)

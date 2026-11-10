@@ -31,12 +31,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.resolve
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -52,7 +55,7 @@ internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
         },
     ) { state, dispatch ->
         Column {
-            if (state.characterLoadError) Text("Could not load characters.", color = MaterialTheme.colorScheme.error)
+            if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
             CharactersTabContent(state, dispatch)
         }
     }
@@ -73,10 +76,14 @@ internal fun CharactersTabContent(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow(state.eyebrow)
-                    Text(state.title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Eyebrow(state.eyebrow.resolve())
                     Text(
-                        state.subtitle,
+                        state.title.resolve(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Text(
+                        state.subtitle.resolve(),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -140,9 +147,13 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
                 modifier = Modifier.size(32.dp),
             )
             Column {
-                Text("Add a new character", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    "Create another hero for your stories.",
+                    stringResource(R.string.add_a_new_character),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    stringResource(R.string.create_another_hero_for_your_stories),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

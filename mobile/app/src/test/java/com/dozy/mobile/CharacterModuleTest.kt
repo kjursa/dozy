@@ -94,6 +94,7 @@ class CharacterModuleTest {
                         scope = app.koin.scopeRegistry.rootScope,
                     )
                 resolveViewModel(StoriesViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
+                form.dispatch(CreateCharacterAction.InitializeSamples("Oliver", "Curious and brave", "Green eyes"))
                 form.dispatch(CreateCharacterAction.SaveClicked)
                 advanceUntilIdle()
                 assertEquals(CreateCharacterEffect.Saved, form.effects.first())

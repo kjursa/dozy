@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,16 +63,17 @@ import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
 
 private data class HeroType(
-    val label: String,
+    val value: String,
+    val label: Int,
     val icon: ImageVector,
 )
 
 private val heroTypes =
     listOf(
-        HeroType("Child", Icons.Default.Face),
-        HeroType("Animal", Icons.Default.Pets),
-        HeroType("Fantasy", Icons.Default.AutoAwesome),
-        HeroType("Other", Icons.Default.Stars),
+        HeroType("Child", R.string.child, Icons.Default.Face),
+        HeroType("Animal", R.string.animal, Icons.Default.Pets),
+        HeroType("Fantasy", R.string.fantasy, Icons.Default.AutoAwesome),
+        HeroType("Other", R.string.other, Icons.Default.Stars),
     )
 
 @Composable
@@ -90,6 +92,12 @@ internal fun CreateCharacterScreen(
             }
         },
     ) { state, dispatch ->
+        val name = state.displayName.resolve()
+        val personality = state.displayPersonality.resolve()
+        val appearance = state.displayAppearance.resolve()
+        LaunchedEffect(Unit) {
+            dispatch(CreateCharacterAction.InitializeSamples(name, personality, appearance))
+        }
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CharacterScreenGlows()
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -102,22 +110,22 @@ internal fun CreateCharacterScreen(
                         .padding(horizontal = UiSpacing.x3),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
                 ) {
-                    CharacterPreview(state.name)
+                    CharacterPreview(name)
                     HeroTypePicker(state.selectedType) { dispatch(CreateCharacterAction.TypeSelected(it)) }
                     state.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
                         nameError = state.nameError,
                         personalityError = state.personalityError,
                         appearanceError = state.appearanceError,
-                        name = state.name,
+                        name = name,
                         onNameChange = { dispatch(CreateCharacterAction.NameChanged(it)) },
-                        personality = state.personality,
+                        personality = personality,
                         onPersonalityChange = { dispatch(CreateCharacterAction.PersonalityChanged(it)) },
-                        appearance = state.appearance,
+                        appearance = appearance,
                         onAppearanceChange = { dispatch(CreateCharacterAction.AppearanceChanged(it)) },
                     )
                     when (state.saveStatus) {
-                        SaveStatus.SAVING -> Text("Saving character…")
+                        SaveStatus.SAVING -> Text(stringResource(R.string.saving_character))
                         SaveStatus.FAILURE ->
                             Text(
                                 stringResource(R.string.character_save_failed),
@@ -174,7 +182,11 @@ private fun CharacterHeader(onBack: () -> Unit) {
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.secondary)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
             }
         }
         Surface(
@@ -193,7 +205,11 @@ private fun CharacterHeader(onBack: () -> Unit) {
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )
-                Text("New Character", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.new_character),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
         Spacer(Modifier.size(48.dp))
@@ -211,7 +227,7 @@ private fun CharacterPreview(name: String) {
             Box(Modifier.padding(UiSpacing.x3).fillMaxSize().background(MaterialTheme.colorScheme.tertiary.copy(alpha = .28f), CircleShape))
             Image(
                 painterResource(R.drawable.character_oliver),
-                contentDescription = "$name preview",
+                contentDescription = stringResource(R.string.character_preview, name),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
             )
@@ -222,7 +238,7 @@ private fun CharacterPreview(name: String) {
                 border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
             ) {
                 Text(
-                    "Preview",
+                    stringResource(R.string.preview),
                     modifier = Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -231,14 +247,18 @@ private fun CharacterPreview(name: String) {
         }
         Text(
             name.ifBlank {
-                "Your hero"
+                stringResource(R.string.your_hero)
             },
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text("Curious explorer, age 5", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(R.string.curious_explorer_age_5),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -248,13 +268,17 @@ private fun HeroTypePicker(
     onSelect: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        Text("WHO IS THIS HERO?", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(R.string.who_is_this_hero),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             heroTypes.forEach { type ->
-                val isSelected = type.label == selected
+                val isSelected = type.value == selected
                 val typeShape = MaterialTheme.shapes.medium
                 Surface(
-                    modifier = Modifier.weight(1f).clip(typeShape).clickable { onSelect(type.label) },
+                    modifier = Modifier.weight(1f).clip(typeShape).clickable { onSelect(type.value) },
                     shape = typeShape,
                     color = MaterialTheme.colorScheme.surface,
                     border =
@@ -275,7 +299,7 @@ private fun HeroTypePicker(
                             modifier = Modifier.size(24.dp),
                         )
                         Text(
-                            type.label,
+                            stringResource(type.label),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -309,32 +333,51 @@ private fun CharacterDetails(
     ) {
         Column(Modifier.padding(UiSpacing.x3), verticalArrangement = Arrangement.spacedBy(UiSpacing.x3)) {
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text("Character name", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.character_name),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
                 CharacterInput(value = name, onValueChange = onNameChange, singleLine = true)
                 nameError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text("Personality", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.personality),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
                 CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
                 personalityError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
-                    listOf("Curious", "Brave", "Kind", "Funny").forEach { TraitChip(it) }
+                    listOf(
+                        stringResource(R.string.curious),
+                        stringResource(R.string.brave),
+                        stringResource(R.string.kind),
+                        stringResource(R.string.funny),
+                    ).forEach {
+                        TraitChip(it)
+                    }
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text("Appearance", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    stringResource(R.string.appearance),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
                 CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
                 appearanceError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
-                    AppearanceChip("Yellow hoodie", MaterialTheme.colorScheme.tertiary)
-                    AppearanceChip("Green eyes", MaterialTheme.colorScheme.secondary)
-                    AppearanceChip("Brown curls", MaterialTheme.colorScheme.onSurface)
+                    AppearanceChip(stringResource(R.string.yellow_hoodie), MaterialTheme.colorScheme.tertiary)
+                    AppearanceChip(stringResource(R.string.green_eyes), MaterialTheme.colorScheme.secondary)
+                    AppearanceChip(stringResource(R.string.brown_curls), MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -438,7 +481,12 @@ private fun CharacterActions(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(UiSpacing.x1))
-                Text("Generate Preview", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(R.string.generate_preview),
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (saving) {
                 Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
@@ -455,7 +503,7 @@ private fun CharacterActions(
                     Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(UiSpacing.x1))
                     Text(
-                        "Save Character",
+                        stringResource(R.string.save_character),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimary,
                         maxLines = 1,

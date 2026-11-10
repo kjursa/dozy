@@ -10,9 +10,9 @@ import com.kjursa.foundation.presentation.text.UiText
 /** Validate creation rules while retaining raw form text for editing. */
 internal fun CreateCharacterUiState.validateInput(): CreateCharacterValidation =
     CreateCharacterInput.from(
-        name = name,
-        personality = personality,
-        appearance = appearance,
+        name = name.orEmpty(),
+        personality = personality.orEmpty(),
+        appearance = appearance.orEmpty(),
         type = Character.Type.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
     )
 

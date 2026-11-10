@@ -24,10 +24,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.dozy.mobile.R
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.resolve
 
 @Composable
 internal fun StoryCard(
@@ -44,7 +48,7 @@ internal fun StoryCard(
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             Image(
                 painterResource(story.image),
-                contentDescription = "${story.title} cover",
+                contentDescription = stringResource(R.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -55,7 +59,7 @@ internal fun StoryCard(
             )
             Column(Modifier.padding(horizontal = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
-                    story.title,
+                    story.title.resolve(),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -85,7 +89,7 @@ internal fun StoryWideCard(
         ) {
             Image(
                 painterResource(story.image),
-                contentDescription = "${story.title} cover",
+                contentDescription = stringResource(R.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .width(96.dp)
@@ -95,7 +99,7 @@ internal fun StoryWideCard(
                 contentScale = ContentScale.Crop,
             )
             Column(Modifier.weight(1f).padding(end = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(story.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(story.title.resolve(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 ReadTime(story.minutes)
             }
         }
@@ -103,7 +107,7 @@ internal fun StoryWideCard(
 }
 
 @Composable
-private fun ReadTime(label: String) {
+private fun ReadTime(minutes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
         Icon(
             Icons.Default.Schedule,
@@ -111,6 +115,10 @@ private fun ReadTime(label: String) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp),
         )
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            pluralStringResource(R.plurals.story_read_minutes, minutes, minutes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

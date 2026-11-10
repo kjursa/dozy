@@ -1,6 +1,12 @@
 package com.dozy.mobile.feature.character.presentation.create
 
 internal sealed interface CreateCharacterAction {
+    data class InitializeSamples(
+        val name: String,
+        val personality: String,
+        val appearance: String,
+    ) : CreateCharacterAction
+
     data object BackClicked : CreateCharacterAction
 
     data object SaveClicked : CreateCharacterAction
