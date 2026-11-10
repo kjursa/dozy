@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
 import com.dozy.mobile.feature.character.domain.SaveCharacter
-import com.dozy.mobile.feature.character.domain.SaveCharacterResult
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import kotlinx.coroutines.launch
 
@@ -37,8 +36,8 @@ internal class CreateCharacterViewModel(
         updateState { withErrors().copy(saveStatus = SaveStatus.SAVING) }
         viewModelScope.launch {
             when (saveCharacter(input)) {
-                is SaveCharacterResult.Success -> sendEffect(CreateCharacterEffect.Saved)
-                SaveCharacterResult.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
+                is SaveCharacter.Result.Success -> sendEffect(CreateCharacterEffect.Saved)
+                SaveCharacter.Result.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
             }
         }
     }

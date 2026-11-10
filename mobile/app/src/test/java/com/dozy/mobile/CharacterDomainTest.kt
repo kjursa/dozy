@@ -5,7 +5,6 @@ import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.CharacterRepository
 import com.dozy.mobile.feature.character.domain.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.SaveCharacter
-import com.dozy.mobile.feature.character.domain.SaveCharacterResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -16,7 +15,7 @@ class CharacterDomainTest {
     @Test fun savesNormalizedInputAndLoadsSavedCharacters() =
         runTest {
             val repository = FakeCharacterRepository()
-            val result = save(repository)(createInput("  Finn  ")) as SaveCharacterResult.Success
+            val result = save(repository)(createInput("  Finn  ")) as SaveCharacter.Result.Success
             assertEquals("Finn", result.saved.character.details.name.value)
             assertEquals(Character.Id("new"), result.saved.character.id)
             assertEquals(result.saved.character, ObserveCharacters(repository)().first().characters.last())
@@ -25,7 +24,7 @@ class CharacterDomainTest {
     @Test fun exposesRepositoryFailure() =
         runTest {
             val repository = FakeCharacterRepository().apply { failure = IllegalStateException("disk full") }
-            assertEquals(SaveCharacterResult.Failure, save(repository)(createInput()))
+            assertEquals(SaveCharacter.Result.Failure, save(repository)(createInput()))
         }
 
     @Test fun preservesCancellation() =
