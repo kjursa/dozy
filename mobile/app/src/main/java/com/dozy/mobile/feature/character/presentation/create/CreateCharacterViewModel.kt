@@ -1,16 +1,19 @@
 package com.dozy.mobile.feature.character.presentation.create
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.kjursa.foundation.compose.mvi.MviViewModel
+import com.kjursa.foundation.compose.mvi.StatePersistence
 import kotlinx.coroutines.launch
 
 internal class CreateCharacterViewModel(
-    private val savedStateHandle: SavedStateHandle,
+    statePersistence: StatePersistence<CreateCharacterUiState>,
     private val saveCharacter: SaveCharacter,
-) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(savedStateHandle.toUiState()) {
+) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(
+        initialState = CreateCharacterUiState(),
+        statePersistence = statePersistence,
+    ) {
     override fun onAction(action: CreateCharacterAction) {
         when (action) {
             CreateCharacterAction.BackClicked -> sendEffect(CreateCharacterEffect.NavigateBack)
@@ -51,7 +54,6 @@ internal class CreateCharacterViewModel(
                 is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
         val next = validated.copy(saveStatus = SaveStatus.EDITING)
-        next.saveTo(savedStateHandle)
         updateState { next }
     }
 }

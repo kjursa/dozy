@@ -9,10 +9,12 @@ import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.create.SaveStatus
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
+import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -180,6 +182,67 @@ class CreateCharacterViewModelTest {
             assertTrue(characters.uiState.value.characterLoadError)
         }
 
+    @Test fun recreationRestoresInvalidTextWithoutPersistingFieldErrors() =
+        runTest(dispatcher) {
+            val handle = SavedStateHandle()
+            val vm = viewModel(handle)
+            vm.dispatch(CreateCharacterAction.NameChanged(""))
+            vm.dispatch(CreateCharacterAction.PersonalityChanged(""))
+            vm.dispatch(CreateCharacterAction.AppearanceChanged("custom appearance"))
+            vm.dispatch(CreateCharacterAction.TypeSelected("Unknown"))
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            assertNotNull(vm.uiState.value.nameError)
+            val restored = viewModel(snapshotHandle(handle)).uiState.value
+            assertEquals("", restored.name)
+            assertEquals("", restored.personality)
+            assertEquals("custom appearance", restored.appearance)
+            assertEquals("Unknown", restored.selectedType)
+            assertEquals(SaveStatus.EDITING, restored.saveStatus)
+            assertNull(restored.nameError)
+            assertNull(restored.personalityError)
+            assertNull(restored.appearanceError)
+            assertNull(restored.typeError)
+            assertEquals(0, repository.saves)
+        }
+
+    @Test fun recreationDuringSaveRestoresAnEditableFormRatherThanStuckProgress() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<Unit>()
+            repository.beforeSave = { gate.await() }
+            val handle = SavedStateHandle()
+            val vm = viewModel(handle)
+            vm.dispatch(CreateCharacterAction.NameChanged("Saved draft"))
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            runCurrent()
+            assertEquals(SaveStatus.SAVING, vm.uiState.value.saveStatus)
+            val restored = viewModel(snapshotHandle(handle))
+            assertEquals("Saved draft", restored.uiState.value.name)
+            assertEquals(SaveStatus.EDITING, restored.uiState.value.saveStatus)
+            assertEquals(1, repository.saves)
+            gate.complete(Unit)
+            advanceUntilIdle()
+        }
+
+    @Test fun recreationDoesNotRestoreAnOldSaveFailure() =
+        runTest(dispatcher) {
+            repository.failure = IllegalStateException("disk full")
+            val handle = SavedStateHandle()
+            val vm = viewModel(handle)
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertEquals(SaveStatus.FAILURE, vm.uiState.value.saveStatus)
+            val restored = viewModel(snapshotHandle(handle))
+            assertEquals(vm.uiState.value.name, restored.uiState.value.name)
+            assertEquals(SaveStatus.EDITING, restored.uiState.value.saveStatus)
+        }
+
+    private fun snapshotHandle(handle: SavedStateHandle) =
+        SavedStateHandle(
+            mapOf(
+                SavedStatePersistence.DEFAULT_KEY to requireNotNull(handle.get<String>(SavedStatePersistence.DEFAULT_KEY)),
+            ),
+        )
+
     private fun assertNoFieldErrors(vm: CreateCharacterViewModel) {
         val state = vm.uiState.value
         assertNull(state.nameError)
@@ -190,7 +253,7 @@ class CreateCharacterViewModelTest {
 
     private fun viewModel(handle: SavedStateHandle = SavedStateHandle()) =
         CreateCharacterViewModel(
-            handle,
+            SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
             SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
         )
 }

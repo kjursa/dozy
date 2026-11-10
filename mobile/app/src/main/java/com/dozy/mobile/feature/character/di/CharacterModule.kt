@@ -6,9 +6,12 @@ import com.dozy.mobile.feature.character.data.api.KtorCharacterApi
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
+import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import org.koin.core.module.dsl.factoryOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -20,6 +23,11 @@ internal val characterModule =
         single<CharacterRepository> { DefaultCharacterRepository(get(), get()) }
         factoryOf(::SaveCharacter)
         factoryOf(::ObserveCharacters)
-        viewModelOf(::CreateCharacterViewModel)
+        viewModel {
+            CreateCharacterViewModel(
+                statePersistence = SavedStatePersistence(get(), CreateCharacterUiState.serializer()),
+                saveCharacter = get(),
+            )
+        }
         viewModelOf(::CharactersViewModel)
     }

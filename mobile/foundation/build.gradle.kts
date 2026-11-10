@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jlleitschuh.gradle.ktlint")
 }
@@ -28,6 +29,8 @@ android {
 }
 
 dependencies {
+    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    api("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

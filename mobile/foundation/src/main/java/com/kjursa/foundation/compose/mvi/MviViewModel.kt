@@ -1,5 +1,6 @@
 package com.kjursa.foundation.compose.mvi
 
+import androidx.annotation.MainThread
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.channels.Channel
@@ -13,8 +14,9 @@ import kotlinx.coroutines.launch
 /** Base for a simple unidirectional flow: actions update state or emit one-off effects. */
 abstract class MviViewModel<State : Any, Action : Any, Effect : Any>(
     initialState: State,
+    private val statePersistence: StatePersistence<State>? = null,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(initialState)
+    private val mutableState = MutableStateFlow(statePersistence?.restore(initialState) ?: initialState)
     val uiState: StateFlow<State> = mutableState.asStateFlow()
 
     private val effectChannel = Channel<Effect>(capacity = Channel.BUFFERED)
@@ -25,8 +27,11 @@ abstract class MviViewModel<State : Any, Action : Any, Effect : Any>(
 
     protected abstract fun onAction(action: Action)
 
+    /** Call on the main thread. Reducers are pure; persistence runs after the state update commits. */
+    @MainThread
     protected fun updateState(reducer: State.() -> State) {
         mutableState.update(reducer)
+        statePersistence?.save(mutableState.value)
     }
 
     protected fun sendEffect(effect: Effect) {

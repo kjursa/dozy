@@ -95,3 +95,42 @@ because one-off effects are delivered through a single-consumer channel.
 
 From `mobile/`, run `./gradlew :foundation:testDebugUnitTest` for library unit tests
 and `./gradlew :app:assembleDebug` to check integration with the consuming app.
+
+## Optional state restoration
+
+`MviViewModel` accepts an optional constructor-injected `StatePersistence<State>`.
+It restores the initial state and automatically persists the committed value after
+`updateState`. Existing ViewModels can omit persistence. Dispatch actions and call
+`updateState` on the main thread; reducers must be pure because StateFlow may retry
+them. Persistence runs outside the reducer.
+
+For a small form, annotate its state with `kotlinx.serialization.Serializable` and
+mark errors, loading/saving status, derived data, and other non-restorable fields
+with `kotlinx.serialization.Transient`. Transient fields need default values:
+
+```kotlin
+@Serializable
+data class EditorState(
+    val text: String = "",
+    @Transient val isLoading: Boolean = false,
+    @Transient val error: UiText? = null,
+)
+```
+
+At the application's DI boundary, supply
+`SavedStatePersistence(handle, EditorState.serializer())` to the ViewModel. No
+Serializable interface or Parcelable implementation is required. New serializable
+fields are included automatically; give new fields defaults so older snapshots
+can still be decoded. Domain values need not be serializable when they are excluded
+from snapshots; retain only minimal input/IDs needed to rebuild larger data.
+
+The adapter stores one JSON string under `STATE` in `SavedStateHandle` (a custom key
+and Json instance can be supplied). Default encoding preserves field defaults and
+ignores removed/unknown fields on restore. Invalid or incompatible serialized data
+is discarded and the supplied initial state is used. Serialization failures during
+save propagate so programming errors are visible. Each adapter owns its key.
+
+This follows SavedStateHandle's lifecycle: it helps restore a system-recreated
+screen and is not durable draft storage after intentional dismissal or app data
+removal. Large data belongs in a repository. The persistence interface has no
+Android/Compose imports; platform code can supply another implementation later.
