@@ -1,9 +1,9 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.core.presentation.text.UiText
 import com.dozy.mobile.feature.character.domain.*
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.withErrors
+import com.kjursa.foundation.presentation.text.UiText
 import org.junit.Assert.*
 import org.junit.Test
 

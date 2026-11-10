@@ -39,7 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dozy.mobile.feature.character.presentation.list.CharactersTabScreen
 import com.dozy.mobile.feature.home.presentation.HomeScreen
 import com.dozy.mobile.feature.story.presentation.list.StoriesTabScreen
-import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.foundation.compose.theme.UiSpacing
 
 private const val HOME_TAB = "home"
 private const val STORIES_TAB = "stories"

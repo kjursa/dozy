@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
-    <file name="src/main/java/com/kjursa/composeuikit/mvi/MviScreen.kt">
+    <file name="src/main/java/com/kjursa/foundation/compose/mvi/MviScreen.kt">
         <error line="12" column="47" source="standard:function-naming" />
     </file>
-    <file name="src/main/java/com/kjursa/composeuikit/theme/ComposeUiKitTheme.kt">
+    <file name="src/main/java/com/kjursa/foundation/compose/theme/FoundationTheme.kt">
         <error line="12" column="5" source="standard:function-naming" />
     </file>
 </baseline>

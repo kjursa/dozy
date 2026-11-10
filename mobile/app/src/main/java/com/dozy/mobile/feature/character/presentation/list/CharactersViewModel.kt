@@ -2,7 +2,7 @@ package com.dozy.mobile.feature.character.presentation.list
 
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.ObserveCharacters
-import com.kjursa.composeuikit.mvi.MviViewModel
+import com.kjursa.foundation.compose.mvi.MviViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 

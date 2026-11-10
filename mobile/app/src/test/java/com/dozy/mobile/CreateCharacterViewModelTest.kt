@@ -1,7 +1,6 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.core.presentation.text.UiText
 import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterId
 import com.dozy.mobile.feature.character.domain.CharacterIdGenerator
@@ -15,6 +14,7 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterView
 import com.dozy.mobile.feature.character.presentation.create.SaveStatus
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
+import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

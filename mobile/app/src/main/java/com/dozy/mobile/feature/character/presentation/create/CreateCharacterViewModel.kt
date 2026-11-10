@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
 import com.dozy.mobile.feature.character.domain.SaveCharacter
 import com.dozy.mobile.feature.character.domain.SaveCharacterResult
-import com.kjursa.composeuikit.mvi.MviViewModel
+import com.kjursa.foundation.compose.mvi.MviViewModel
 import kotlinx.coroutines.launch
 
 internal class CreateCharacterViewModel(

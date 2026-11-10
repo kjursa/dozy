@@ -1,6 +1,6 @@
 package com.dozy.mobile.feature.character.domain
 
-import com.dozy.mobile.core.coroutines.runCatchingSuspend
+import com.kjursa.foundation.coroutines.runCatchingSuspend
 
 class SaveCharacter(
     private val repository: CharacterRepository,

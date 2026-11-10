@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.kjursa.composeuikit"
+    namespace = "com.kjursa.foundation"
     compileSdk = 36
 
     defaultConfig {
@@ -28,6 +28,9 @@ android {
 }
 
 dependencies {
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     api("androidx.compose.ui:ui")
     api("androidx.compose.material3:material3")

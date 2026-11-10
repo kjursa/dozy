@@ -56,10 +56,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.dozy.mobile.core.presentation.text.UiText
-import com.dozy.mobile.core.presentation.text.resolve
-import com.kjursa.composeuikit.mvi.MviScreen
-import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.foundation.compose.mvi.MviScreen
+import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.UiText
+import com.kjursa.foundation.presentation.text.resolve
 
 private data class HeroType(
     val label: String,

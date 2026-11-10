@@ -11,8 +11,8 @@
 
 ## Architecture
 
-- Organize packages by feature first: `feature.<area>.domain`, `feature.<area>.data`, and `feature.<area>.presentation`. Group screens within their feature. Keep shared technical utilities in `core` (for example, `core.coroutines` and `core.presentation.text`); core must not depend on features. Prefer packages first; create extra Gradle modules only when a real boundary or reuse need justifies them.
-- `presentation` owns Compose screens, screen-specific UI state/actions/effects, and ViewModels. Keep screen content stateless where practical and connect MVI screens with `MviScreen` from `:compose-ui-kit`.
+- Organize packages by feature first: `feature.<area>.domain`, `feature.<area>.data`, and `feature.<area>.presentation`. Group screens within their feature. Keep app-wide technical UI helpers in `core`, and put reusable library APIs in `:foundation` (for example, coroutine utilities and presentation text). Neither core nor foundation may depend on features. Prefer packages first; create extra Gradle modules only when a real boundary or reuse need justifies them.
+- `presentation` owns Compose screens, screen-specific UI state/actions/effects, and ViewModels. Keep screen content stateless where practical and connect MVI screens with `MviScreen` from `:foundation`.
 - `domain` contains pure Kotlin business models and repository contracts. It must not depend on Android, AndroidX, Compose, platform SDKs, or data-layer implementations. Keep business rules independent of framework types.
 - Represent domain concepts backed by a primitive or `String` with distinct `@JvmInline value class` types, such as `Name` and `Description`, so values with different meanings cannot be accidentally swapped. Use `data class` models to group cohesive use case inputs and results, and pass those models to use cases instead of several unrelated parameters. When construction must enforce invariants, provide a named factory in the value class's companion object. Do not add value classes for primitives that have no distinct domain meaning.
 - `data` contains repository implementations, local/remote data sources, transport/database models, and mapping to domain models. ViewModels and use cases must not access databases or APIs directly.
@@ -28,9 +28,9 @@
 - Keep composable functions stateless where practical. Hoist state and event handling to the caller when doing so makes the UI easier to reuse, test, or reason about.
 - When the main layout contains a logically distinct section, extract that section into a separate composable in the same file to keep the screen structure readable.
 
-## Compose UI Kit
+## Foundation
 
-- Use `:compose-ui-kit` for reusable Compose UI foundations, theme entry points, spacing, and shared MVI infrastructure.
+- Use `:foundation` for reusable coroutine utilities, presentation text, Compose foundations, theme entry points, spacing, and shared MVI infrastructure. Keep it independent of app features and branding.
 - Keep Dozy-specific palette, fonts, assets, navigation, and screen behavior in `:app`.
 - Use Material 3 components directly unless the library adds distinct reusable behavior or styling; avoid wrappers that only duplicate Material APIs.
-- Before changing public library APIs, read `compose-ui-kit/AGENTS.md` and update `compose-ui-kit/README.md` as needed.
+- Before changing public library APIs, read `foundation/AGENTS.md` and update `foundation/README.md` as needed.

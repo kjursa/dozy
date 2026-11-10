@@ -1,4 +1,4 @@
-package com.kjursa.composeuikit.theme
+package com.kjursa.foundation.compose.theme
 
 import androidx.compose.ui.unit.dp
 

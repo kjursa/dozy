@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.foundation.compose.theme.UiSpacing
 
 private data class StoryThemeOption(
     val title: String,

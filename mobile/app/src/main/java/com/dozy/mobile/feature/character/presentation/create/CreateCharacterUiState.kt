@@ -1,6 +1,6 @@
 package com.dozy.mobile.feature.character.presentation.create
 
-import com.dozy.mobile.core.presentation.text.UiText
+import com.kjursa.foundation.presentation.text.UiText
 
 internal data class CreateCharacterUiState(
     val nameError: UiText? = null,

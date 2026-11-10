@@ -1,4 +1,4 @@
-package com.kjursa.composeuikit.mvi
+package com.kjursa.foundation.compose.mvi
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

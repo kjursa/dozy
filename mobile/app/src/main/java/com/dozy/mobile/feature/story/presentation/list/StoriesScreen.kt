@@ -23,8 +23,8 @@ import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
-import com.kjursa.composeuikit.mvi.MviScreen
-import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.foundation.compose.mvi.MviScreen
+import com.kjursa.foundation.compose.theme.UiSpacing
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

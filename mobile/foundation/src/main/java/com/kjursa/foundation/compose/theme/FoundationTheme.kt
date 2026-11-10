@@ -1,4 +1,4 @@
-package com.kjursa.composeuikit.theme
+package com.kjursa.foundation.compose.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 
 /** Configurable Material 3 theme entry point for apps using Compose UI Kit. */
 @Composable
-fun ComposeUiKitTheme(
+fun FoundationTheme(
     colorScheme: ColorScheme = lightColorScheme(),
     typography: Typography = Typography(),
     shapes: Shapes = Shapes(),

@@ -27,7 +27,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.feature.story.presentation.list.Story
-import com.kjursa.composeuikit.theme.UiSpacing
+import com.kjursa.foundation.compose.theme.UiSpacing
 
 @Composable
 internal fun StoryCard(

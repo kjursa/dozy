@@ -1,12 +1,12 @@
 package com.dozy.mobile.feature.character.data
 
-import com.dozy.mobile.core.coroutines.runCatchingSuspend
 import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.domain.Character
 import com.dozy.mobile.feature.character.domain.CharacterRepository
 import com.dozy.mobile.feature.character.domain.CharacterSync
 import com.dozy.mobile.feature.character.domain.SavedCharacter
+import com.kjursa.foundation.coroutines.runCatchingSuspend
 import kotlinx.coroutines.flow.map
 
 /** Local-first: a successful save always means a durable row, even with no server. */

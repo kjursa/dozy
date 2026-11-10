@@ -1,4 +1,4 @@
-package com.dozy.mobile.core.coroutines
+package com.kjursa.foundation.coroutines
 
 import kotlinx.coroutines.CancellationException
 

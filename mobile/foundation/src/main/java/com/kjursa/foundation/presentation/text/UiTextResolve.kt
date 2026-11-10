@@ -1,4 +1,4 @@
-package com.dozy.mobile.core.presentation.text
+package com.kjursa.foundation.presentation.text
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource

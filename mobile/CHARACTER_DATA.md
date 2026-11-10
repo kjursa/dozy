@@ -74,8 +74,8 @@ need to move Android presentation resources out of any shared ViewModels.
   list, each with separate ViewModel, UI state, actions, effects, and mapping files.
 - `feature.home.presentation` and `feature.story.presentation`: Home and Story
   screens and their presentation models; each feature declares its own DI module.
-- `core.coroutines`: cancellation-safe coroutine helpers such as `runCatchingSuspend`.
-- `core.presentation.text`: `UiText` and its `resolve()` extension.
+- `:foundation` / `com.kjursa.foundation.coroutines`: reusable coroutine helpers such as `runCatchingSuspend`.
+- `:foundation` / `com.kjursa.foundation.presentation.text`: `UiText` and its `resolve()` extension.
 - `core.presentation.components` and `.layout`: generic UI helpers with no feature
   dependencies. Story-specific cards remain in `feature.story.presentation.components`.
 - `navigation`: the application bottom navigation shell.
@@ -99,8 +99,14 @@ Technical schema/serialization failures remain data-layer failures.
 
 Presentation maps domain errors to `UiText.Resource` values in the four nullable
 UI-state fields (`nameError`, `personalityError`, `appearanceError`, `typeError`).
-`UiText.Plain` can carry an API message intended for users. The `resolve()`
+`UiText.Plain` can carry an API message intended for users. The foundation library’s `resolve()`
 Composable extension selects current localized resources and formatting arguments
 or returns the plain text. Domain code contains no resource IDs or UI text.
 Resource IDs currently use Android resources; switching the presentation to
 Compose Multiplatform resources belongs to the future KMP migration.
+
+Reusable technical APIs are collected in the single `:foundation` Android library
+(formerly `:compose-ui-kit`): coroutine helpers, presentation text, Compose MVI,
+spacing, and the theme entry point. The app retains its feature code, visual
+branding, and screen-specific UI helpers. Coroutine tests live in the foundation
+module; app tests exercise the library through the feature integrations.
