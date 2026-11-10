@@ -34,12 +34,12 @@ internal fun CreateCharacterUiState.validateInput(): CreateCharacterValidation =
         type = Character.Type.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
     )
 
-internal fun CreateCharacterUiState.withErrors(errors: CreateCharacterErrors = CreateCharacterErrors()) =
-    copy(
-        nameError = errors.name?.toUiText(),
-        personalityError = errors.personality?.toUiText(),
-        appearanceError = errors.appearance?.toUiText(),
-        typeError = errors.type?.toUiText(),
+internal fun CreateCharacterUiState.withValidationErrors(errors: CreateCharacterErrors) =
+    withErrors(
+        name = errors.name?.toUiText(),
+        personality = errors.personality?.toUiText(),
+        appearance = errors.appearance?.toUiText(),
+        type = errors.type?.toUiText(),
     )
 
 private fun CreateCharacterErrors.Name.toUiText(): UiText =

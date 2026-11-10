@@ -16,10 +16,10 @@ internal class CreateCharacterViewModel(
             CreateCharacterAction.BackClicked -> sendEffect(CreateCharacterEffect.NavigateBack)
             CreateCharacterAction.SaveClicked -> save()
             CreateCharacterAction.PreviewClicked -> sendEffect(CreateCharacterEffect.PreviewRequested)
-            is CreateCharacterAction.TypeSelected -> updateCharacterState { copy(selectedType = action.type) }
-            is CreateCharacterAction.NameChanged -> updateCharacterState { copy(name = action.name) }
-            is CreateCharacterAction.PersonalityChanged -> updateCharacterState { copy(personality = action.personality) }
-            is CreateCharacterAction.AppearanceChanged -> updateCharacterState { copy(appearance = action.appearance) }
+            is CreateCharacterAction.TypeSelected -> updateCharacterState { withType(action.type) }
+            is CreateCharacterAction.NameChanged -> updateCharacterState { withName(action.name) }
+            is CreateCharacterAction.PersonalityChanged -> updateCharacterState { withPersonality(action.personality) }
+            is CreateCharacterAction.AppearanceChanged -> updateCharacterState { withAppearance(action.appearance) }
         }
     }
 
@@ -29,7 +29,7 @@ internal class CreateCharacterViewModel(
             when (val validation = uiState.value.validateInput()) {
                 is CreateCharacterValidation.Valid -> validation.input
                 is CreateCharacterValidation.Invalid -> {
-                    updateState { withErrors(validation.errors).copy(saveStatus = SaveStatus.EDITING) }
+                    updateState { withValidationErrors(validation.errors).copy(saveStatus = SaveStatus.EDITING) }
                     return
                 }
             }
@@ -48,7 +48,7 @@ internal class CreateCharacterViewModel(
         val validated =
             when (val validation = edited.validateInput()) {
                 is CreateCharacterValidation.Valid -> edited.withErrors()
-                is CreateCharacterValidation.Invalid -> edited.withErrors(validation.errors)
+                is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
         val next = validated.copy(saveStatus = SaveStatus.EDITING)
         next.saveTo(savedStateHandle)
