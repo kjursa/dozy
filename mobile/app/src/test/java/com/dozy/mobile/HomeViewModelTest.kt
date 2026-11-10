@@ -1,5 +1,9 @@
 package com.dozy.mobile
 
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.home.presentation.HomeAction
+import com.dozy.mobile.feature.home.presentation.HomeEffect
+import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -26,8 +30,14 @@ class HomeViewModelTest {
         Dispatchers.resetMain()
     }
 
-    @Test fun initialStateContainsHomeHeaderAndSampleCollections() {
-        val state = HomeViewModel().uiState.value
+    @Test fun initialStateContainsHomeHeaderAndPersistedCollections() {
+        val viewModel =
+            HomeViewModel(
+                com.dozy.mobile.feature.character.domain.usecase
+                    .ObserveCharacters(FakeCharacterRepository()),
+            )
+        dispatcher.scheduler.advanceUntilIdle()
+        val state = viewModel.uiState.value
 
         assertEquals("TUESDAY, 14 OCTOBER", state.dateLabel)
         assertEquals("Good evening!", state.greeting)
@@ -39,32 +49,43 @@ class HomeViewModelTest {
         assertEquals(listOf("Oliver", "Luna", "Captain Finn"), state.characters.map { it.name })
     }
 
-    @Test fun homeActionsEmitExpectedEffects() = runTest(dispatcher) {
-        val viewModel = HomeViewModel()
-        val story = viewModel.uiState.value.stories.first()
-        val character = viewModel.uiState.value.characters.first()
-        val expectedEffects = listOf(
-            HomeEffect.CreateStoryRequested,
-            HomeEffect.OpenStory(story),
-            HomeEffect.SeeAllStoriesRequested,
-            HomeEffect.OpenCharacter(character),
-            HomeEffect.AddCharacterRequested,
-            HomeEffect.OpenNotifications,
-        )
-        val effects = async { expectedEffects.map { viewModel.effects.first() } }
-
-        listOf(
-            HomeAction.CreateStoryClicked,
-            HomeAction.StorySelected(story),
-            HomeAction.SeeAllStoriesClicked,
-            HomeAction.CharacterSelected(character),
-            HomeAction.AddCharacterClicked,
-            HomeAction.NotificationsClicked,
-        ).forEach { action ->
-            viewModel.dispatch(action)
+    @Test fun homeActionsEmitExpectedEffects() =
+        runTest(dispatcher) {
+            val viewModel =
+                HomeViewModel(
+                    com.dozy.mobile.feature.character.domain.usecase
+                        .ObserveCharacters(FakeCharacterRepository()),
+                )
             advanceUntilIdle()
-        }
+            val story =
+                viewModel.uiState.value.stories
+                    .first()
+            val character =
+                viewModel.uiState.value.characters
+                    .first()
+            val expectedEffects =
+                listOf(
+                    HomeEffect.CreateStoryRequested,
+                    HomeEffect.OpenStory(story),
+                    HomeEffect.SeeAllStoriesRequested,
+                    HomeEffect.OpenCharacter(character),
+                    HomeEffect.AddCharacterRequested,
+                    HomeEffect.OpenNotifications,
+                )
+            val effects = async { expectedEffects.map { viewModel.effects.first() } }
 
-        assertEquals(expectedEffects, effects.await())
-    }
+            listOf(
+                HomeAction.CreateStoryClicked,
+                HomeAction.StorySelected(story),
+                HomeAction.SeeAllStoriesClicked,
+                HomeAction.CharacterSelected(character),
+                HomeAction.AddCharacterClicked,
+                HomeAction.NotificationsClicked,
+            ).forEach { action ->
+                viewModel.dispatch(action)
+                advanceUntilIdle()
+            }
+
+            assertEquals(expectedEffects, effects.await())
+        }
 }

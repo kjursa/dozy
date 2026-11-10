@@ -1,0 +1,52 @@
+package com.dozy.mobile
+
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.model.SavedCharacter
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+
+internal val validDetails =
+    Character.Details(
+        Character.Name("Oliver"),
+        Character.Personality("Curious and brave"),
+        Character.Appearance("Curly brown hair"),
+        Character.Type.CHILD,
+    )
+
+internal fun character(
+    id: String = "1",
+    name: String = "Oliver",
+) = com.dozy.mobile.feature.character.domain.model.Character(
+    Character.Id(id),
+    validDetails.copy(name = Character.Name(name)),
+)
+
+internal class FakeCharacterRepository : CharacterRepository {
+    val characters = MutableStateFlow(listOf(character(), character("2", "Luna"), character("3", "Captain Finn")))
+    var failure: Exception? = null
+    var saves = 0
+    var beforeSave: suspend () -> Unit = {}
+
+    override fun observe() = characters
+
+    override suspend fun save(character: com.dozy.mobile.feature.character.domain.model.Character): SavedCharacter {
+        saves++
+        beforeSave()
+        failure?.let { throw it }
+        characters.value = characters.value + character
+        return SavedCharacter(character, CharacterSync.PENDING)
+    }
+}
+
+internal fun createInput(name: String = "Oliver"): CreateCharacterInput =
+    (
+        CreateCharacterInput.from(
+            name,
+            "Curious and brave",
+            "Curly brown hair",
+            Character.Type.CHILD,
+        ) as CreateCharacterValidation.Valid
+    ).input

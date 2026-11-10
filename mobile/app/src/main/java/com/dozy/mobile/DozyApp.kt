@@ -1,10 +1,14 @@
 package com.dozy.mobile
 
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterScreen
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryScreen
+import com.dozy.mobile.navigation.MainScreen
+import org.koin.compose.viewmodel.koinViewModel
 
 private const val MAIN_ROUTE = "main"
 private const val CREATE_STORY_ROUTE = "create-story"
@@ -29,7 +33,7 @@ fun DozyApp() {
             )
         }
         composable(CREATE_CHARACTER_ROUTE) {
-            val characterViewModel: CreateCharacterViewModel = viewModel()
+            val characterViewModel: CreateCharacterViewModel = koinViewModel()
             CreateCharacterScreen(
                 viewModel = characterViewModel,
                 onBack = { navController.popBackStack() },

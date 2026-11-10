@@ -1,5 +1,9 @@
 package com.dozy.mobile
 
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.character.presentation.list.CharactersAction
+import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
+import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -26,16 +30,29 @@ class CharactersViewModelTest {
         Dispatchers.resetMain()
     }
 
-    @Test fun initialStateExposesSampleCharacters() {
-        val state = CharactersViewModel().uiState.value
+    @Test fun initialStateExposesPersistedCharacters() {
+        val viewModel =
+            CharactersViewModel(
+                com.dozy.mobile.feature.character.domain.usecase
+                    .ObserveCharacters(FakeCharacterRepository()),
+            )
+        dispatcher.scheduler.advanceUntilIdle()
+        val state = viewModel.uiState.value
         assertEquals("Characters", state.title)
         assertEquals(listOf("Oliver", "Luna", "Captain Finn"), state.characters.map { it.name })
     }
 
     @Test fun selectingCharacterEmitsOpenCharacterEffect() =
         runTest(dispatcher) {
-            val viewModel = CharactersViewModel()
-            val character = viewModel.uiState.value.characters.first()
+            val viewModel =
+                CharactersViewModel(
+                    com.dozy.mobile.feature.character.domain.usecase
+                        .ObserveCharacters(FakeCharacterRepository()),
+                )
+            advanceUntilIdle()
+            val character =
+                viewModel.uiState.value.characters
+                    .first()
             val effect = async { viewModel.effects.first() }
             viewModel.dispatch(CharactersAction.CharacterSelected(character))
             advanceUntilIdle()
@@ -44,7 +61,11 @@ class CharactersViewModelTest {
 
     @Test fun addingCharacterEmitsNavigationEffect() =
         runTest(dispatcher) {
-            val viewModel = CharactersViewModel()
+            val viewModel =
+                CharactersViewModel(
+                    com.dozy.mobile.feature.character.domain.usecase
+                        .ObserveCharacters(FakeCharacterRepository()),
+                )
             val effect = async { viewModel.effects.first() }
             viewModel.dispatch(CharactersAction.AddCharacterClicked)
             advanceUntilIdle()

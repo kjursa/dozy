@@ -11,16 +11,59 @@
 
 ## Architecture
 
-- Keep the architecture simple and organize code by `presentation`, `domain`, and `data` responsibilities. Prefer packages first; create extra Gradle modules only when a real boundary or reuse need justifies them.
-- `presentation` owns Compose screens, screen-specific UI state/actions/effects, and ViewModels. Keep screen content stateless where practical and connect MVI screens with `MviScreen` from `:compose-ui-kit`.
-- `domain` contains pure Kotlin business models and repository contracts. It must not depend on Android, AndroidX, Compose, platform SDKs, or data-layer implementations. Keep business rules independent of framework types.
-- Represent domain concepts backed by a primitive or `String` with distinct `@JvmInline value class` types, such as `Name` and `Description`, so values with different meanings cannot be accidentally swapped. Use `data class` models to group cohesive use case inputs and results, and pass those models to use cases instead of several unrelated parameters. When construction must enforce invariants, provide a named factory in the value class's companion object. Do not add value classes for primitives that have no distinct domain meaning.
-- `data` contains repository implementations, local/remote data sources, transport/database models, and mapping to domain models. ViewModels and use cases must not access databases or APIs directly.
-- Keep repository interfaces in `domain` and implement them in `data`. Data implementations may depend on domain contracts; domain must not depend on data.
-- Keep repository implementations flat: inject and use the DAO and API directly whenever practical. Avoid `LocalDataSource`/`RemoteDataSource` wrappers that only forward calls; add an abstraction when it owns meaningful behavior or creates a useful boundary.
-- Add a use case when it contains meaningful business rules, coordinates multiple repositories, or is reused. Avoid use cases that only delegate one call without adding behavior.
-- Keep dependencies pointing inward: `presentation` may depend on `domain`; `data` may depend on `domain`; `domain` stays framework-independent.
-- Prefer Kotlin/Flow APIs and platform-neutral types in code that may later move to KMP `commonMain`. Keep Android-specific behavior in platform-specific code.
+### Package structure and dependencies
+
+- Organize code by feature first. Use the following structure within `feature.<area>`:
+
+  ```text
+  data/
+    api/
+    database/
+  di/
+  domain/
+    model/
+    repository/
+    usecase/
+  presentation/
+    <screen>/
+  ```
+
+- Keep repository implementations and data mapping in `data`, HTTP clients and DTOs in `data.api`, and database definitions, entities, and DAOs in `data.database`.
+- Put domain models and operation input/validation types in `domain.model`, repository interfaces in `domain.repository`, and use cases with their operation-specific collaborators in `domain.usecase`.
+- Keep screen layouts, ViewModels, UI state, actions, effects, and presentation mapping in `presentation`. Use separate files for the ViewModel, state, actions, and effects; group screens belonging to the same feature under their own packages.
+- Keep domain models shared across features in their owning feature's domain package. Presentation models may be specific to a screen; do not duplicate domain models for each screen or move them into a generic shared package solely because multiple screens use them.
+- Keep dependencies pointing inward: presentation and data may depend on domain; domain must remain pure Kotlin and independent of Android, AndroidX, Compose, platform SDKs, DTOs, database entities, and data implementations. ViewModels depend on use cases, and use cases depend on repository contracts rather than DAOs or API clients.
+- Keep app-wide technical helpers in `core`, with no dependencies on features. Follow the Foundation section for reusable library APIs. Prefer packages first; add Gradle modules when an actual boundary or reuse need justifies them.
+- Use platform-neutral Kotlin and coroutine/Flow APIs wherever practical to support a future KMP migration. Isolate platform-specific construction and APIs at the platform boundary.
+
+### Domain models and validation
+
+- Represent semantically distinct primitive and string values with `@JvmInline value class` types. Nest closely related value types and enums within their owning domain model to make their context explicit and avoid repeated name prefixes. Use `data class` for cohesive data structures; avoid wrapping primitives without distinct domain meaning.
+- Distinguish existing domain data from requests to create or modify it. Current input restrictions must not automatically invalidate existing values read from the database or API; handle malformed transport/storage data at the data boundary.
+- For operations requiring validation of user input, introduce a dedicated domain input type with a private constructor and a named companion factory. Prevent unchecked construction or copying that bypasses validation.
+- The factory validates and normalizes raw input and returns a typed success/invalid outcome. Collect errors across all fields, with at most one typed error per field for now, rather than throwing exceptions for expected invalid input or stopping at the first field.
+- Group field errors in a dedicated domain error model with nullable properties for individual fields. Nest error enums or sealed types in that model when they are used only for that operation. Keep domain errors independent of resource IDs, localized strings, and UI types.
+- Pass validated input objects to use cases instead of unrelated primitive parameters. Enforce input rules during construction; keep business checks requiring repositories or other external information in the appropriate use case.
+
+### Use cases and results
+
+- Give each use case one clear operation. Keep operation-specific result types in the same file, nested within the use case.
+- For operations with success/failure outcomes, return the use case's own sealed `Result` with explicit variants so callers can handle it exhaustively. Use Flow for observable data where appropriate.
+- Use Kotlin `Result` internally for technical exception handling and map it to the operation's typed outcome at the use case boundary. Preserve coroutine cancellation; cancellation must propagate rather than become an ordinary failure.
+
+### Repositories, mapping, and dependency injection
+
+- Keep repository implementations flat: inject and use the DAO and API client directly whenever practical. Add another abstraction only when it owns meaningful behavior; avoid local/remote data-source wrappers that merely forward calls.
+- Put mapping in separate files as extension functions near the layer that knows both models: transport/database mapping in data and domain-to-UI mapping in presentation. Use a constructor-injected mapper when mapping is complex or needs collaborators.
+- Define feature dependencies in `di` using Koin modules. Keep platform-specific providers separate from definitions intended for shared code, and assemble feature modules at the application composition root.
+- Register ViewModels with Koin's ViewModel lifecycle support and obtain them through lifecycle-aware Koin injection at screen/route boundaries. Scope them to the appropriate navigation owner rather than registering them as singletons or maintaining manual factories.
+- Supply dependencies through constructors. Domain, data, and ViewModels must not resolve collaborators from a service locator internally; constructor-based unit tests should work without starting Koin.
+
+### Form state and text
+
+- Store one nullable `UiText` error per form field in UI state. Map typed domain validation errors to those fields in a presentation mapper; clear or update them when input changes or validation succeeds.
+- Represent localized messages as resource-backed `UiText` and runtime user-facing messages as plain `UiText`. Resolve them in Compose with the presentation text resolver so localization happens when rendering. Map known backend error codes to resources and display raw server text only when the API defines it as suitable for users.
+- Validate before starting a save operation. While saving, expose a loading state and prevent duplicate submissions; on failure, restore the action and expose an appropriate error. Handle successful navigation and other transient UI actions through one-off effects, while keeping renderable information in state.
 
 ## UI
 
@@ -28,9 +71,9 @@
 - Keep composable functions stateless where practical. Hoist state and event handling to the caller when doing so makes the UI easier to reuse, test, or reason about.
 - When the main layout contains a logically distinct section, extract that section into a separate composable in the same file to keep the screen structure readable.
 
-## Compose UI Kit
+## Foundation
 
-- Use `:compose-ui-kit` for reusable Compose UI foundations, theme entry points, spacing, and shared MVI infrastructure.
-- Keep Dozy-specific palette, fonts, assets, navigation, and screen behavior in `:app`.
+- Use `:foundation` for reusable coroutine utilities, presentation text, Compose foundations, theme entry points, spacing, and shared MVI infrastructure. Keep it independent of app features and branding.
+- Keep application-specific palette, fonts, assets, navigation, and screen behavior in `:app`.
 - Use Material 3 components directly unless the library adds distinct reusable behavior or styling; avoid wrappers that only duplicate Material APIs.
-- Before changing public library APIs, read `compose-ui-kit/AGENTS.md` and update `compose-ui-kit/README.md` as needed.
+- Before changing public library APIs, read `foundation/AGENTS.md` and update `foundation/README.md` as needed.

@@ -4,7 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import com.kjursa.composeuikit.theme.ComposeUiKitTheme
+import com.kjursa.foundation.compose.theme.FoundationTheme
 
 private val DozyShapes =
     Shapes(
@@ -16,7 +16,7 @@ private val DozyShapes =
 
 @Composable
 fun DozyTheme(content: @Composable () -> Unit) {
-    ComposeUiKitTheme(
+    FoundationTheme(
         colorScheme = DozyColorScheme,
         typography = DozyTypography,
         shapes = DozyShapes,

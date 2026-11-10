@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DozyMobile"
-include(":app", ":compose-ui-kit")
+include(":app", ":foundation")
