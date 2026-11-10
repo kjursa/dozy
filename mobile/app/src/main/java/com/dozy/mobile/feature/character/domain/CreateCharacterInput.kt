@@ -24,14 +24,14 @@ class CreateCharacterInput private constructor(
                 CreateCharacterErrors(
                     name =
                         when {
-                            normalizedName.isEmpty() -> CharacterNameError.REQUIRED
-                            normalizedName.length > NAME_MAX_LENGTH -> CharacterNameError.TOO_LONG
-                            normalizedName.any { it == '\n' || it == '\r' } -> CharacterNameError.MUST_BE_SINGLE_LINE
+                            normalizedName.isEmpty() -> CreateCharacterErrors.Name.REQUIRED
+                            normalizedName.length > NAME_MAX_LENGTH -> CreateCharacterErrors.Name.TOO_LONG
+                            normalizedName.any { it == '\n' || it == '\r' } -> CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE
                             else -> null
                         },
                     personality = validateDescription(normalizedPersonality),
                     appearance = validateDescription(normalizedAppearance),
-                    type = if (type == null) CharacterTypeError.REQUIRED else null,
+                    type = if (type == null) CreateCharacterErrors.Type.REQUIRED else null,
                 )
             if (!errors.isEmpty) return CreateCharacterValidation.Invalid(errors)
             return CreateCharacterValidation.Valid(
@@ -44,10 +44,10 @@ class CreateCharacterInput private constructor(
             )
         }
 
-        private fun validateDescription(value: String): CharacterDescriptionError? =
+        private fun validateDescription(value: String): CreateCharacterErrors.Description? =
             when {
-                value.isEmpty() -> CharacterDescriptionError.REQUIRED
-                value.length > DESCRIPTION_MAX_LENGTH -> CharacterDescriptionError.TOO_LONG
+                value.isEmpty() -> CreateCharacterErrors.Description.REQUIRED
+                value.length > DESCRIPTION_MAX_LENGTH -> CreateCharacterErrors.Description.TOO_LONG
                 else -> null
             }
     }

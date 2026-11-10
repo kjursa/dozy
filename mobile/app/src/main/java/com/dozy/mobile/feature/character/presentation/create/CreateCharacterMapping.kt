@@ -3,9 +3,6 @@ package com.dozy.mobile.feature.character.presentation.create
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.R
 import com.dozy.mobile.feature.character.domain.Character
-import com.dozy.mobile.feature.character.domain.CharacterDescriptionError
-import com.dozy.mobile.feature.character.domain.CharacterNameError
-import com.dozy.mobile.feature.character.domain.CharacterTypeError
 import com.dozy.mobile.feature.character.domain.CreateCharacterErrors
 import com.dozy.mobile.feature.character.domain.CreateCharacterInput
 import com.dozy.mobile.feature.character.domain.CreateCharacterValidation
@@ -45,26 +42,30 @@ internal fun CreateCharacterUiState.withErrors(errors: CreateCharacterErrors = C
         typeError = errors.type?.toUiText(),
     )
 
-private fun CharacterNameError.toUiText(): UiText =
+private fun CreateCharacterErrors.Name.toUiText(): UiText =
     when (this) {
-        CharacterNameError.REQUIRED -> UiText.Resource(R.string.character_name_required)
-        CharacterNameError.TOO_LONG -> UiText.Resource(R.string.character_name_too_long, listOf(CreateCharacterInput.NAME_MAX_LENGTH))
-        CharacterNameError.MUST_BE_SINGLE_LINE -> UiText.Resource(R.string.character_name_single_line)
+        CreateCharacterErrors.Name.REQUIRED -> UiText.Resource(R.string.character_name_required)
+        CreateCharacterErrors.Name.TOO_LONG ->
+            UiText.Resource(
+                R.string.character_name_too_long,
+                listOf(CreateCharacterInput.NAME_MAX_LENGTH),
+            )
+        CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE -> UiText.Resource(R.string.character_name_single_line)
     }
 
-private fun CharacterDescriptionError.toUiText(): UiText =
+private fun CreateCharacterErrors.Description.toUiText(): UiText =
     when (this) {
-        CharacterDescriptionError.REQUIRED -> UiText.Resource(R.string.character_description_required)
-        CharacterDescriptionError.TOO_LONG ->
+        CreateCharacterErrors.Description.REQUIRED -> UiText.Resource(R.string.character_description_required)
+        CreateCharacterErrors.Description.TOO_LONG ->
             UiText.Resource(
                 R.string.character_description_too_long,
                 listOf(CreateCharacterInput.DESCRIPTION_MAX_LENGTH),
             )
     }
 
-private fun CharacterTypeError.toUiText(): UiText =
+private fun CreateCharacterErrors.Type.toUiText(): UiText =
     when (this) {
-        CharacterTypeError.REQUIRED -> UiText.Resource(R.string.character_type_required)
+        CreateCharacterErrors.Type.REQUIRED -> UiText.Resource(R.string.character_type_required)
     }
 
 internal fun CreateCharacterUiState.saveTo(handle: SavedStateHandle) {

@@ -17,11 +17,11 @@ class CreateCharacterInputTest {
     @Test fun nameRulesReturnOneTypedError() {
         val cases =
             listOf(
-                " \n" to CharacterNameError.REQUIRED,
-                "a".repeat(51) to CharacterNameError.TOO_LONG,
-                "Captain\nFinn" to CharacterNameError.MUST_BE_SINGLE_LINE,
-                "Captain\rFinn" to CharacterNameError.MUST_BE_SINGLE_LINE,
-                "😀".repeat(26) to CharacterNameError.TOO_LONG,
+                " \n" to CreateCharacterErrors.Name.REQUIRED,
+                "a".repeat(51) to CreateCharacterErrors.Name.TOO_LONG,
+                "Captain\nFinn" to CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE,
+                "Captain\rFinn" to CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE,
+                "😀".repeat(26) to CreateCharacterErrors.Name.TOO_LONG,
             )
         for ((name, expected) in cases) {
             val errors = (validate(name) as CreateCharacterValidation.Invalid).errors
@@ -41,8 +41,8 @@ class CreateCharacterInputTest {
     @Test fun descriptionsRespectRequiredAndLengthRules() {
         assertTrue(validate(personality = "a".repeat(2000), appearance = "a".repeat(2000)) is CreateCharacterValidation.Valid)
         for ((text, expected) in listOf(
-            " " to CharacterDescriptionError.REQUIRED,
-            "a".repeat(2001) to CharacterDescriptionError.TOO_LONG,
+            " " to CreateCharacterErrors.Description.REQUIRED,
+            "a".repeat(2001) to CreateCharacterErrors.Description.TOO_LONG,
         )) {
             val errors = (validate(personality = text, appearance = text) as CreateCharacterValidation.Invalid).errors
             assertEquals(expected, errors.personality)
@@ -56,10 +56,10 @@ class CreateCharacterInputTest {
         val errors = (validate("", "", "", null) as CreateCharacterValidation.Invalid).errors
         assertEquals(
             CreateCharacterErrors(
-                CharacterNameError.REQUIRED,
-                CharacterDescriptionError.REQUIRED,
-                CharacterDescriptionError.REQUIRED,
-                CharacterTypeError.REQUIRED,
+                CreateCharacterErrors.Name.REQUIRED,
+                CreateCharacterErrors.Description.REQUIRED,
+                CreateCharacterErrors.Description.REQUIRED,
+                CreateCharacterErrors.Type.REQUIRED,
             ),
             errors,
         )

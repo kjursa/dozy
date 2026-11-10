@@ -11,9 +11,9 @@ class CreateCharacterMappingTest {
     @Test fun mapsNameErrorsToResourcesAndClearsOtherFields() {
         val cases =
             mapOf(
-                CharacterNameError.REQUIRED to UiText.Resource(R.string.character_name_required),
-                CharacterNameError.TOO_LONG to UiText.Resource(R.string.character_name_too_long, listOf(50)),
-                CharacterNameError.MUST_BE_SINGLE_LINE to UiText.Resource(R.string.character_name_single_line),
+                CreateCharacterErrors.Name.REQUIRED to UiText.Resource(R.string.character_name_required),
+                CreateCharacterErrors.Name.TOO_LONG to UiText.Resource(R.string.character_name_too_long, listOf(50)),
+                CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE to UiText.Resource(R.string.character_name_single_line),
             )
         for ((error, text) in cases) {
             val state = CreateCharacterUiState().withErrors(CreateCharacterErrors(name = error))
@@ -28,9 +28,9 @@ class CreateCharacterMappingTest {
         val state =
             CreateCharacterUiState().withErrors(
                 CreateCharacterErrors(
-                    personality = CharacterDescriptionError.REQUIRED,
-                    appearance = CharacterDescriptionError.TOO_LONG,
-                    type = CharacterTypeError.REQUIRED,
+                    personality = CreateCharacterErrors.Description.REQUIRED,
+                    appearance = CreateCharacterErrors.Description.TOO_LONG,
+                    type = CreateCharacterErrors.Type.REQUIRED,
                 ),
             )
         assertNull(state.nameError)
