@@ -1,0 +1,33 @@
+/* Shared Dozy lockup: the generated sleepy cloud and a readable lowercase name. */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #2d3436;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -2px;
+  text-decoration: none;
+}
+.wordmark .brand-icon {
+  display: block;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  object-fit: contain;
+  border-radius: 18px;
+}
+.brand-header {
+  padding: 16px 24px 0;
+  background: #faf5eb;
+}
+@media (max-width: 670px) {
+  .wordmark .brand-icon {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+    border-radius: 14px;
+  }
+}
