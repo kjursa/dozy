@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,13 +36,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,31 +48,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
-
-private data class StoryThemeOption(
-    val title: Int,
-    val image: Int,
-)
 
 private data class StoryHero(
     val id: String,
     val name: Int,
     val image: Int,
 )
-
-private val storyThemes =
-    listOf(
-        StoryThemeOption(R.string.pirates, R.drawable.story_pirates),
-        StoryThemeOption(R.string.detectives, R.drawable.story_detectives),
-        StoryThemeOption(R.string.enchanted_forest, R.drawable.story_forest),
-        StoryThemeOption(R.string.space, R.drawable.story_space),
-    )
 
 private val storyHeroes =
     listOf(
@@ -86,64 +69,72 @@ private val storyHeroes =
     )
 
 @Composable
-fun CreateStoryScreen(
+internal fun CreateStoryScreen(
     onBack: () -> Unit,
     onNewHero: () -> Unit,
     onGenerate: () -> Unit,
+    onChoosePlace: () -> Unit,
+    viewModel: CreateStoryViewModel,
 ) {
-    var selectedTheme by rememberSaveable { mutableIntStateOf(0) }
-    val selectedHeroes = remember { mutableStateListOf("oliver", "captain_finn") }
-    var selectedLength by rememberSaveable { mutableIntStateOf(0) }
-    var specialRequest by rememberSaveable { mutableStateOf("") }
-    var ending by rememberSaveable { mutableStateOf("") }
-
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        StoryScreenGlows()
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            StoryHeader(onBack)
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
-            ) {
-                StoryIntro()
-                ThemePicker(selectedTheme, onSelect = { selectedTheme = it })
-                HeroPicker(selectedHeroes, onToggle = { name ->
-                    if (name in selectedHeroes) selectedHeroes.remove(name) else selectedHeroes.add(name)
-                }, onNewHero = onNewHero)
-                LengthPicker(selectedLength, onSelect = { selectedLength = it })
-                StoryPrompts(
-                    specialRequest = specialRequest,
-                    onSpecialRequestChange = { specialRequest = it },
-                    ending = ending,
-                    onEndingChange = { ending = it },
-                )
-                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+    LaunchedEffect(viewModel) { viewModel.resumed() }
+    MviScreen(viewModel, onEffect = { onChoosePlace() }) { state, dispatch ->
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            StoryScreenGlows()
+            Column(Modifier.fillMaxSize().statusBarsPadding()) {
+                StoryHeader(onBack)
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = UiSpacing.x3),
+                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
+                ) {
+                    StoryIntro()
+                    Column {
+                        Text(stringResource(R.string.place_setting), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (state.randomSetting) {
+                                stringResource(R.string.place_surprise)
+                            } else {
+                                state.placeName
+                                    ?: stringResource(R.string.place_selected)
+                            },
+                        )
+                        TextButton(onClick = { dispatch(CreateStoryAction.ChoosePlace) }) { Text(stringResource(R.string.place_choose)) }
+                    }
+                    HeroPicker(state.selectedHeroes, onToggle = { dispatch(CreateStoryAction.Hero(it)) }, onNewHero = onNewHero)
+                    LengthPicker(state.selectedLength, onSelect = { dispatch(CreateStoryAction.Length(it)) })
+                    StoryPrompts(
+                        specialRequest = state.specialRequest,
+                        onSpecialRequestChange = { dispatch(CreateStoryAction.Request(it)) },
+                        ending = state.ending,
+                        onEndingChange = { dispatch(CreateStoryAction.Ending(it)) },
+                    )
+                    Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+                }
             }
-        }
-        Button(
-            onClick = onGenerate,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x3)
-                    .height(56.dp)
-                    .shadow(16.dp, CircleShape),
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(UiSpacing.x1))
-            Text(
-                stringResource(R.string.generate_my_story),
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
+            Button(
+                onClick = onGenerate,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x3)
+                        .height(56.dp)
+                        .shadow(16.dp, CircleShape),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(UiSpacing.x1))
+                Text(
+                    stringResource(R.string.generate_my_story),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
         }
     }
 }
@@ -220,79 +211,10 @@ private fun StoryIntro() {
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            stringResource(R.string.pick_one_adventure_theme),
+            stringResource(R.string.places_intro),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun ThemePicker(
-    selected: Int,
-    onSelect: (Int) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        storyThemes.chunked(2).forEachIndexed { rowIndex, rowThemes ->
-            Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                rowThemes.forEachIndexed { columnIndex, item ->
-                    val index = rowIndex * 2 + columnIndex
-                    ThemeCard(item, selected = index == selected, modifier = Modifier.weight(1f), onClick = { onSelect(index) })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeCard(
-    option: StoryThemeOption,
-    selected: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        border =
-            BorderStroke(
-                if (selected) 2.dp else 1.dp,
-                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-            ),
-    ) {
-        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-            Box {
-                Image(
-                    painterResource(option.image),
-                    contentDescription = stringResource(option.title),
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium),
-                    contentScale = ContentScale.Crop,
-                )
-                if (selected) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(UiSpacing.x1),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
-                    ) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = stringResource(R.string.selected),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(5.dp).size(16.dp),
-                        )
-                    }
-                }
-            }
-            Text(
-                stringResource(option.title),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
     }
 }
 

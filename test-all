@@ -2,5 +2,5 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-"$script_dir/backend/gradlew" -p "$script_dir/backend" test
-"$script_dir/mobile/gradlew" -p "$script_dir/mobile" test
+"$script_dir/backend/gradlew" -p "$script_dir/backend" --no-daemon test
+"$script_dir/mobile/gradlew" -p "$script_dir/mobile" --no-daemon test

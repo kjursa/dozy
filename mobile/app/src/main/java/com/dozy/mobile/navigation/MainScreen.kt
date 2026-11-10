@@ -40,6 +40,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dozy.mobile.R
 import com.dozy.mobile.feature.character.presentation.list.CharactersTabScreen
 import com.dozy.mobile.feature.home.presentation.HomeScreen
+import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.story.presentation.list.StoriesTabScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 
@@ -51,6 +52,8 @@ private const val CHARACTERS_TAB = "characters"
 fun MainScreen(
     onCreateStory: () -> Unit,
     onCreateCharacter: () -> Unit,
+    onPlaces: () -> Unit,
+    onPlaceSelected: (Place.Id?) -> Unit,
 ) {
     val tabController = rememberNavController()
     val backStackEntry by tabController.currentBackStackEntryAsState()
@@ -66,6 +69,8 @@ fun MainScreen(
                 HomeScreen(
                     onCreateStory = onCreateStory,
                     onAddCharacter = onCreateCharacter,
+                    onPlaces = onPlaces,
+                    onPlaceSelected = onPlaceSelected,
                 )
             }
             composable(STORIES_TAB) { StoriesTabScreen() }
