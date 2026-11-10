@@ -23,10 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,11 @@ import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.presentation.list.PlaceCard
+import com.dozy.mobile.feature.place.presentation.list.PlacesAction
+import com.dozy.mobile.feature.place.presentation.list.PlacesEffect
+import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
 import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.list.Story
@@ -54,6 +61,8 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun HomeScreen(
     onCreateStory: () -> Unit,
     onAddCharacter: () -> Unit,
+    onPlaces: () -> Unit,
+    onPlaceSelected: (Place.Id?) -> Unit,
 ) {
     val homeViewModel: HomeViewModel = koinViewModel()
     MviScreen(
@@ -70,7 +79,7 @@ internal fun HomeScreen(
     ) { state, dispatch ->
         Column {
             if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
-            HomeContent(state = state, onAction = dispatch)
+            HomeContent(state = state, onAction = dispatch, onPlaces = onPlaces, onPlaceSelected = onPlaceSelected)
         }
     }
 }
@@ -79,6 +88,8 @@ internal fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState,
     onAction: (HomeAction) -> Unit,
+    onPlaces: () -> Unit,
+    onPlaceSelected: (Place.Id?) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
@@ -101,6 +112,7 @@ private fun HomeContent(
                     onAction(HomeAction.AddCharacterClicked)
                 }, onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) })
             }
+            HomePlaces(onPlaces, onPlaceSelected)
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
     }
@@ -270,6 +282,32 @@ private fun CharactersSection(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomePlaces(
+    onPlaces: () -> Unit,
+    onPlaceSelected: (Place.Id?) -> Unit,
+) {
+    val viewModel: PlacesViewModel = koinViewModel()
+    MviScreen(viewModel, onEffect = { effect ->
+        if (effect is PlacesEffect.Selected) onPlaceSelected(effect.id)
+        viewModel.navigationHandled()
+    }) { state, dispatch ->
+        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionHeading(stringResource(R.string.place_setting), stringResource(R.string.places_heading), onPlaces)
+            state.places.take(3).forEach { place ->
+                PlaceCard(place, enabled = !state.navigating, onSelect = {
+                    dispatch(PlacesAction.Select(place.id))
+                })
+            }
+            if (state.loading) CircularProgressIndicator()
+            state.error?.let {
+                Text(it.resolve())
+                TextButton(onClick = { dispatch(PlacesAction.Retry) }) { Text(stringResource(R.string.place_retry)) }
             }
         }
     }

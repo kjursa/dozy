@@ -1,18 +1,30 @@
 package com.dozy.mobile
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterScreen
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormEffect
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormScreen
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
+import com.dozy.mobile.feature.place.presentation.list.PlacesAction
+import com.dozy.mobile.feature.place.presentation.list.PlacesEffect
+import com.dozy.mobile.feature.place.presentation.list.PlacesScreen
+import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryScreen
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
+import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
+import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.MainScreen
+import com.dozy.mobile.navigation.PLACES_ROUTE
+import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.openStory
+import com.dozy.mobile.navigation.usePlace
 import org.koin.compose.viewmodel.koinViewModel
-
-private const val MAIN_ROUTE = "main"
-private const val CREATE_STORY_ROUTE = "create-story"
-private const val CREATE_CHARACTER_ROUTE = "create-character"
 
 @Composable
 fun DozyApp() {
@@ -21,16 +33,62 @@ fun DozyApp() {
     NavHost(navController = navController, startDestination = MAIN_ROUTE) {
         composable(MAIN_ROUTE) {
             MainScreen(
-                onCreateStory = { navController.navigate(CREATE_STORY_ROUTE) },
+                onCreateStory = { navController.openStory(null) },
                 onCreateCharacter = { navController.navigate(CREATE_CHARACTER_ROUTE) },
+                onPlaces = { navController.navigate("places?fromStory=false") { launchSingleTop = true } },
+                onPlaceSelected = { navController.openStory(it) },
             )
         }
         composable(CREATE_STORY_ROUTE) {
+            val storyViewModel: CreateStoryViewModel = koinViewModel()
             CreateStoryScreen(
+                viewModel = storyViewModel,
                 onBack = { navController.popBackStack() },
                 onNewHero = { navController.navigate(CREATE_CHARACTER_ROUTE) },
+                onChoosePlace = { navController.navigate("places?fromStory=true") { launchSingleTop = true } },
                 onGenerate = { navController.popBackStack(MAIN_ROUTE, inclusive = false) },
             )
+        }
+        composable(PLACES_ROUTE) { entry ->
+            val viewModel: PlacesViewModel = koinViewModel()
+            val fromStory = entry.arguments?.getString("fromStory") == "true"
+            val draft: CreateStoryViewModel? =
+                if (fromStory) {
+                    koinViewModel(
+                        viewModelStoreOwner = navController.getBackStackEntry(CREATE_STORY_ROUTE),
+                    )
+                } else {
+                    null
+                }
+            PlacesScreen(viewModel) { effect ->
+                when (effect) {
+                    PlacesEffect.Back -> navController.popBackStack()
+                    is PlacesEffect.Form ->
+                        navController.navigate(
+                            if (effect.id ==
+                                null
+                            ) {
+                                "place-form"
+                            } else {
+                                "place-form?id=${Uri.encode(effect.id.value)}"
+                            },
+                        ) { launchSingleTop = true }
+                    is PlacesEffect.Selected -> navController.usePlace(effect.id, draft)
+                }
+            }
+        }
+        composable(PLACE_FORM_ROUTE) {
+            val viewModel: PlaceFormViewModel = koinViewModel()
+            val list: PlacesViewModel = koinViewModel(viewModelStoreOwner = navController.getBackStackEntry(PLACES_ROUTE))
+            PlaceFormScreen(viewModel) { effect ->
+                when (effect) {
+                    PlaceFormEffect.Back -> navController.popBackStack()
+                    is PlaceFormEffect.Saved -> {
+                        list.dispatch(PlacesAction.Select(effect.id))
+                        navController.popBackStack()
+                    }
+                }
+            }
         }
         composable(CREATE_CHARACTER_ROUTE) {
             val characterViewModel: CreateCharacterViewModel = koinViewModel()

@@ -234,6 +234,15 @@ One list: custom places first, predefined ones afterwards, without separating he
 
 Predefined places cannot be edited directly. Copying a predefined place into a custom version has not been designed yet.
 
+### Mobile implementation contract
+
+The mobile collection uses bundled, offline predefined suggestions plus durable
+local custom places and a cached remote snapshot. Within each source, names and
+IDs determine order. Selection changes only the persisted story draft setting;
+inhabitants never select main characters. The add/edit form currently saves
+locally. The proposed GET contract, identifiers, ordering, migration, retry, and
+synchronization limits are documented in [PLACE_DATA.md](PLACE_DATA.md).
+
 ## 10. Creating and editing a place
 
 Mockup: [place-form.html](design/screens/place-form.html).
