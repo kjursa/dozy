@@ -24,6 +24,8 @@ internal val storyModule =
         factoryOf(::StartGeneration)
         factoryOf(::ObserveGenerations)
         factoryOf(::ObserveSavedStories)
+        factoryOf(::ObserveStoryLibrary)
+        factoryOf(::RefreshStories)
         factoryOf(::ReadStory)
         factoryOf(::RefreshGeneration)
         factoryOf(::RetryGeneration)

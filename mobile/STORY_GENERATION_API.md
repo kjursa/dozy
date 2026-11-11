@@ -181,3 +181,49 @@ same reference. Text works offline; cover availability offline depends on the im
 loader cache. Expiring signed URLs require a future stable-reference resolution
 contract before enabling the API. Reader settings and reading position are local to
 the restored navigation entry as described in SPEC §13, with no server synchronization.
+
+## Saved library (F12)
+
+`GET /stories?limit=100&cursor=<opaque cursor>` returns 200:
+
+```json
+{
+  "stories": [
+    {"id":"story-1","title":"A lost star","coverUrl":"https://assets.example.test/story-1.png","readingMinutes":4,"createdAt":1794355200000}
+  ],
+  "nextCursor": null
+}
+```
+
+There is no request body. IDs, titles and durable cover references match
+`GET /stories/{id}`. Summaries omit text and configuration. `readingMinutes` is a
+positive integer estimated at 150 words/minute, minimum one, consistent with the
+reader. `createdAt` is the immutable story creation timestamp in UTC epoch
+milliseconds (nonnegative). Add the same `createdAt` field to the full story DTO;
+legacy full results without it are supported as timestamp zero. New generation
+results must supply it. Sort newest first, then by ascending story ID to break ties.
+No series, editing or deletion operation is implied.
+
+Pages belong to a stable snapshot, have unique story IDs across pages, and use
+opaque URL-encoded cursors. The last page omits `nextCursor` or returns null. A
+refresh starts at the first page and follows all cursors; repeated/blank cursors,
+duplicate IDs, invalid metadata or malformed pages fail the refresh. The client
+validates all pages before merging. Cancellation propagates. Retry is an explicit
+idempotent GET starting at page one; no generation, cover generation or POST occurs.
+
+Errors use the existing `{code}` envelope: 400 INVALID_CURSOR, 401 UNAUTHORIZED,
+429 RATE_LIMITED, 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
+retryable library error while retaining known cards; raw server messages are not
+shown. Transport I/O failures and null ApiConfig show the offline library, without
+claiming a successful synchronization. Null configuration sends no requests.
+
+The existing shared GenerationRepository owns both jobs and stories; no parallel
+list repository is introduced. DozyDatabase v8 adds nullable summary JSON to the
+feature's existing table with an automatic migration from v7. Remote summaries use
+reserved `library:<id>` rows without jobs. Locally completed jobs and durable reader
+fetches continue storing the complete result in their existing rows. Observation
+merges by story ID, choosing the metadata with the newest creation timestamp and
+sorting deterministically. Summary refresh never overwrites full text, job status,
+configuration or notification state and never deletes absent stories, including on
+empty responses or temporary failures. The reader fetches full text only when no
+local result exists. A remote summary alone therefore does not promise offline text.

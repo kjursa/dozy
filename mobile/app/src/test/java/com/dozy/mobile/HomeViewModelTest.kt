@@ -43,14 +43,7 @@ class HomeViewModelTest {
         assertEquals(UiText.Resource(R.string.tuesday_14_october), state.dateLabel)
         assertEquals(UiText.Resource(R.string.good_evening), state.greeting)
         assertEquals(UiText.Resource(R.string.ready_for_a_new_adventure), state.prompt)
-        assertEquals(
-            listOf(
-                UiText.Resource(R.string.oliver_and_the_secret_pirate_island),
-                UiText.Resource(R.string.the_mystery_of_the_missing_moon),
-                UiText.Resource(R.string.a_journey_through_the_enchanted_forest),
-            ),
-            state.stories.map { it.title },
-        )
+        assertEquals(emptyList<com.dozy.mobile.feature.story.presentation.list.Story>(), state.stories)
         assertEquals(listOf("Oliver", "Luna", "Captain Finn"), state.characters.map { it.name })
     }
 
@@ -63,8 +56,12 @@ class HomeViewModelTest {
                 )
             advanceUntilIdle()
             val story =
-                viewModel.uiState.value.stories
-                    .first()
+                com.dozy.mobile.feature.story.presentation.list.Story(
+                    UiText.Plain("A saved adventure"),
+                    1,
+                    "https://example.test/cover",
+                    "story",
+                )
             val character =
                 viewModel.uiState.value.characters
                     .first()

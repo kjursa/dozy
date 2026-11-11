@@ -15,6 +15,7 @@ data class GenerationEntity(
     @ColumnInfo(defaultValue = "NULL") val retryKey: String? = null,
     @ColumnInfo(defaultValue = "0") val notificationDelivered: Boolean = false,
     @ColumnInfo(defaultValue = "0") val createdOrder: Long = 0,
+    @ColumnInfo(defaultValue = "NULL") val summary: String? = null,
 )
 
 @Dao

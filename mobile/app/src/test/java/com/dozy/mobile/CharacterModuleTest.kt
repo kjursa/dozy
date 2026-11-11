@@ -55,6 +55,7 @@ class CharacterModuleTest {
                 module {
                     single { ApiConfig(baseUrl = null) }
                     single<CharacterDao> { dao }
+                    single<com.dozy.mobile.feature.story.data.database.GenerationDao> { FakeGenerationDao() }
                     single<HttpClient> { client }
                     single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
                 }
