@@ -48,6 +48,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.10.1")
     implementation(platform("io.insert-koin:koin-bom:4.1.1"))
     implementation("io.insert-koin:koin-core")
     implementation("io.insert-koin:koin-android")

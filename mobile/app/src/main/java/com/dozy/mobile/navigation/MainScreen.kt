@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Groups
@@ -38,10 +42,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dozy.mobile.R
+import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.character.presentation.list.CharactersTabScreen
 import com.dozy.mobile.feature.home.presentation.HomeScreen
 import com.dozy.mobile.feature.place.domain.model.Place
-import com.dozy.mobile.feature.story.presentation.list.StoriesTabScreen
+import com.dozy.mobile.feature.story.presentation.reader.SavedStories
 import com.kjursa.foundation.compose.theme.UiSpacing
 
 private const val HOME_TAB = "home"
@@ -57,6 +62,8 @@ fun MainScreen(
     onCharacter: (String) -> Unit,
     onPlaces: () -> Unit,
     onPlaceSelected: (Place.Id?) -> Unit,
+    onGeneration: (String) -> Unit,
+    onRead: (String) -> Unit,
 ) {
     val tabController = rememberNavController()
     androidx.compose.runtime.LaunchedEffect(showCharacters) {
@@ -81,13 +88,28 @@ fun MainScreen(
             composable(HOME_TAB) {
                 HomeScreen(
                     onCreateStory = onCreateStory,
+                    onGeneration = onGeneration,
+                    onRead = onRead,
                     onAddCharacter = onCreateCharacter,
                     onPlaces = onPlaces,
                     onCharacter = onCharacter,
                     onPlaceSelected = onPlaceSelected,
                 )
             }
-            composable(STORIES_TAB) { StoriesTabScreen() }
+            composable(STORIES_TAB) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(
+                            rememberScrollState(),
+                        ).navigationBarsPadding()
+                        .padding(top = UiSpacing.x4)
+                        .then(Modifier.padding(bottom = UiSpacing.x4)),
+                ) {
+                    SavedStories(onRead)
+                    Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+                }
+            }
             composable(CHARACTERS_TAB) { CharactersTabScreen(onAddCharacter = onCreateCharacter, onCharacter = onCharacter) }
         }
 

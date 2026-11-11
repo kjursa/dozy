@@ -1,4 +1,4 @@
-# Proposed story generation contract (F9)
+# Proposed story generation contract (F9/F10)
 
 This contract is a mobile proposal, not an implemented backend endpoint. It extends
 CHARACTER_DATA.md and PLACE_DATA.md using the same string IDs and uppercase enums.
@@ -51,23 +51,113 @@ Errors use `{"code":"..."}`: 400 INVALID_REQUEST, 401 UNAUTHORIZED,
 transport failure or malformed acceptance; server text is not displayed. Retrying
 uses the same key, never an automatic new execution. Coroutine cancellation propagates.
 
-## Extension points for F10–F12
+## Status, completion, and durable results (F10/F11 contract)
 
-Proposed `GET /story-generations/{jobId}` returns 200 with jobId, status, and
-`storyId` only when READY, or a typed `errorCode` when FAILED. 404 JOB_NOT_FOUND,
-network errors and 5xx mean observation is unavailable, not that generation failed.
-The locally persisted request configuration supports resuming observation. A deliberate
-retry of a terminal failed job starts a new execution with a new key and the original
-snapshots; transport retries continue to use the original key.
+`GET /story-generations/{jobId}` returns 200:
 
-Proposed `GET /stories/{storyId}` returns 200 with id, title, text, coverUrl and
-configuration (the original request snapshots). READY is published only after story
-and cover are durably saved. Story IDs are independent of job IDs. 404 STORY_NOT_FOUND
-and 503 UNAVAILABLE are typed errors. Domain Story and GenerationJob live in the story
-feature, independently of the existing library presentation fixture.
+```json
+{"jobId":"job-1","status":"CREATING_TEXT"}
+```
 
-F9 navigates only after acceptance to `generation/{jobId}`, removing the submitted
-form from the stack. Its entry screen displays acceptance and the job reference;
-status polling, progress, notifications and reader integration belong to F10–F12.
-Reader entry can call `openStory(null, castIds)` to create a clean draft with only
-the cast preselected. Character/place creation returns to the existing draft owner.
+Statuses are QUEUED (accepted), CREATING_TEXT, CREATING_COVER (exactly one image),
+READY, FAILED. These are stages, not percentages. READY requires `storyId`, e.g.
+`{"jobId":"job-1","status":"READY","storyId":"story-1"}`. FAILED requires
+`errorCode`: CONTENT_REJECTED or GENERATION_FAILED. These fields are absent in other
+states. No raw server error text is displayed. Unknown failure codes, malformed
+responses, 401, 404 JOB_NOT_FOUND, 429, 5xx, and transport errors mean **status
+unavailable**, never FAILED. A subsequent successful read clears unavailability.
+The server must serve consistent, monotonic stage reads for the current execution.
+
+`GET /stories/{storyId}` returns 200 with the following JSON DTO:
+
+```json
+{
+  "id":"story-1",
+  "title":"A lost star",
+  "text":"Once upon a time…",
+  "coverUrl":"https://assets.example.test/story-1.png",
+  "configuration":{"cast":[],"mode":"AUTOMATIC","length":"SHORT"}
+}
+```
+
+The example configuration is abbreviated: the real cast contains the nonempty
+original character snapshots from POST. Configuration uses the exact F9 request DTO.
+The title and text are nonblank; the cover URL is a durable HTTPS reference. IDs
+obey F9's URL-safe ID rules. 404 STORY_NOT_FOUND and 503 UNAVAILABLE are observation
+failures. Publish READY only after the complete text and cover are durably readable.
+The same logical job always returns the same immutable story ID and content.
+Story IDs are independent of job IDs. The client checks returned IDs and snapshots,
+then stores the complete DTO and READY status in **one atomic Room row update** in
+DozyDatabase v7. A failed story fetch leaves the previous local stage plus unknown
+status. Repeated reads do not re-download or duplicate an already saved story.
+The shared repository exposes saved domain stories for Home, library, and a minimal
+reader. Text is local; cover bytes load from the durable asset URL when available.
+A full offline image cache and the remaining reader controls belong to F11/F12.
+
+## Failed-job retry
+
+`POST /story-generations/{jobId}/retry`, no body,
+`Idempotency-Key: <new client UUID>` returns 202 `{jobId,status}` using the same
+logical job ID. Only FAILED jobs can start a new execution. The backend reuses the
+original immutable configuration; the client never reconstructs it from edited or
+deleted characters/places. The logical job has at most one successful durable result.
+
+The server atomically binds each retry key to one execution. Replay must return its
+current status even when that execution has already become FAILED or READY; it must
+never execute again. A new explicit retry after a confirmed subsequent failure uses
+a new key. A different logical job/key binding returns 409 IDEMPOTENCY_CONFLICT;
+retrying an active or completed job returns 409 JOB_NOT_FAILED. GET remains valid
+through retries. Retain all bindings for the lifetime of the job/story.
+
+The client saves its pending retry key before HTTP, retains it on timeout or process
+death, and replays it from background reconciliation. Acceptance clears the pending
+key. A confirmed progressing/completed GET can also acknowledge the pending retry.
+The local mutex and disabled action prevent duplicate concurrent submissions. A
+completed local job cannot be retried. One active job is allowed; starting another
+or retrying an older failed job while one is active is rejected locally. The backend
+must enforce the same per-account limit (409 ACTIVE_JOB_EXISTS), including uncertain
+initial POSTs and other devices. No cancellation or multi-job management UI is added.
+
+## Scheduling and notification delivery
+
+Generation executes on the backend, independent of Android processes and screens.
+Android WorkManager runs unique immediate reconciliation work and a persistent
+15-minute recovery sweep. An active work run polls every 10 seconds for up to eight
+minutes, then asks WorkManager to retry with linear backoff starting at 10 seconds.
+Network failures preserve known state and retry on later polls. Launching the app
+resumes work from Room; accepted jobs never submit another initial POST. New durable
+job changes enqueue a check. Navigation, system back, or closing the activity does
+not cancel work. The periodic sweep closes scheduling gaps if a process dies after
+saving acceptance and before enqueuing the immediate work. WorkManager persists
+across normal process death/reboot, subject to Android scheduling and battery limits.
+
+A successful background reconciliation saves the result first, then posts a local
+notification with a stable story-ID tag and persists delivery acknowledgement.
+Replay across a crash replaces the same notification instead of adding another.
+The explicit immutable PendingIntent has unique `dozy://stories/{storyId}` data and
+opens that story on cold or warm start, with Home below it. IDs are validated at the
+activity boundary. No external deep-link intent filter is exposed. Notification
+permission is requested only after the parent taps the opt-in action on progress
+(Android 13+); generation never waits for it. Permission/channel denial is normal:
+Home and library still show the saved result. Granting permission schedules a check.
+Open progress stays on its ready card with a Read story action; no automatic jump.
+
+**Backend/system integration requirements:** these proposed endpoints and a durable
+backend job executor must be implemented before enabling ApiConfig. The current
+client uses polling, not push, so completion alerts can be delayed by Doze, OS quotas,
+network loss, or manufacturer restrictions. Android force-stop suppresses background
+work until the user opens the app again; permission cannot override this. Guaranteed
+prompt delivery while the process is absent requires a separate FCM integration:
+register/rotate device tokens, authenticate account ownership, deliver a data message
+containing validated job/story IDs after durable READY, enqueue the same reconciliation
+worker, and fetch/save before notifying. No device-token endpoint or push service is
+claimed by this mobile slice. A normal close does not require an open ViewModel or
+an activity coroutine for progress or completion delivery.
+
+F9 acceptance removes the submitted form from the stack and opens
+`generation/{jobId}`. Back to Home or system back preserves the same observed job.
+Home's latest-job card supports progress, status refresh, failed-job retry, and opening
+the exact saved result. The library reads the same persisted collection. Notification
+and ready-card navigation use `reader/{storyId}`; unavailable local stories show a
+return action rather than a fictitious result. Existing creation return-to-origin
+and cast-only new-adventure entry points remain shared with F9.

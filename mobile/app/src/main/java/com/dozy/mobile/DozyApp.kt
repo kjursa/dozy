@@ -28,16 +28,27 @@ import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.MainScreen
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.READER_ROUTE
 import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.generationAccepted
+import com.dozy.mobile.navigation.openSavedStory
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun DozyApp() {
+fun DozyApp(
+    notificationStory: String? = null,
+    onNotificationHandled: () -> Unit = {},
+) {
     val navController = rememberNavController()
+    androidx.compose.runtime.LaunchedEffect(notificationStory) {
+        notificationStory?.let {
+            navController.openSavedStory(it, fromNotification = true)
+            onNotificationHandled()
+        }
+    }
 
     NavHost(navController = navController, startDestination = MAIN_ROUTE) {
         composable(MAIN_ROUTE) { entry ->
@@ -50,6 +61,8 @@ fun DozyApp() {
                 onCharacter = { navController.navigate("character/${Uri.encode(it)}") },
                 onPlaces = { navController.navigate("places?fromStory=false") { launchSingleTop = true } },
                 onPlaceSelected = { navController.openStory(it) },
+                onGeneration = { navController.navigate("generation/${Uri.encode(it)}") { launchSingleTop = true } },
+                onRead = { navController.openSavedStory(it) },
             )
         }
         composable(CREATE_STORY_ROUTE) { entry ->
@@ -73,9 +86,16 @@ fun DozyApp() {
             )
         }
         composable(GENERATION_ROUTE) { entry ->
-            com.dozy.mobile.feature.story.presentation.create.AcceptedGenerationScreen(
+            com.dozy.mobile.feature.story.presentation.generation.GenerationScreen(
                 requireNotNull(entry.arguments?.getString("jobId")),
+                onRead = { navController.openSavedStory(it) },
                 onHome = { navController.popBackStack(MAIN_ROUTE, inclusive = false) },
+            )
+        }
+        composable(READER_ROUTE) { entry ->
+            com.dozy.mobile.feature.story.presentation.reader.SavedStoryScreen(
+                requireNotNull(entry.arguments?.getString("storyId")),
+                onBack = { navController.popBackStack() },
             )
         }
         composable(PLACES_ROUTE) { entry ->

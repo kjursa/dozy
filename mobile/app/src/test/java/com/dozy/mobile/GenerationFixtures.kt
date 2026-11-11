@@ -23,6 +23,15 @@ internal fun testStartGeneration() =
         DefaultGenerationRepository(
             FakeGenerationDao(),
             object : GenerationApi {
+                override suspend fun status(id: String): GenerationStatusDto? = null
+
+                override suspend fun story(id: String): StoryDto? = null
+
+                override suspend fun retry(
+                    id: String,
+                    key: String,
+                ): GenerationAcceptedDto? = null
+
                 override suspend fun start(
                     key: String,
                     request: GenerationRequestDto,
