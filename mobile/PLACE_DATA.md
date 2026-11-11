@@ -73,8 +73,9 @@ and local places. Storage observation errors retain bundled suggestions and show
 a retry action. A genuine empty collection is also supported by the screen.
 
 The add/edit form saves custom places durably before attempting upload, including
-when the backend is disabled. Schema version 3 adds `pendingSync` with an automatic
-migration from version 2. Existing local rows are pending; remote rows are never
+when the backend is disabled. Schema version 3 adds character avatar fields;
+schema version 4 adds `pendingSync` with an automatic migration from version 3.
+Existing local rows are pending; remote rows are never
 queued. Save returns `SYNCED` only after acknowledgement and durable metadata,
 otherwise `PENDING`. Only failure to persist the initial row fails the form save.
 A pending local save can be selected immediately and is never described as a

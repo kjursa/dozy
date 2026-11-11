@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "420798f5fdc17a64c10ba30e100b8e86",
+    "identityHash": "e7762373b9f54dcd88ca6c00bf76bd2f",
     "entities": [
       {
         "tableName": "characters",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `personality` TEXT NOT NULL, `appearance` TEXT NOT NULL, `type` TEXT NOT NULL, `pendingSync` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `personality` TEXT NOT NULL, `appearance` TEXT NOT NULL, `type` TEXT NOT NULL, `pendingSync` INTEGER NOT NULL, `avatarId` TEXT, `avatarUrl` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -43,6 +43,16 @@
             "columnName": "pendingSync",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "avatarId",
+            "columnName": "avatarId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "avatarUrl",
+            "columnName": "avatarUrl",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -54,7 +64,7 @@
       },
       {
         "tableName": "places",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `inhabitants` TEXT, `ownership` TEXT NOT NULL, `editable` INTEGER NOT NULL, `local` INTEGER NOT NULL, `pendingSync` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `inhabitants` TEXT, `ownership` TEXT NOT NULL, `editable` INTEGER NOT NULL, `local` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -96,13 +106,6 @@
             "columnName": "local",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "pendingSync",
-            "columnName": "pendingSync",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "1"
           }
         ],
         "primaryKey": {
@@ -115,7 +118,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '420798f5fdc17a64c10ba30e100b8e86')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e7762373b9f54dcd88ca6c00bf76bd2f')"
     ]
   }
 }

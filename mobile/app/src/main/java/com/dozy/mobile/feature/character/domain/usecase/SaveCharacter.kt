@@ -10,9 +10,15 @@ class SaveCharacter(
     private val repository: CharacterRepository,
     private val ids: CharacterIdGenerator,
 ) {
-    suspend operator fun invoke(input: CreateCharacterInput): Result =
+    suspend operator fun invoke(
+        input: CreateCharacterInput,
+        avatar: Character.Avatar,
+        id: Character.Id? = null,
+    ): Result =
         runCatchingSuspend {
-            repository.save(Character(ids.next(), Character.Details(input.name, input.personality, input.appearance, input.type)))
+            repository.save(
+                Character(id ?: ids.next(), Character.Details(input.name, input.personality, input.appearance, input.type), avatar),
+            )
         }.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { Result.Failure },

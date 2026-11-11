@@ -4,6 +4,7 @@ import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
 import com.dozy.mobile.feature.character.domain.model.SavedCharacter
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
@@ -14,6 +15,8 @@ class DefaultCharacterRepository(
     private val dao: CharacterDao,
     private val api: CharacterApi,
 ) : CharacterRepository {
+    override suspend fun generateAvatar(input: CreateCharacterInput) = api.generateAvatar(input.toAvatarDto())?.toDomain()
+
     override fun observe() = dao.observe().map { rows -> rows.map { it.toDomain() } }
 
     override suspend fun save(character: Character): SavedCharacter {

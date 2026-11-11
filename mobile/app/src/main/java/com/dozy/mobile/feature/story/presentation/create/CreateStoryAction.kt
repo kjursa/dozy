@@ -5,6 +5,10 @@ internal sealed interface CreateStoryAction {
         val id: String?,
     ) : CreateStoryAction
 
+    data class AddHero(
+        val id: String,
+    ) : CreateStoryAction
+
     data class Hero(
         val id: String,
     ) : CreateStoryAction

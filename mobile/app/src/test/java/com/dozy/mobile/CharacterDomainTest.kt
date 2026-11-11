@@ -15,7 +15,7 @@ class CharacterDomainTest {
     @Test fun savesNormalizedInputAndLoadsSavedCharacters() =
         runTest {
             val repository = FakeCharacterRepository()
-            val result = save(repository)(createInput("  Finn  ")) as SaveCharacter.Result.Success
+            val result = save(repository)(createInput("  Finn  "), avatar()) as SaveCharacter.Result.Success
             assertEquals("Finn", result.saved.character.details.name.value)
             assertEquals(Character.Id("new"), result.saved.character.id)
             assertEquals(result.saved.character, ObserveCharacters(repository)().first().characters.last())
@@ -24,14 +24,14 @@ class CharacterDomainTest {
     @Test fun exposesRepositoryFailure() =
         runTest {
             val repository = FakeCharacterRepository().apply { failure = IllegalStateException("disk full") }
-            assertEquals(SaveCharacter.Result.Failure, save(repository)(createInput()))
+            assertEquals(SaveCharacter.Result.Failure, save(repository)(createInput(), avatar()))
         }
 
     @Test fun preservesCancellation() =
         runTest {
             val repository = FakeCharacterRepository().apply { failure = CancellationException("cancelled") }
             try {
-                save(repository)(createInput())
+                save(repository)(createInput(), avatar())
                 fail("Expected cancellation")
             } catch (_: CancellationException) {
             }

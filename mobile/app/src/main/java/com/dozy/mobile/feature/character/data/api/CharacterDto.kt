@@ -10,4 +10,5 @@ data class CharacterDto(
     val personality: String,
     val appearance: String,
     val type: String,
+    val avatar: AvatarDto? = null,
 )

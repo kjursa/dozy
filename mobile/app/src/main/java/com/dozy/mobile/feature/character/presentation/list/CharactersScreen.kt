@@ -1,7 +1,6 @@
 package com.dozy.mobile.feature.character.presentation.list
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,14 +26,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
+import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.kjursa.foundation.compose.mvi.MviScreen
@@ -43,13 +40,16 @@ import com.kjursa.foundation.presentation.text.resolve
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun CharactersTabScreen(onAddCharacter: () -> Unit) {
+internal fun CharactersTabScreen(
+    onAddCharacter: () -> Unit,
+    onCharacter: (String) -> Unit,
+) {
     val charactersViewModel: CharactersViewModel = koinViewModel()
     MviScreen(
         viewModel = charactersViewModel,
         onEffect = { effect ->
             when (effect) {
-                is CharactersEffect.OpenCharacter -> Unit // A character detail destination does not exist yet.
+                is CharactersEffect.OpenCharacter -> onCharacter(effect.character.id)
                 CharactersEffect.NavigateToAddCharacter -> onAddCharacter()
             }
         },
@@ -116,12 +116,7 @@ private fun CharacterLibraryCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Image(
-                painterResource(character.image),
-                contentDescription = character.name,
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(MaterialTheme.shapes.medium),
-                contentScale = ContentScale.Crop,
-            )
+            AvatarImage(character.avatarUrl, character.name, Modifier.fillMaxWidth().aspectRatio(1f))
             Text(character.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         }
     }

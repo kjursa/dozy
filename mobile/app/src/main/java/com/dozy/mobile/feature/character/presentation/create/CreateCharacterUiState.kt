@@ -1,6 +1,6 @@
 package com.dozy.mobile.feature.character.presentation.create
 
-import com.dozy.mobile.R
+import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -12,25 +12,28 @@ internal data class CreateCharacterUiState(
     @Transient val appearanceError: UiText? = null,
     @Transient val typeError: UiText? = null,
     @Transient val saveStatus: SaveStatus = SaveStatus.EDITING,
+    @Transient val loading: Boolean = false,
+    @Transient val unavailable: Boolean = false,
+    @Transient val generating: Boolean = false,
+    @Transient val generationError: UiText? = null,
+    val avatarId: String? = null,
+    val avatarUrl: String? = null,
+    val editingId: String? = null,
     val selectedType: String = "Child",
     val name: String? = null,
     val personality: String? = null,
     val appearance: String? = null,
 ) {
-    // Null means the resource-backed sample has not been edited or initialized yet.
-    val displayName: UiText get() = name?.let(UiText::Plain) ?: UiText.Resource(R.string.sample_character_name)
-    val displayPersonality: UiText get() = personality?.let(UiText::Plain) ?: UiText.Resource(R.string.sample_character_personality)
-    val displayAppearance: UiText get() = appearance?.let(UiText::Plain) ?: UiText.Resource(R.string.sample_character_appearance)
-
-    fun withSampleDefaults(
-        name: String,
-        personality: String,
-        appearance: String,
-    ) = copy(
-        name = this.name ?: name,
-        personality = this.personality ?: personality,
-        appearance = this.appearance ?: appearance,
-    )
+    val displayName: UiText get() = UiText.Plain(name.orEmpty())
+    val displayPersonality: UiText get() = UiText.Plain(personality.orEmpty())
+    val displayAppearance: UiText get() = UiText.Plain(appearance.orEmpty())
+    val busy: Boolean get() = loading || generating || saveStatus == SaveStatus.SAVING
+    val canSave: Boolean get() =
+        !busy &&
+            !unavailable &&
+            avatarId != null &&
+            avatarUrl != null &&
+            validateInput() is CreateCharacterValidation.Valid
 
     fun withName(value: String) = copy(name = value)
 

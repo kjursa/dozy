@@ -10,9 +10,9 @@ import com.dozy.mobile.feature.place.data.database.PlaceEntity
 
 @Database(
     entities = [CharacterEntity::class, PlaceEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
 abstract class DozyDatabase : RoomDatabase() {
     abstract fun places(): PlaceDao

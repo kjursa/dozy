@@ -79,7 +79,13 @@ class CharacterModuleTest {
                                     SavedStatePersistence.DEFAULT_KEY to
                                         Json.encodeToString(
                                             CreateCharacterUiState.serializer(),
-                                            CreateCharacterUiState(name = "Koin hero"),
+                                            CreateCharacterUiState(
+                                                name = "Koin hero",
+                                                personality = "Curious",
+                                                appearance = "Green eyes",
+                                                avatarId = "asset",
+                                                avatarUrl = "https://example.test/avatar.png",
+                                            ),
                                         ),
                                 ),
                             ),
@@ -96,10 +102,9 @@ class CharacterModuleTest {
                         scope = app.koin.scopeRegistry.rootScope,
                     )
                 resolveViewModel(StoriesViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
-                form.dispatch(CreateCharacterAction.InitializeSamples("Oliver", "Curious and brave", "Green eyes"))
                 form.dispatch(CreateCharacterAction.SaveClicked)
                 advanceUntilIdle()
-                assertEquals(CreateCharacterEffect.Saved, form.effects.first())
+                assertEquals(CreateCharacterEffect.Saved(Character.Id("injected-id")), form.effects.first())
                 assertEquals(
                     "injected-id",
                     dao.rows.value

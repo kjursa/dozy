@@ -5,15 +5,19 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.composable
 import androidx.navigation.createGraph
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -36,6 +40,8 @@ class PlaceNavigationTest {
             graph =
                 createGraph(startDestination = MAIN_ROUTE) {
                     composable(MAIN_ROUTE) { }
+                    composable(CREATE_CHARACTER_ROUTE) { }
+                    composable("character/{id}") { }
                     composable(CREATE_STORY_ROUTE) { }
                     composable(PLACES_ROUTE) { }
                     composable(PLACE_FORM_ROUTE) { }
@@ -70,6 +76,7 @@ class PlaceNavigationTest {
                 },
                 null,
                 SelectPlace(FakePlaceRepository()),
+                ObserveCharacters(FakeCharacterRepository()),
             )
         draft.dispatch(CreateStoryAction.Request("A moonlit adventure"))
         val input = draft.uiState.value
@@ -96,5 +103,50 @@ class PlaceNavigationTest {
         assertSame(story, nav.currentBackStackEntry)
         assertTrue(draft.uiState.value.randomSetting)
         assertEquals(false, draft.uiState.value.automaticPlot)
+    }
+
+    @Test fun savedCharacterFromHomeOpensItsDetailsAndEditsReturnToSameEntry() {
+        val nav = controller()
+        nav.navigate("create-character")
+        nav.characterSaved(Character.Id("new"), null)
+        assertEquals("character/{id}", nav.currentDestination?.route)
+        assertEquals("new", nav.currentBackStackEntry?.arguments?.getString("id"))
+        val details = nav.currentBackStackEntry
+        nav.navigate("create-character?id=new")
+        nav.characterSaved(Character.Id("new"), null)
+        assertSame(details, nav.currentBackStackEntry)
+        nav.popBackStack()
+        assertEquals(MAIN_ROUTE, nav.currentDestination?.route)
+    }
+
+    @Test fun characterSaveSelectsNewHeroAndReturnsToSameStoryDraft() {
+        val nav = controller()
+        nav.openStory(null)
+        val story = nav.currentBackStackEntry
+        val draft =
+            CreateStoryViewModel(
+                object : StatePersistence<CreateStoryUiState> {
+                    override fun restore(defaultState: CreateStoryUiState) = defaultState
+
+                    override fun save(state: CreateStoryUiState) = Unit
+                },
+                null,
+                SelectPlace(FakePlaceRepository()),
+                ObserveCharacters(FakeCharacterRepository()),
+            )
+        draft.dispatch(CreateStoryAction.Request("Moonlit adventure"))
+        draft.dispatch(CreateStoryAction.Ending("Back home"))
+        draft.dispatch(CreateStoryAction.Length(1))
+        draft.dispatch(CreateStoryAction.AddHero("existing"))
+        val before = draft.uiState.value
+        nav.navigate("create-character")
+        nav.popBackStack()
+        assertEquals(before, draft.uiState.value)
+        nav.navigate("create-character")
+        nav.characterSaved(Character.Id("new"), draft)
+        assertSame(story, nav.currentBackStackEntry)
+        assertEquals(before.copy(selectedHeroes = listOf("existing", "new")), draft.uiState.value)
+        draft.dispatch(CreateStoryAction.AddHero("new"))
+        assertEquals(listOf("existing", "new"), draft.uiState.value.selectedHeroes)
     }
 }
