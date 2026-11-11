@@ -1,7 +1,6 @@
 package com.dozy.mobile.feature.story.presentation.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,13 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
+import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
@@ -46,16 +44,15 @@ internal fun StoryCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
     ) {
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            Image(
-                painterResource(story.image),
-                contentDescription = stringResource(R.string.story_cover, story.title.resolve()),
+            AvatarImage(
+                story.coverUrl,
+                description = stringResource(R.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .aspectRatio(
                             3f / 4f,
                         ).clip(MaterialTheme.shapes.medium),
-                contentScale = ContentScale.Crop,
             )
             Column(Modifier.padding(horizontal = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
@@ -87,16 +84,15 @@ internal fun StoryWideCard(
             horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painterResource(story.image),
-                contentDescription = stringResource(R.string.story_cover, story.title.resolve()),
+            AvatarImage(
+                story.coverUrl,
+                description = stringResource(R.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .width(96.dp)
                         .aspectRatio(
                             3f / 4f,
                         ).clip(MaterialTheme.shapes.medium),
-                contentScale = ContentScale.Crop,
             )
             Column(Modifier.weight(1f).padding(end = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(story.title.resolve(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)

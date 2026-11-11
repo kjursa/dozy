@@ -115,7 +115,12 @@ Mockup: [stories.html](design/screens/stories.html).
 
 - **Populated:** saved stories with covers, titles, and estimated reading times. Each item is an independent story.
 - **Empty library:** explain that saved stories will appear here and offer “Create your first story”. The HTML variant assumes characters already exist; otherwise, the story form leads to hero creation.
-- **Loading / failure:** shared rules apply; a failure is not an empty library.
+- **Loading:** show progress until local observation emits; do not flash empty copy.
+- **Refreshing:** keep known cards visible, show progress and disable repeated refreshes.
+- **Failure:** keep saved cards and offer Refresh; a failure is not an empty library.
+- **Offline:** explain that only locally known stories are shown. A disabled API makes no requests.
+- The collection merges persisted remote summaries and completed local generation results by story ID, newest creation timestamp first, then ascending ID. Legacy results without timestamps sort at timestamp zero. Completion updates the collection automatically and appears once. Refresh never deletes known stories. See [the proposed contract](STORY_GENERATION_API.md#saved-library-f12).
+- Opening the reader and returning preserves the library tab and scroll position. Cards show every saved story; there is no fixed three-card limit. Library data is reconstructed from Room, with no form inputs to persist.
 
 ### Actions and destinations
 
@@ -438,7 +443,7 @@ Reader → “New adventure with these heroes” → new form with the cast → 
 4. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
 5. F10 resolves generation to one active job, no cancellation, and a latest-job card on Home; the backend must enforce the same limit.
 6. F10 keeps the ready card on progress with an explicit Read story action. Notification permission is requested only from the parent’s opt-in action there.
-7. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
+7. Ordering within custom places and predefined places, and the source of the final small Places thumbnails.
 
 Audio, story text editing, plot-based series, payments, and a separate notification center are not part of the currently described screens.
 

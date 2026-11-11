@@ -202,4 +202,9 @@
     <string name="reader_unavailable">Unable to read this story. Please try again.</string>
     <string name="reader_missing">This story could not be found.</string>
     <string name="reader_retry">Try again</string>
+    <string name="stories_load_error">Your library could not be updated. Your saved stories are still available. Try refreshing.</string>
+    <string name="stories_offline">Offline library. Showing stories saved on this device.</string>
+    <string name="stories_empty">Saved adventures will appear here. Create your first story to begin.</string>
+    <string name="stories_create">Create a story</string>
+    <string name="stories_refresh">Refresh</string>
 </resources>

@@ -25,6 +25,44 @@ class DefaultGenerationRepository(
             rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain() } }.distinctBy { it.id }
         }
 
+    override fun summaries() =
+        dao.observe().map { rows ->
+            rows
+                .mapNotNull { row ->
+                    row.summary?.let { Json.decodeFromString<StorySummaryDto>(it).toDomain() }
+                        ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto().toDomain() }
+                }.groupBy { it.id }
+                .values
+                .map { versions -> versions.maxBy { it.createdAt.epochMillis } }
+                .sortedWith(compareByDescending<StorySummary> { it.createdAt.epochMillis }.thenBy { it.id.value })
+        }
+
+    override suspend fun refreshStories(): Boolean =
+        mutex.withLock {
+            val collected = mutableListOf<StorySummaryDto>()
+            val cursors = mutableSetOf<String>()
+            var cursor: String? = null
+            do {
+                val page = api.stories(cursor) ?: return@withLock false
+                page.stories.forEach { it.toDomain() }
+                collected += page.stories
+                cursor = page.nextCursor
+                if (cursor != null) require(cursor.isNotBlank() && cursors.add(cursor))
+            } while (cursor != null)
+            // Validate every page before merging. An empty page or failed refresh never removes saved results.
+            require(collected.distinctBy { it.id }.size == collected.size)
+            collected.forEach { summary ->
+                dao.upsert(
+                    GenerationEntity(
+                        requestKey = "library:${summary.id}",
+                        configuration = "",
+                        summary = Json.encodeToString(summary),
+                    ),
+                )
+            }
+            true
+        }
+
     override suspend fun readStory(id: Story.Id): Story? =
         mutex.withLock {
             stories().first().find { it.id == id }?.let { return@withLock it }

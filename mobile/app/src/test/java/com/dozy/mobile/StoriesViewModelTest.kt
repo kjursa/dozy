@@ -1,20 +1,14 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.story.presentation.list.StoriesAction
-import com.dozy.mobile.feature.story.presentation.list.StoriesEffect
-import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
-import com.kjursa.foundation.presentation.text.UiText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
+import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
+import com.dozy.mobile.feature.story.data.api.*
+import com.dozy.mobile.feature.story.domain.usecase.*
+import com.dozy.mobile.feature.story.presentation.list.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
@@ -30,29 +24,80 @@ class StoriesViewModelTest {
         Dispatchers.resetMain()
     }
 
-    @Test fun initialStateExposesSampleStories() {
-        val viewModel = StoriesViewModel()
-        assertEquals(UiText.Resource(R.string.my_stories), viewModel.uiState.value.title)
-        assertEquals(
-            listOf(
-                UiText.Resource(R.string.oliver_and_the_secret_pirate_island),
-                UiText.Resource(R.string.the_mystery_of_the_missing_moon),
-                UiText.Resource(R.string.a_journey_through_the_enchanted_forest),
-            ),
-            viewModel.uiState.value.stories
-                .map { it.title },
-        )
-    }
-
-    @Test fun selectingStoryEmitsOpenStoryEffect() =
+    @Test fun loadingRefreshEmptyErrorOfflineAndRetryAreDistinctAndRepeatedRefreshIsIgnored() =
         runTest(dispatcher) {
-            val viewModel = StoriesViewModel()
-            val story =
-                viewModel.uiState.value.stories
-                    .first()
-            val effect = async { viewModel.effects.first() }
-            viewModel.dispatch(StoriesAction.StorySelected(story))
+            val gate = CompletableDeferred<Unit>()
+            var calls = 0
+            var fail = false
+            var offline = false
+            val api =
+                object : GenerationApi by ProgressApi() {
+                    override suspend fun stories(cursor: String?): StoryPageDto? {
+                        calls++
+                        gate.await()
+                        if (fail) error("Unavailable")
+                        return if (offline) null else StoryPageDto(emptyList())
+                    }
+                }
+            val repo = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
+            assertTrue(vm.uiState.value.loading)
+            runCurrent()
+            assertFalse(vm.uiState.value.loading)
+            assertTrue(vm.uiState.value.refreshing)
+            repeat(3) { vm.dispatch(StoriesAction.Refresh) }
+            runCurrent()
+            assertEquals(1, calls)
+            gate.complete(Unit)
             advanceUntilIdle()
-            assertEquals(StoriesEffect.OpenStory(story), effect.await())
+            assertFalse(vm.uiState.value.refreshing)
+            assertTrue(
+                vm.uiState.value.stories
+                    .isEmpty(),
+            )
+            assertNull(vm.uiState.value.error)
+            fail = true
+            vm.dispatch(StoriesAction.Refresh)
+            advanceUntilIdle()
+            assertNotNull(vm.uiState.value.error)
+            fail = false
+            offline = true
+            vm.dispatch(StoriesAction.Refresh)
+            advanceUntilIdle()
+            assertNull(vm.uiState.value.error)
+            assertTrue(vm.uiState.value.offline)
+            offline = false
+            vm.dispatch(StoriesAction.Refresh)
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.offline)
+        }
+
+    @Test fun completedStoryUpdatesLibraryAndNavigationIsOneOffAndCanResume() =
+        runTest(dispatcher) {
+            val api = ProgressApi()
+            val repo = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
+            advanceUntilIdle()
+            repo.start(
+                com.dozy.mobile.feature.story.domain.model.GenerationJob
+                    .RequestKey("key"),
+                api.configuration,
+            )
+            api.remote = GenerationStatusDto("job", "READY", "story")
+            repo.refresh(
+                com.dozy.mobile.feature.story.domain.model.GenerationJob
+                    .Id("job"),
+            )
+            advanceUntilIdle()
+            val story =
+                vm.uiState.value.stories
+                    .single()
+            assertEquals("story", story.id)
+            repeat(3) { vm.dispatch(StoriesAction.StorySelected(story)) }
+            assertEquals(StoriesEffect.OpenStory(story), vm.effects.first())
+            assertTrue(vm.uiState.value.navigating)
+            vm.navigationHandled()
+            vm.dispatch(StoriesAction.Create)
+            assertEquals(StoriesEffect.CreateStory, vm.effects.first())
         }
 }

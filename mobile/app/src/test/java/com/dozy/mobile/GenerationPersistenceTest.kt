@@ -24,6 +24,56 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
 class GenerationPersistenceTest {
+    @Test fun remoteSummariesSurviveRestartWithoutDownloadingFullStories() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            context.deleteDatabase("library-test.db")
+
+            fun open() = Room.databaseBuilder<DozyDatabase>(context, "library-test.db").setDriver(AndroidSQLiteDriver()).build()
+            val progress = ProgressApi()
+            val api =
+                object : com.dozy.mobile.feature.story.data.api.GenerationApi by progress {
+                    override suspend fun stories(cursor: String?) =
+                        com.dozy.mobile.feature.story.data.api.StoryPageDto(
+                            listOf(
+                                com.dozy.mobile.feature.story.data.api
+                                    .StorySummaryDto("story", "A star", "https://example.test/cover.png", 1, 100),
+                            ),
+                        )
+                }
+            var database = open()
+            try {
+                val repo = DefaultGenerationRepository(database.generations(), api)
+                assertTrue(repo.refreshStories())
+                assertEquals(0, progress.storyReads)
+                database.close()
+                database = open()
+                val restored = DefaultGenerationRepository(database.generations(), api)
+                assertEquals(
+                    "story",
+                    restored
+                        .summaries()
+                        .first()
+                        .single()
+                        .id.value,
+                )
+                assertEquals("Once upon a time", restored.readStory(Story.Id("story"))?.text)
+                assertEquals(1, progress.storyReads)
+                assertEquals(1, restored.summaries().first().size)
+                database.close()
+                database = open()
+                progress.storyUnavailable = true
+                assertEquals(
+                    "Once upon a time",
+                    DefaultGenerationRepository(database.generations(), api).readStory(Story.Id("story"))?.text,
+                )
+                assertEquals(1, progress.storyReads)
+            } finally {
+                database.close()
+                context.deleteDatabase("library-test.db")
+            }
+        }
+
     @Test fun queuedStatusAndReadyResultSurviveClosingAndReopeningDatabase() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()

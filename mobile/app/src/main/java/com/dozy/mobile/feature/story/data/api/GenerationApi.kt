@@ -3,11 +3,13 @@ package com.dozy.mobile.feature.story.data.api
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.api.CharacterDto
 import com.dozy.mobile.feature.place.data.api.PlaceDto
+import com.kjursa.foundation.coroutines.runCatchingSuspend
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
+import java.io.IOException
 
 @Serializable
 data class GenerationRequestDto(
@@ -40,11 +42,29 @@ data class StoryDto(
     val text: String,
     val coverUrl: String,
     val configuration: GenerationRequestDto,
+    val createdAt: Long = 0,
 )
 
 class StoryNotFoundException : Exception()
 
+@Serializable
+data class StorySummaryDto(
+    val id: String,
+    val title: String,
+    val coverUrl: String,
+    val readingMinutes: Int,
+    val createdAt: Long,
+)
+
+@Serializable
+data class StoryPageDto(
+    val stories: List<StorySummaryDto>,
+    val nextCursor: String? = null,
+)
+
 interface GenerationApi {
+    suspend fun stories(cursor: String?): StoryPageDto? = null
+
     suspend fun status(id: String): GenerationStatusDto?
 
     suspend fun story(id: String): StoryDto?
@@ -64,6 +84,19 @@ class KtorGenerationApi(
     private val client: HttpClient,
     private val config: ApiConfig,
 ) : GenerationApi {
+    override suspend fun stories(cursor: String?): StoryPageDto? {
+        val base = config.baseUrl ?: return null
+        val response =
+            runCatchingSuspend {
+                client.get("${base.trimEnd('/')}/stories") {
+                    parameter("limit", 100)
+                    cursor?.let { parameter("cursor", it) }
+                }
+            }.getOrElse { if (it is IOException) return null else throw it }
+        check(response.status == HttpStatusCode.OK)
+        return response.body()
+    }
+
     override suspend fun status(id: String): GenerationStatusDto? {
         val base = config.baseUrl ?: return null
         require(validId(id))
