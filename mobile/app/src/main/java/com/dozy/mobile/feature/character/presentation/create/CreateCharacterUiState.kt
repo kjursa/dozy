@@ -13,9 +13,11 @@ internal data class CreateCharacterUiState(
     @Transient val typeError: UiText? = null,
     @Transient val saveStatus: SaveStatus = SaveStatus.EDITING,
     @Transient val loading: Boolean = false,
+    @Transient val loadError: UiText? = null,
     @Transient val unavailable: Boolean = false,
     @Transient val generating: Boolean = false,
     @Transient val generationError: UiText? = null,
+    val avatarDescription: List<String>? = null,
     val avatarId: String? = null,
     val avatarUrl: String? = null,
     val editingId: String? = null,
@@ -27,10 +29,13 @@ internal data class CreateCharacterUiState(
     val displayName: UiText get() = UiText.Plain(name.orEmpty())
     val displayPersonality: UiText get() = UiText.Plain(personality.orEmpty())
     val displayAppearance: UiText get() = UiText.Plain(appearance.orEmpty())
+    val descriptionKey: List<String> get() = listOf(selectedType.uppercase(), personality.orEmpty().trim(), appearance.orEmpty().trim())
+    val avatarOutdated: Boolean get() = avatarId != null && avatarDescription != descriptionKey
     val busy: Boolean get() = loading || generating || saveStatus == SaveStatus.SAVING
     val canSave: Boolean get() =
         !busy &&
             !unavailable &&
+            loadError == null &&
             avatarId != null &&
             avatarUrl != null &&
             validateInput() is CreateCharacterValidation.Valid

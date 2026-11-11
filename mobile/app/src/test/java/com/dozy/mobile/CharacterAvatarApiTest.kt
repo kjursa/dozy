@@ -151,6 +151,16 @@ class CharacterAvatarApiTest {
 
                 override fun observe() = flowOf(emptyList<CharacterEntity>())
 
+                override suspend fun updateExisting(
+                    id: String,
+                    name: String,
+                    personality: String,
+                    appearance: String,
+                    type: String,
+                    avatarId: String?,
+                    avatarUrl: String?,
+                ): Int = error("Generation must never update a character")
+
                 override suspend fun upsert(character: CharacterEntity) {
                     error("Generation must never write a character")
                 }

@@ -49,3 +49,21 @@ private fun CreateCharacterErrors.Type.toUiText(): UiText =
     when (this) {
         CreateCharacterErrors.Type.REQUIRED -> UiText.Resource(R.string.character_type_required)
     }
+
+internal fun CreateCharacterUiState.withCharacter(character: Character): CreateCharacterUiState {
+    val loaded =
+        copy(
+            loading = false,
+            editingId = character.id.value,
+            name = character.details.name.value,
+            personality = character.details.personality.value,
+            appearance = character.details.appearance.value,
+            selectedType =
+                character.details.type.name
+                    .lowercase()
+                    .replaceFirstChar { it.uppercase() },
+            avatarId = character.avatar?.id?.value,
+            avatarUrl = character.avatar?.url?.value,
+        )
+    return loaded.copy(avatarDescription = loaded.descriptionKey)
+}

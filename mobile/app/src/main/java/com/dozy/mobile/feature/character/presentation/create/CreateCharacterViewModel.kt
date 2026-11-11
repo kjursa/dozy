@@ -4,8 +4,9 @@ import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.R
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
+import com.dozy.mobile.feature.character.domain.model.EditCharacterInput
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
-import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -19,39 +20,33 @@ internal class CreateCharacterViewModel(
     statePersistence: StatePersistence<CreateCharacterUiState>,
     private val saveCharacter: SaveCharacter,
     private val generateAvatar: GenerateCharacterAvatar,
-    private val observeCharacters: ObserveCharacters,
+    private val observeCharacter: ObserveCharacter,
     private val initialId: String? = null,
 ) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(
         initialState = CreateCharacterUiState(),
         statePersistence = statePersistence,
     ) {
     init {
-        if (initialId != null && uiState.value.editingId == null) {
-            updateState { copy(loading = true) }
-            viewModelScope.launch {
-                runCatchingSuspend {
-                    observeCharacters().first().characters.firstOrNull { it.id.value == initialId }
-                }.onSuccess { character ->
-                    if (character == null) {
-                        updateState { copy(loading = false, unavailable = true) }
-                    } else {
-                        updateState {
-                            copy(
-                                loading = false,
-                                editingId = character.id.value,
-                                name = character.details.name.value,
-                                personality = character.details.personality.value,
-                                appearance = character.details.appearance.value,
-                                selectedType =
-                                    character.details.type.name
-                                        .lowercase()
-                                        .replaceFirstChar { it.uppercase() },
-                                avatarId = character.avatar?.id?.value,
-                                avatarUrl = character.avatar?.url?.value,
-                            )
-                        }
+        if (initialId != null) loadCharacter()
+    }
+
+    private fun loadCharacter() {
+        val id = initialId ?: return
+        val restoreDraft = uiState.value.editingId == id
+        updateState { copy(loading = true, loadError = null, unavailable = false) }
+        viewModelScope.launch {
+            runCatchingSuspend {
+                observeCharacter(Character.Id(id)).first()
+            }.onSuccess { character ->
+                updateState {
+                    when {
+                        character == null -> copy(loading = false, unavailable = true)
+                        restoreDraft -> copy(loading = false)
+                        else -> withCharacter(character)
                     }
-                }.onFailure { updateState { copy(loading = false, unavailable = true) } }
+                }
+            }.onFailure {
+                updateState { copy(loading = false, loadError = UiText.Resource(R.string.character_read_failed)) }
             }
         }
     }
@@ -67,9 +62,13 @@ internal class CreateCharacterViewModel(
             sendEffect(CreateCharacterEffect.NavigateBack)
             return
         }
-        if (abandoned || saved || uiState.value.busy || uiState.value.unavailable) return
+        if (action == CreateCharacterAction.RetryLoadClicked) {
+            if (!abandoned && !uiState.value.busy && uiState.value.loadError != null) loadCharacter()
+            return
+        }
+        if (abandoned || saved || uiState.value.busy || uiState.value.unavailable || uiState.value.loadError != null) return
         when (action) {
-            CreateCharacterAction.BackClicked -> Unit
+            CreateCharacterAction.BackClicked, CreateCharacterAction.RetryLoadClicked -> Unit
             CreateCharacterAction.SaveClicked -> save()
             CreateCharacterAction.PreviewClicked -> generate()
             is CreateCharacterAction.TypeSelected -> updateCharacterState { withType(action.type) }
@@ -116,6 +115,7 @@ internal class CreateCharacterViewModel(
                                 generating = false,
                                 avatarId = result.avatar.id.value,
                                 avatarUrl = result.avatar.url.value,
+                                avatarDescription = uiState.value.descriptionKey,
                             )
                         GenerateCharacterAvatar.Result.Unavailable ->
                             copy(
@@ -142,11 +142,15 @@ internal class CreateCharacterViewModel(
             )
         updateState { copy(saveStatus = SaveStatus.SAVING) }
         viewModelScope.launch {
-            when (val result = saveCharacter(input, avatar, state.editingId?.let { Character.Id(it) })) {
+            val result =
+                state.editingId?.let { saveCharacter(EditCharacterInput.from(Character.Id(it), input), avatar) }
+                    ?: saveCharacter(input, avatar)
+            when (result) {
                 is SaveCharacter.Result.Success -> {
                     saved = true
                     if (!abandoned) sendEffect(CreateCharacterEffect.Saved(result.saved.character.id))
                 }
+                SaveCharacter.Result.Unavailable -> updateState { copy(saveStatus = SaveStatus.EDITING, unavailable = true) }
                 SaveCharacter.Result.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
             }
         }

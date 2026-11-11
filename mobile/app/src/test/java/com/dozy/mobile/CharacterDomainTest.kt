@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.EditCharacterInput
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
@@ -32,6 +33,31 @@ class CharacterDomainTest {
             val repository = FakeCharacterRepository().apply { failure = CancellationException("cancelled") }
             try {
                 save(repository)(createInput(), avatar())
+                fail("Expected cancellation")
+            } catch (_: CancellationException) {
+            }
+        }
+
+    @Test fun editingPreservesIdAndDoesNotAllocateOrDuplicate() =
+        runTest {
+            val repository = FakeCharacterRepository()
+            val save = SaveCharacter(repository, CharacterIdGenerator { error("Editing cannot allocate an ID") })
+            val result = save(EditCharacterInput.from(Character.Id("1"), createInput("Edited")), avatar()) as SaveCharacter.Result.Success
+            assertEquals(Character.Id("1"), result.saved.character.id)
+            assertEquals(3, repository.characters.value.size)
+            assertEquals(
+                "Edited",
+                repository.characters.value
+                    .single { it.id.value == "1" }
+                    .details.name.value,
+            )
+            assertEquals(SaveCharacter.Result.Unavailable, save(EditCharacterInput.from(Character.Id("missing"), createInput()), avatar()))
+            assertEquals(1, repository.saves)
+            repository.failure = IllegalStateException("disk")
+            assertEquals(SaveCharacter.Result.Failure, save(EditCharacterInput.from(Character.Id("1"), createInput()), avatar()))
+            repository.failure = CancellationException("cancel")
+            try {
+                save(EditCharacterInput.from(Character.Id("1"), createInput()), avatar())
                 fail("Expected cancellation")
             } catch (_: CancellationException) {
             }

@@ -21,6 +21,7 @@ import org.junit.Test
 class CreateCharacterViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val stored = FakeCharacterRepository()
+    private var readFailure: Exception? = null
     private var generations = 0
     private var generate: suspend () -> Character.Avatar? = { avatar() }
     private val repository =
@@ -29,7 +30,11 @@ class CreateCharacterViewModelTest {
                 id: com.dozy.mobile.feature.character.domain.model.Character.Id,
             ): com.dozy.mobile.feature.character.domain.model.CharacterSync = error("Unexpected deletion")
 
-            override fun observe() = stored.observe()
+            override fun observe() =
+                flow {
+                    readFailure?.let { throw it }
+                    emitAll(stored.observe())
+                }
 
             override suspend fun save(character: Character): SavedCharacter = stored.save(character)
 
@@ -273,6 +278,114 @@ class CreateCharacterViewModelTest {
             assertEquals(1, stored.saves)
         }
 
+    @Test fun missingAndReadFailureHaveDistinctStatesAndRetryReloads() =
+        runTest(dispatcher) {
+            val missing = vm(id = "absent")
+            assertTrue(missing.uiState.value.loading)
+            missing.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertTrue(missing.uiState.value.unavailable)
+            assertNull(missing.uiState.value.loadError)
+            assertEquals(0, stored.saves)
+            readFailure = IllegalStateException("disk read")
+            val failed = vm(id = "1")
+            advanceUntilIdle()
+            assertFalse(failed.uiState.value.unavailable)
+            assertNotNull(failed.uiState.value.loadError)
+            failed.dispatch(CreateCharacterAction.NameChanged("Ignored"))
+            assertNull(failed.uiState.value.name)
+            readFailure = null
+            failed.dispatch(CreateCharacterAction.RetryLoadClicked)
+            failed.dispatch(CreateCharacterAction.RetryLoadClicked)
+            advanceUntilIdle()
+            assertNull(failed.uiState.value.loadError)
+            assertEquals("Oliver", failed.uiState.value.name)
+        }
+
+    @Test fun legacyInputIsReadableButMustBeCorrectedBeforeSaving() =
+        runTest(dispatcher) {
+            stored.characters.value = listOf(character(name = "x".repeat(55)).copy(avatar = avatar()))
+            val vm = vm(id = "1")
+            advanceUntilIdle()
+            assertEquals("x".repeat(55), vm.uiState.value.name)
+            assertFalse(vm.uiState.value.canSave)
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            assertNotNull(vm.uiState.value.nameError)
+            assertEquals(0, stored.saves)
+            vm.dispatch(CreateCharacterAction.NameChanged("Corrected"))
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertEquals(
+                "1",
+                stored.characters.value
+                    .single()
+                    .id.value,
+            )
+            assertEquals(
+                "Corrected",
+                stored.characters.value
+                    .single()
+                    .details.name.value,
+            )
+        }
+
+    @Test fun editRegenerationMarksOldPreviewAndReplacesItOnlyOnSuccess() =
+        runTest(dispatcher) {
+            stored.characters.value = listOf(character().copy(avatar = avatar()))
+            val original = stored.characters.value.single()
+            val vm = vm(id = "1")
+            advanceUntilIdle()
+            assertFalse(vm.uiState.value.avatarOutdated)
+            vm.dispatch(CreateCharacterAction.PersonalityChanged("Curious"))
+            assertTrue(vm.uiState.value.avatarOutdated)
+            generate = { error("failed") }
+            ready(vm)
+            assertEquals("asset", vm.uiState.value.avatarId)
+            assertTrue(vm.uiState.value.avatarOutdated)
+            generate = { Character.Avatar(Character.Avatar.Id("replacement"), avatar().url) }
+            ready(vm)
+            assertFalse(vm.uiState.value.avatarOutdated)
+            assertEquals("replacement", vm.uiState.value.avatarId)
+            assertEquals(original, stored.characters.value.single())
+            vm.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertEquals(
+                "replacement",
+                stored.characters.value
+                    .single()
+                    .avatar
+                    ?.id
+                    ?.value,
+            )
+            assertEquals(CreateCharacterEffect.Saved(original.id), vm.effects.first())
+        }
+
+    @Test fun restoredEditKeepsDraftAndRechecksExistenceBeforeSaving() =
+        runTest(dispatcher) {
+            stored.characters.value = listOf(character().copy(avatar = avatar()))
+            val handle = SavedStateHandle()
+            val vm = vm(handle, "1")
+            advanceUntilIdle()
+            vm.dispatch(CreateCharacterAction.PersonalityChanged("Draft"))
+            val snapshot = handle.get<String>(SavedStatePersistence.DEFAULT_KEY)
+
+            fun restored() = vm(SavedStateHandle(mapOf(SavedStatePersistence.DEFAULT_KEY to snapshot)), "1")
+            val restored = restored()
+            assertTrue(restored.uiState.value.loading)
+            advanceUntilIdle()
+            assertEquals("Draft", restored.uiState.value.personality)
+            assertTrue(restored.uiState.value.avatarOutdated)
+            stored.characters.value = emptyList()
+            restored.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertTrue(restored.uiState.value.unavailable)
+            assertEquals(0, stored.saves)
+            val missing = restored()
+            advanceUntilIdle()
+            assertTrue(missing.uiState.value.unavailable)
+            assertFalse(missing.uiState.value.canSave)
+        }
+
     private suspend fun TestScope.ready(vm: CreateCharacterViewModel) {
         vm.dispatch(CreateCharacterAction.PreviewClicked)
         runCurrent()
@@ -291,7 +404,7 @@ class CreateCharacterViewModelTest {
         SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
         SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
         GenerateCharacterAvatar(repository),
-        ObserveCharacters(repository),
+        ObserveCharacter(repository),
         id,
     )
 }

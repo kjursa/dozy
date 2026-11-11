@@ -99,7 +99,7 @@ internal fun CreateCharacterScreen(
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CharacterScreenGlows()
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
-                CharacterHeader { dispatch(CreateCharacterAction.BackClicked) }
+                CharacterHeader(state.editingId != null) { dispatch(CreateCharacterAction.BackClicked) }
                 Column(
                     Modifier
                         .weight(1f)
@@ -110,16 +110,23 @@ internal fun CreateCharacterScreen(
                 ) {
                     if (state.loading) CircularProgressIndicator()
                     if (state.unavailable) Text(stringResource(R.string.character_unavailable))
+                    state.loadError?.let {
+                        Text(it.resolve(), color = MaterialTheme.colorScheme.error)
+                        OutlinedButton(onClick = { dispatch(CreateCharacterAction.RetryLoadClicked) }) {
+                            Text(stringResource(R.string.characters_retry))
+                        }
+                    }
                     CharacterPreview(name, state.avatarUrl)
+                    if (state.avatarOutdated) Text(stringResource(R.string.avatar_earlier_description))
                     if (state.editingId == null && name.isBlank()) Text(stringResource(R.string.character_inspiration))
                     state.generationError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     HeroTypePicker(
                         state.selectedType,
-                        !state.busy && !state.unavailable,
+                        !state.busy && !state.unavailable && state.loadError == null,
                     ) { dispatch(CreateCharacterAction.TypeSelected(it)) }
                     state.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
-                        enabled = !state.busy && !state.unavailable,
+                        enabled = !state.busy && !state.unavailable && state.loadError == null,
                         nameError = state.nameError,
                         personalityError = state.personalityError,
                         appearanceError = state.appearanceError,
@@ -149,7 +156,7 @@ internal fun CreateCharacterScreen(
                 saving = state.saveStatus == SaveStatus.SAVING,
                 generating = state.generating,
                 canSave = state.canSave,
-                canGenerate = !state.busy && !state.unavailable,
+                canGenerate = !state.busy && !state.unavailable && state.loadError == null,
                 hasAvatar = state.avatarId != null,
             )
         }
@@ -179,7 +186,10 @@ private fun CharacterScreenGlows() {
 }
 
 @Composable
-private fun CharacterHeader(onBack: () -> Unit) {
+private fun CharacterHeader(
+    editing: Boolean,
+    onBack: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -216,7 +226,7 @@ private fun CharacterHeader(onBack: () -> Unit) {
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    stringResource(R.string.new_character),
+                    stringResource(if (editing) R.string.character_edit else R.string.new_character),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

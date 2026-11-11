@@ -37,7 +37,7 @@ internal val characterModule =
                 statePersistence = SavedStatePersistence(get(), CreateCharacterUiState.serializer()),
                 saveCharacter = get(),
                 generateAvatar = get(),
-                observeCharacters = get(),
+                observeCharacter = get(),
                 initialId = get<androidx.lifecycle.SavedStateHandle>().get<String>("id"),
             )
         }
