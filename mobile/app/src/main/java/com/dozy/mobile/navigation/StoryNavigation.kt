@@ -88,3 +88,8 @@ internal fun NavHostController.openSavedStory(
         launchSingleTop = true
     }
 }
+
+internal fun NavHostController.readerLibrary() {
+    getBackStackEntry(MAIN_ROUTE).savedStateHandle["showStories"] = true
+    popBackStack(MAIN_ROUTE, inclusive = false)
+}

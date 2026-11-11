@@ -188,4 +188,18 @@
     <string name="generation_notification_channel">Story completion</string>
     <string name="generation_notification_title">Your bedtime story is ready</string>
     <string name="avatar_earlier_description">This avatar is from an earlier description. Regenerate to match your changes, or keep it when saving.</string>
+    <string name="reader_settings">Aa · Reading settings</string>
+    <string name="reader_close">Close</string>
+    <string name="reader_small">Small</string>
+    <string name="reader_medium">Medium</string>
+    <string name="reader_large">Large</string>
+    <string name="reader_evening">Evening reading</string>
+    <string name="reader_minutes">%1$d min read</string>
+    <string name="reader_enlarge">Enlarge cover</string>
+    <string name="reader_end">The end · Sweet dreams</string>
+    <string name="reader_adventure">New adventure with these heroes</string>
+    <string name="reader_library">Back to your stories</string>
+    <string name="reader_unavailable">Unable to read this story. Please try again.</string>
+    <string name="reader_missing">This story could not be found.</string>
+    <string name="reader_retry">Try again</string>
 </resources>

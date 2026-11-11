@@ -34,6 +34,7 @@ import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.generationAccepted
 import com.dozy.mobile.navigation.openSavedStory
 import com.dozy.mobile.navigation.openStory
+import com.dozy.mobile.navigation.readerLibrary
 import com.dozy.mobile.navigation.usePlace
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -52,8 +53,11 @@ fun DozyApp(
 
     NavHost(navController = navController, startDestination = MAIN_ROUTE) {
         composable(MAIN_ROUTE) { entry ->
+            val showStories by entry.savedStateHandle.getStateFlow("showStories", false).collectAsStateWithLifecycle()
             val showCharacters by entry.savedStateHandle.getStateFlow("showCharacters", false).collectAsStateWithLifecycle()
             MainScreen(
+                showStories = showStories,
+                onStoriesShown = { entry.savedStateHandle["showStories"] = false },
                 showCharacters = showCharacters,
                 onCharactersShown = { entry.savedStateHandle["showCharacters"] = false },
                 onCreateStory = { navController.openStory(null) },
@@ -93,10 +97,17 @@ fun DozyApp(
             )
         }
         composable(READER_ROUTE) { entry ->
-            com.dozy.mobile.feature.story.presentation.reader.SavedStoryScreen(
-                requireNotNull(entry.arguments?.getString("storyId")),
-                onBack = { navController.popBackStack() },
-            )
+            com.dozy.mobile.feature.story.presentation.reader.ReaderScreen { effect ->
+                when (effect) {
+                    com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.Back -> navController.popBackStack()
+                    com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.Library -> navController.readerLibrary()
+                    is com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.NewAdventure ->
+                        navController.openStory(
+                            null,
+                            effect.cast,
+                        )
+                }
+            }
         }
         composable(PLACES_ROUTE) { entry ->
             val viewModel: PlacesViewModel = koinViewModel()

@@ -378,7 +378,21 @@ Title, heroes, estimated reading time, one opening cover, and scrollable text. N
 - “Back to your stories” → library.
 - “Back” → entry screen, such as Home or library. After entry from a notification without an existing navigation stack → Home.
 
-Remembering reading position and reader preferences is a proposed convenience; persistence details have not been settled yet.
+Reading position uses the scroll state saved with the reader navigation entry. Settings
+(size and evening mode) use StatePersistence for that entry. Both survive overlays,
+configuration changes, process restoration, and returning from a new-adventure form.
+A fresh reader visit starts at the top with medium text and light mode; there is no
+cross-visit or account preference store. Overlays are transient. Changing size keeps
+the scroll offset (the visible words can move when text reflows).
+
+Cast names are immutable saved snapshots, even after a hero is edited or deleted.
+New adventure sends only the snapshot IDs to a fresh form. The form intersects those
+IDs with current heroes, so deleted heroes are not recreated or selectable. Normal
+cast validation still applies. Reading time is estimated locally at 150 words/minute
+from the actual text, with a minimum of one minute. Locally saved text requires no
+network; a missing local story is fetched by ID and saved in DozyDatabase before
+rendering. A server 404 shows missing; other failures show retryable unavailability.
+Cover enlargement reuses the library URL; it never requests image generation.
 
 ## 14. Key flows
 

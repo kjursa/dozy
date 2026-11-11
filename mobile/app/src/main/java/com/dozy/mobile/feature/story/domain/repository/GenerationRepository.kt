@@ -10,6 +10,9 @@ interface GenerationRepository {
 
     fun stories(): Flow<List<Story>>
 
+    /** Local-first durable read. Null means a confirmed missing story; failures throw. */
+    suspend fun readStory(id: Story.Id): Story?
+
     suspend fun refresh(id: GenerationJob.Id): GenerationJob?
 
     suspend fun retry(
