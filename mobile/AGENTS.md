@@ -49,7 +49,7 @@
 
 - Give each use case one clear operation. Keep operation-specific result types in the same file, nested within the use case.
 - For operations with success/failure outcomes, return the use case's own sealed `Result` with explicit variants so callers can handle it exhaustively. Use Flow for observable data where appropriate.
-- Use Kotlin `Result` internally for technical exception handling and map it to the operation's typed outcome at the use case boundary. Preserve coroutine cancellation; cancellation must propagate rather than become an ordinary failure.
+- Use Kotlin `Result` internally for technical exception handling and map it to the operation's typed outcome at the use case boundary. When capturing failures from suspend operations, prefer `runCatchingSuspend` from `:foundation` (`com.kjursa.foundation.coroutines`) where appropriate instead of repeating `try/catch` blocks that manually rethrow `CancellationException` or using Kotlin `runCatching`. Cancellation must propagate rather than become an ordinary failure. Keep `try/finally` for resource cleanup and `Flow.catch` for flow error handling where appropriate.
 
 ### Repositories, mapping, and dependency injection
 
