@@ -71,7 +71,7 @@ internal class PlacesViewModel(
                 viewModelScope.launch {
                     when (val result = selectPlace(action.id)) {
                         is SelectPlace.Result.Selected -> sendEffect(PlacesEffect.Selected(result.place.id))
-                        SelectPlace.Result.Unavailable ->
+                        SelectPlace.Result.Unavailable, SelectPlace.Result.Failure ->
                             updateState {
                                 copy(
                                     navigating = false,

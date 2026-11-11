@@ -42,6 +42,7 @@ internal class FakePlaceDao : PlaceDao() {
 
 internal class FakePlaceRepository : PlaceRepository {
     val places = MutableStateFlow(listOf(place(), place("builtin:woods", "Woods", false)))
+    var findFailure = false
     var refreshCalls = 0
     var saves = 0
     var failure = false
@@ -54,7 +55,10 @@ internal class FakePlaceRepository : PlaceRepository {
         return refreshBlock()
     }
 
-    override suspend fun find(id: Place.Id) = places.value.find { it.id == id }
+    override suspend fun find(id: Place.Id): Place? {
+        check(!findFailure)
+        return places.value.find { it.id == id }
+    }
 
     override suspend fun save(place: Place): com.dozy.mobile.feature.place.domain.model.PlaceSync {
         saves++

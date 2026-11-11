@@ -272,7 +272,8 @@ A place image is not required. Name and short description are required. The curr
 
 - **New, empty:** placeholders and an explanation of optional inhabitants.
 - **Populated:** input awaiting save; the inhabitant description can remain empty.
-- **Editing:** existing custom place data.
+- **Editing:** existing custom place data. Loading blocks fields and Save; Back remains available.
+- **Unavailable / forbidden:** a missing record and a predefined or non-editable record show distinct messages and cannot be saved. Load failures offer retry.
 - **Validation failure:** messages beside fields without losing other input.
 - **Saving / save failure:** progress and prevention of repeated requests; retry after failure.
 

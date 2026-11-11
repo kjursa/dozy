@@ -16,7 +16,7 @@ internal class PlaceFormViewModel(
     private val savePlace: SavePlace,
     private val selectPlace: SelectPlace,
     private val editId: String?,
-) : MviViewModel<PlaceFormUiState, PlaceFormAction, PlaceFormEffect>(PlaceFormUiState(), persistence) {
+) : MviViewModel<PlaceFormUiState, PlaceFormAction, PlaceFormEffect>(PlaceFormUiState(id = editId), persistence) {
     init {
         initialize()
     }
@@ -46,7 +46,8 @@ internal class PlaceFormViewModel(
                     } else {
                         updateState { copy(loading = false, error = UiText.Resource(R.string.place_not_editable)) }
                     }
-                SelectPlace.Result.Unavailable -> updateState { copy(loading = false, error = UiText.Resource(R.string.places_load_error)) }
+                SelectPlace.Result.Unavailable -> updateState { copy(loading = false, error = UiText.Resource(R.string.place_unavailable)) }
+                SelectPlace.Result.Failure -> updateState { copy(loading = false, error = UiText.Resource(R.string.place_load_error)) }
             }
         }
     }
@@ -85,8 +86,9 @@ internal class PlaceFormViewModel(
             }
         updateState { copy(saving = true, error = null, nameError = null, descriptionError = null, inhabitantsError = null) }
         viewModelScope.launch {
-            when (val result = savePlace(input, state.id?.let(Place::Id))) {
+            when (val result = savePlace(input, editId?.let(Place::Id))) {
                 is SavePlace.Result.Saved -> sendEffect(PlaceFormEffect.Saved(result.place.id))
+                SavePlace.Result.Unavailable -> updateState { copy(saving = false, error = UiText.Resource(R.string.place_unavailable)) }
                 SavePlace.Result.NotEditable -> updateState { copy(saving = false, error = UiText.Resource(R.string.place_not_editable)) }
                 SavePlace.Result.Failure -> updateState { copy(saving = false, error = UiText.Resource(R.string.place_save_error)) }
             }

@@ -44,7 +44,10 @@ class DefaultPlaceRepository(
 
     override suspend fun save(place: Place): PlaceSync =
         mutations.withLock {
-            require(place.canEdit)
+            require(place.canEdit && !place.id.value.startsWith("builtin:"))
+            // Check the stored authority too: caller-supplied ownership cannot grant edit permission.
+            val existing = find(place.id)
+            require(existing == null || existing.canEdit)
             val row = place.toEntity()
             dao.upsert(row)
             synchronize(row)

@@ -19,7 +19,10 @@ class SavePlace(
         id: Place.Id?,
     ): Result =
         runCatchingSuspend {
-            if (id != null && repository.find(id)?.canEdit != true) return@runCatchingSuspend Result.NotEditable
+            if (id != null) {
+                val existing = repository.find(id) ?: return@runCatchingSuspend Result.Unavailable
+                if (!existing.canEdit) return@runCatchingSuspend Result.NotEditable
+            }
             val place = Place(id ?: ids.generate(), input.name, input.description, input.inhabitants, Place.Ownership.CUSTOM, true)
             val sync = repository.save(place)
             Result.Saved(place, sync)
@@ -30,6 +33,8 @@ class SavePlace(
             val place: Place,
             val sync: PlaceSync,
         ) : Result
+
+        data object Unavailable : Result
 
         data object NotEditable : Result
 
