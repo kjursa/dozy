@@ -43,6 +43,11 @@ class StoryDraftTest {
         initial,
         SelectPlace(FakePlaceRepository()),
         ObserveCharacters(FakeCharacterRepository()),
+        testStartGeneration(),
+        com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
+            com.dozy.mobile.feature.story.domain.model.GenerationJob
+                .RequestKey("key")
+        },
     )
 
     @Test fun selectingOnlyChangesSettingAndRestoresAllOtherInputAfterRecreation() =

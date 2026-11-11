@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -53,17 +54,23 @@ import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
+import com.kjursa.foundation.presentation.text.resolve
 
 @Composable
 internal fun CreateStoryScreen(
     onBack: () -> Unit,
     onNewHero: () -> Unit,
-    onGenerate: () -> Unit,
+    onGenerate: (String) -> Unit,
     onChoosePlace: () -> Unit,
     viewModel: CreateStoryViewModel,
 ) {
     LaunchedEffect(viewModel) { viewModel.resumed() }
-    MviScreen(viewModel, onEffect = { onChoosePlace() }) { state, dispatch ->
+    MviScreen(viewModel, onEffect = { effect ->
+        when (effect) {
+            CreateStoryEffect.OpenPlaces -> onChoosePlace()
+            is CreateStoryEffect.Accepted -> onGenerate(effect.jobId)
+        }
+    }) { state, dispatch ->
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             StoryScreenGlows()
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -77,19 +84,38 @@ internal fun CreateStoryScreen(
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
                 ) {
                     StoryIntro()
-                    Column {
-                        Text(stringResource(R.string.place_setting), style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            if (state.randomSetting) {
-                                stringResource(R.string.place_surprise)
-                            } else {
-                                state.placeName
-                                    ?: stringResource(R.string.place_selected)
-                            },
-                        )
-                        TextButton(onClick = { dispatch(CreateStoryAction.ChoosePlace) }) { Text(stringResource(R.string.place_choose)) }
+                    Row {
+                        TextButton(onClick = { dispatch(CreateStoryAction.Automatic(false)) }) {
+                            Text(stringResource(R.string.story_own_idea))
+                        }
+                        TextButton(onClick = { dispatch(CreateStoryAction.Automatic(true)) }) {
+                            Text(stringResource(R.string.story_surprise))
+                        }
                     }
-                    if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters))
+                    Text(stringResource(if (state.automaticPlot) R.string.story_surprise else R.string.story_own_idea))
+                    if (!state.automaticPlot) {
+                        Column {
+                            Text(stringResource(R.string.place_setting), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                if (state.randomSetting) {
+                                    stringResource(R.string.place_surprise)
+                                } else {
+                                    state.placeName
+                                        ?: stringResource(R.string.place_selected)
+                                },
+                            )
+                            TextButton(
+                                onClick = { dispatch(CreateStoryAction.ChoosePlace) },
+                            ) { Text(stringResource(R.string.place_choose)) }
+                        }
+                    }
+                    if (state.characterLoading) CircularProgressIndicator()
+                    if (state.characterLoadError) {
+                        Text(stringResource(R.string.could_not_load_characters))
+                        TextButton(onClick = { dispatch(CreateStoryAction.ReloadCharacters) }) {
+                            Text(stringResource(R.string.story_retry_characters))
+                        }
+                    }
                     HeroPicker(
                         state.heroes,
                         state.selectedHeroes,
@@ -97,17 +123,34 @@ internal fun CreateStoryScreen(
                         onNewHero = onNewHero,
                     )
                     LengthPicker(state.selectedLength, onSelect = { dispatch(CreateStoryAction.Length(it)) })
-                    StoryPrompts(
-                        specialRequest = state.specialRequest,
-                        onSpecialRequestChange = { dispatch(CreateStoryAction.Request(it)) },
-                        ending = state.ending,
-                        onEndingChange = { dispatch(CreateStoryAction.Ending(it)) },
-                    )
+                    if (!state.automaticPlot) {
+                        StoryPrompts(
+                            specialRequest = state.specialRequest,
+                            onSpecialRequestChange = { dispatch(CreateStoryAction.Request(it)) },
+                            ending = state.ending,
+                            onEndingChange = { dispatch(CreateStoryAction.Ending(it)) },
+                        )
+                    }
+                    if (!state.characterLoading &&
+                        !state.characterLoadError &&
+                        state.heroes.isEmpty()
+                    ) {
+                        Text(stringResource(R.string.story_no_characters))
+                    }
+                    listOfNotNull(state.castError, state.lengthError, state.ideaError, state.endingError, state.submissionError).forEach {
+                        Text(it.resolve(), color = MaterialTheme.colorScheme.error)
+                    }
                     Spacer(Modifier.height(mainBottomMenuScrollSpace()))
                 }
             }
             Button(
-                onClick = onGenerate,
+                onClick = { dispatch(CreateStoryAction.Submit) },
+                enabled =
+                    state.heroes.isNotEmpty() &&
+                        !state.characterLoading &&
+                        !state.characterLoadError &&
+                        !state.submitting &&
+                        state.acceptedJobId == null,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -119,7 +162,11 @@ internal fun CreateStoryScreen(
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
+                if (state.submitting) {
+                    CircularProgressIndicator(Modifier.size(22.dp))
+                } else {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(22.dp))
+                }
                 Spacer(Modifier.width(UiSpacing.x1))
                 Text(
                     stringResource(R.string.generate_my_story),

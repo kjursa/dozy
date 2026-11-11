@@ -147,4 +147,18 @@
     <string name="characters_retry">Retry</string>
     <string name="characters_empty_title">Who will be the hero?</string>
     <string name="characters_empty_description">Describe someone special. We’ll turn your description into an avatar and bring them into your stories.</string>
+    <string name="story_own_idea">I have an idea</string>
+    <string name="story_surprise">Surprise me</string>
+    <string name="story_no_characters">Create your first hero to start a story.</string>
+    <string name="story_cast_required">Choose at least one hero.</string>
+    <string name="story_length_invalid">Choose a story length.</string>
+    <string name="story_idea_too_long">Keep your idea within 1000 characters.</string>
+    <string name="story_ending_too_long">Keep your ending within 500 characters.</string>
+    <string name="story_backend_unavailable">Story generation is not available yet. Your draft is saved.</string>
+    <string name="story_selection_unavailable">A selected hero or place is unavailable. Please select again.</string>
+    <string name="story_acceptance_failed">Could not confirm your request. Retry to check the same request safely.</string>
+    <string name="story_job_accepted">Your story request was accepted.</string>
+    <string name="story_job_reference">Request: %1$s</string>
+    <string name="story_back_home">Back to Home</string>
+    <string name="story_retry_characters">Retry loading heroes</string>
 </resources>

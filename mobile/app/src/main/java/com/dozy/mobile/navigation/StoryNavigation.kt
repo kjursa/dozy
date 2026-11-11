@@ -8,13 +8,38 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 
 internal const val MAIN_ROUTE = "main"
-internal const val CREATE_STORY_ROUTE = "create-story?place={place}"
+internal const val CREATE_STORY_ROUTE = "create-story?place={place}&cast={cast}"
 internal const val PLACES_ROUTE = "places?fromStory={fromStory}"
 internal const val PLACE_FORM_ROUTE = "place-form?id={id}"
 internal const val CREATE_CHARACTER_ROUTE = "create-character?id={id}"
 
-internal fun NavHostController.openStory(id: Place.Id?) {
-    navigate(if (id == null) "create-story" else "create-story?place=${Uri.encode(id.value)}") { launchSingleTop = true }
+/** Reader callers pass only cast IDs; previous plot and setting are deliberately absent. */
+internal fun NavHostController.openStory(
+    id: Place.Id?,
+    cast: List<Character.Id> = emptyList(),
+) {
+    val parameters =
+        buildList {
+            id?.let { add("place=${Uri.encode(it.value)}") }
+            if (cast.isNotEmpty()) {
+                add(
+                    "cast=${Uri.encode(
+                        kotlinx.serialization.json.Json
+                            .encodeToString(cast.map { it.value }),
+                    )}",
+                )
+            }
+        }
+    navigate("create-story" + if (parameters.isEmpty()) "" else parameters.joinToString("&", "?")) { launchSingleTop = true }
+}
+
+internal const val GENERATION_ROUTE = "generation/{jobId}"
+
+internal fun NavHostController.generationAccepted(jobId: String) {
+    navigate("generation/${Uri.encode(jobId)}") {
+        popUpTo(CREATE_STORY_ROUTE) { inclusive = true }
+        launchSingleTop = true
+    }
 }
 
 internal fun NavHostController.usePlace(

@@ -35,6 +35,13 @@ internal val androidModule =
                 .build()
         } onClose { it?.close() }
         single { get<DozyDatabase>().places() }
+        single { get<DozyDatabase>().generations() }
+        single<com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator> {
+            com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
+                com.dozy.mobile.feature.story.domain.model.GenerationJob
+                    .RequestKey(UUID.randomUUID().toString())
+            }
+        }
         single<PlaceIdGenerator> {
             PlaceIdGenerator { Place.Id(UUID.randomUUID().toString()) }
         }

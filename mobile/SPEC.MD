@@ -424,3 +424,13 @@ Reader → “New adventure with these heroes” → new form with the cast → 
 7. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
 
 Audio, story text editing, plot-based series, payments, and a separate notification center are not part of the currently described screens.
+
+### F9 implementation contract
+
+Story submission follows [STORY_GENERATION_API.md](STORY_GENERATION_API.md).
+Manual ideas are limited to 1000 characters and endings to 500 characters.
+The draft keeps its idempotency key across uncertain responses and restoration;
+editing an input starts a new request. Request snapshots are persisted before HTTP.
+A null API base URL retains the draft and displays unavailability. Acceptance opens
+`generation/{jobId}` and removes the submitted form from the stack. Until F10 adds
+observation, the destination shows only confirmed acceptance and the job reference.

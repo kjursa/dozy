@@ -25,5 +25,13 @@ internal sealed interface CreateStoryAction {
         val value: String,
     ) : CreateStoryAction
 
+    data class Automatic(
+        val enabled: Boolean,
+    ) : CreateStoryAction
+
+    data object ReloadCharacters : CreateStoryAction
+
+    data object Submit : CreateStoryAction
+
     data object ChoosePlace : CreateStoryAction
 }

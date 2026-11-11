@@ -72,12 +72,18 @@ class PlaceDatabaseTest {
                     )
                     assertEquals("Robin", database.places().find("custom")?.inhabitants)
                     assertEquals(listOf("custom"), database.places().pending().map { it.id })
+                    database.generations().upsert(
+                        com.dozy.mobile.feature.story.data.database
+                            .GenerationEntity("request", "snapshot", "job", "QUEUED"),
+                    )
                 } finally {
                     database.close()
                 }
                 val reopened = open(context)
                 try {
                     assertEquals(listOf("custom"), reopened.places().pending().map { it.id })
+                    assertEquals("snapshot", reopened.generations().find("request")?.configuration)
+                    assertEquals("job", reopened.generations().find("request")?.jobId)
                     assertEquals(
                         "asset",
                         reopened

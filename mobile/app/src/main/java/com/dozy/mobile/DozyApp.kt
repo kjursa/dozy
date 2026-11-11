@@ -21,11 +21,13 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryScreen
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
+import com.dozy.mobile.navigation.GENERATION_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.MainScreen
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
 import com.dozy.mobile.navigation.characterSaved
+import com.dozy.mobile.navigation.generationAccepted
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
 import org.koin.compose.viewmodel.koinViewModel
@@ -59,7 +61,15 @@ fun DozyApp() {
                 onBack = { navController.popBackStack() },
                 onNewHero = { navController.navigate("create-character") },
                 onChoosePlace = { navController.navigate("places?fromStory=true") { launchSingleTop = true } },
-                onGenerate = { navController.popBackStack(MAIN_ROUTE, inclusive = false) },
+                onGenerate = { jobId ->
+                    navController.generationAccepted(jobId)
+                },
+            )
+        }
+        composable(GENERATION_ROUTE) { entry ->
+            com.dozy.mobile.feature.story.presentation.create.AcceptedGenerationScreen(
+                requireNotNull(entry.arguments?.getString("jobId")),
+                onHome = { navController.popBackStack(MAIN_ROUTE, inclusive = false) },
             )
         }
         composable(PLACES_ROUTE) { entry ->
@@ -110,8 +120,7 @@ fun DozyApp() {
                 onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate("create-character?id=${Uri.encode(it.value)}") },
                 onStory = {
-                    navController.openStory(null)
-                    navController.getBackStackEntry(CREATE_STORY_ROUTE).savedStateHandle["newHero"] = it.value
+                    navController.openStory(null, listOf(it))
                 },
             )
         }
