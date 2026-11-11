@@ -8,8 +8,17 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CharacterDao {
-    @Query("SELECT * FROM characters ORDER BY name COLLATE NOCASE, id")
+    @Query("SELECT * FROM characters WHERE deleted = 0 ORDER BY name COLLATE NOCASE, id")
     fun observe(): Flow<List<CharacterEntity>>
+
+    @Query("SELECT * FROM characters WHERE id = :id AND deleted = 0")
+    fun observe(id: String): Flow<CharacterEntity?>
+
+    @Query("UPDATE characters SET deleted = 1, pendingSync = 1 WHERE id = :id")
+    suspend fun markDeleted(id: String)
+
+    @Query("SELECT id FROM characters WHERE deleted = 1")
+    suspend fun deletedIds(): List<String>
 
     @Query("SELECT id FROM characters WHERE pendingSync = 1")
     suspend fun pendingIds(): List<String>

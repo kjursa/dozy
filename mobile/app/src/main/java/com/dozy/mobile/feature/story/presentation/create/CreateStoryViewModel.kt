@@ -39,8 +39,17 @@ internal class CreateStoryViewModel(
         updateState { copy(characterLoading = true, characterLoadError = false) }
         characterObservation =
             viewModelScope.launch {
-                observeCharacters().catch { updateState { copy(characterLoading = false, characterLoadError = true) } }.collect {
-                    updateState { copy(heroes = it.characters, characterLoading = false, characterLoadError = false) }
+                observeCharacters().catch { updateState { copy(characterLoading = false, characterLoadError = true) } }.collect { collection ->
+                    updateState {
+                        val selected = selectedHeroes.filter { id -> collection.characters.any { hero -> hero.id.value == id } }
+                        copy(
+                            heroes = collection.characters,
+                            selectedHeroes = selected,
+                            requestKey = if (selected != selectedHeroes) null else requestKey,
+                            characterLoading = false,
+                            characterLoadError = false,
+                        )
+                    }
                 }
             }
     }

@@ -139,6 +139,12 @@ class CharacterAvatarApiTest {
     private fun repository(api: CharacterApi) =
         DefaultCharacterRepository(
             object : CharacterDao {
+                override fun observe(id: String) = flowOf<CharacterEntity?>(null)
+
+                override suspend fun deletedIds() = emptyList<String>()
+
+                override suspend fun markDeleted(id: String) = error("Unexpected deletion")
+
                 override suspend fun pendingIds() = emptyList<String>()
 
                 override suspend fun deleteSynced() = Unit

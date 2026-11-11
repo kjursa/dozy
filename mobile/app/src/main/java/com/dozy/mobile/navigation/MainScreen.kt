@@ -50,6 +50,8 @@ private const val CHARACTERS_TAB = "characters"
 
 @Composable
 fun MainScreen(
+    showCharacters: Boolean = false,
+    onCharactersShown: () -> Unit = {},
     onCreateStory: () -> Unit,
     onCreateCharacter: () -> Unit,
     onCharacter: (String) -> Unit,
@@ -57,6 +59,16 @@ fun MainScreen(
     onPlaceSelected: (Place.Id?) -> Unit,
 ) {
     val tabController = rememberNavController()
+    androidx.compose.runtime.LaunchedEffect(showCharacters) {
+        if (showCharacters) {
+            tabController.navigate(CHARACTERS_TAB) {
+                popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+            onCharactersShown()
+        }
+    }
     val backStackEntry by tabController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: HOME_TAB
 

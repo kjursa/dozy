@@ -33,7 +33,7 @@ class PlaceDomainTest {
             val input = (PlaceInput.validate("Garden", "Sunny", "Bees") as PlaceInput.Validation.Valid).input
             val save = SavePlace(repository, PlaceIdGenerator { Place.Id("new") })
             assertEquals(SavePlace.Result.NotEditable, save(input, Place.Id("builtin:woods")))
-            assertEquals(SavePlace.Result.NotEditable, save(input, Place.Id("missing")))
+            assertEquals(SavePlace.Result.Unavailable, save(input, Place.Id("missing")))
             assertEquals(0, repository.saves)
             assertTrue(SelectPlace(repository)(Place.Id("custom")) is SelectPlace.Result.Selected)
             assertEquals(0, repository.saves)

@@ -20,6 +20,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
@@ -284,6 +285,90 @@ class CharacterDataTest {
             }
         }
 
+    @Test fun deletionIsDurableLocalOnlyAndRefreshCannotRestoreTombstones() =
+        runTest {
+            val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
+            dao.upsert(character("2", "Luna").toEntity(false))
+            val local = DefaultCharacterRepository(dao, CharacterApi { false })
+            assertEquals(CharacterSync.PENDING, local.delete(character().id))
+            assertNull(local.observe(character().id).first())
+            assertEquals(listOf("2"), local.observe().first().map { it.id.value })
+            val deleted = mutableListOf<String>()
+            val online =
+                DefaultCharacterRepository(
+                    dao,
+                    object : CharacterApi {
+                        override suspend fun save(character: CharacterDto) = true
+
+                        override suspend fun delete(id: String): Boolean {
+                            deleted += id
+                            return true
+                        }
+
+                        override suspend fun list() = listOf(character().toDto(), character("2", "Luna").toDto())
+                    },
+                )
+            assertTrue(online.refresh())
+            assertEquals(listOf("1"), deleted)
+            assertEquals(listOf("2"), online.observe().first().map { it.id.value })
+            assertEquals(listOf("1"), dao.deletedIds())
+        }
+
+    @Test fun deletionApiFailureAndCancellationPreserveVisibleCharacter() =
+        runTest {
+            for (failure in listOf(IllegalStateException("server"), CancellationException("cancelled"))) {
+                val dao = FakeDao()
+                dao.upsert(character().toEntity(false))
+                val repository =
+                    DefaultCharacterRepository(
+                        dao,
+                        object : CharacterApi {
+                            override suspend fun save(character: CharacterDto) = true
+
+                            override suspend fun delete(id: String): Boolean = throw failure
+                        },
+                    )
+                try {
+                    repository.delete(character().id)
+                    fail("Expected failure")
+                } catch (actual: Exception) {
+                    assertSame(failure, actual)
+                }
+                assertEquals(character(), repository.observe(character().id).first())
+                assertTrue(dao.deletedIds().isEmpty())
+            }
+        }
+
+    @Test fun deleteHttpContractIsIdempotentAndDisabledApiSendsNothing() =
+        runTest {
+            var requests = 0
+            val statuses = listOf(HttpStatusCode.NoContent, HttpStatusCode.NotFound, HttpStatusCode.ServiceUnavailable)
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals("DELETE", request.method.value)
+                        assertEquals("/characters/hero%2Fone%20two", request.url.encodedPath)
+                        respond("", statuses[requests++])
+                    },
+                )
+            try {
+                assertFalse(KtorCharacterApi(client, ApiConfig(null)).delete("hero/one two"))
+                assertEquals(0, requests)
+                val api = KtorCharacterApi(client, ApiConfig("https://example.test/"))
+                assertTrue(api.delete("hero/one two"))
+                assertTrue(api.delete("hero/one two"))
+                try {
+                    api.delete("hero/one two")
+                    fail("Expected HTTP failure")
+                } catch (_: IllegalStateException) {
+                }
+                assertEquals(3, requests)
+            } finally {
+                client.close()
+            }
+        }
+
     private class FakeDao : CharacterDao {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
         var failAt = 0
@@ -295,7 +380,15 @@ class CharacterDataTest {
             rows.value = rows.value.filter { it.pendingSync }
         }
 
-        override fun observe() = rows
+        override fun observe() = rows.map { it.filterNot { row -> row.deleted } }
+
+        override fun observe(id: String) = rows.map { it.firstOrNull { row -> row.id == id && !row.deleted } }
+
+        override suspend fun deletedIds() = rows.value.filter { it.deleted }.map { it.id }
+
+        override suspend fun markDeleted(id: String) {
+            rows.value = rows.value.map { if (it.id == id) it.copy(deleted = true, pendingSync = true) else it }
+        }
 
         override suspend fun upsert(character: CharacterEntity) {
             calls++

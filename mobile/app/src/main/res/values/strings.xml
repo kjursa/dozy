@@ -117,6 +117,8 @@
     <string name="place_save">Save &amp; use this place</string>
     <string name="place_required">This field is required.</string>
     <string name="place_too_long">This value is too long. Use up to 80 characters for the name and 500 for descriptions.</string>
+    <string name="place_unavailable">This place is no longer available.</string>
+    <string name="place_load_error">Could not load this place. Try again.</string>
     <string name="place_not_editable">This place cannot be edited.</string>
     <string name="place_save_error">Could not save the place. Please try again.</string>
     <string name="place_setting">Setting</string>
@@ -161,4 +163,10 @@
     <string name="story_job_reference">Request: %1$s</string>
     <string name="story_back_home">Back to Home</string>
     <string name="story_retry_characters">Retry loading heroes</string>
+    <string name="character_delete">Delete character</string>
+    <string name="character_delete_title">Say goodbye to this character?</string>
+    <string name="character_delete_description">They will no longer be available for new stories. Saved stories will stay in your library. In local-only mode, deletion is saved on this device for later synchronization.</string>
+    <string name="character_keep">Keep character</string>
+    <string name="character_delete_failed">Could not delete this character. Please try again.</string>
+    <string name="character_read_failed">Could not load this character. Please try again.</string>
 </resources>

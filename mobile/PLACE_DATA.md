@@ -90,13 +90,14 @@ follow SPEC section 10: trimmed required name (80 characters), required descript
 `PUT /places/{id}` uses the same opaque UUID on every retry. Path identifiers are
 encoded as a single segment. The JSON request is `PlaceDto`, matching GET items:
 `id`, `name`, `description`, `ownership: "CUSTOM"`, `editable: true`, and optional
-nullable `inhabitants`. Empty optional input becomes null. No image or character
+nullable `inhabitants`. Empty optional input becomes null. PUT replaces the full setting: an omitted or
+null `inhabitants` field clears previously saved inhabitants. No image or character
 record is needed. The server must require path/body ID equality and authorize
 ownership; the client cannot grant permissions through `editable`.
 
 Any 2xx status acknowledges the upsert (proposed 201 for creation, 204 for update;
 no response body is required). Repeated identical PUTs produce one resource.
-400/422 indicate invalid input, 401/403 authorization, 404 unsupported endpoint,
+400/422 indicate invalid input, 401/403 authorization, 404 unavailable resource or unsupported endpoint,
 409 ownership conflict, 429 rate limiting, and 5xx temporary failure. Error bodies
 are not consumed or shown as user-facing copy. All non-2xx, network failures, and
 acknowledgement-storage failures retain the pending row, with no fictitious remote
@@ -110,6 +111,27 @@ an interrupted save should edit the existing saved item from the list. Pending
 rows survive process death and keep their IDs on refresh, including when the
 server accepted a request whose response was lost. This matches the local-first
 character contract while adding a durable refresh-driven retry queue.
+
+## Editing existing places
+
+Edit resolves the ID from the same local/cache/bundled collection as selection;
+no separate GET-by-ID endpoint is required. Loading blocks editing and saving.
+A missing ID displays an unavailable message; storage failures display a load
+error with retry; predefined or non-editable custom records display a permission
+error. Back remains available. The form restores unsaved input and the original
+ID through `StatePersistence`, never overwriting restored input with a reload.
+Saving rechecks existence and editability in the use case. The repository also
+checks stored/bundled permissions under its mutation lock, and rejects custom
+writes into the reserved `builtin:` namespace, even if a caller forges ownership.
+
+Edits upsert the original ID, with no duplicate row or new ID generation. Clearing
+inhabitants writes null. Collection and Home observe the same database and see
+changes immediately. Only the setting record is changed: existing story text and
+covers are never regenerated or rewritten. The pending-sync and retry policy
+above applies equally to edits, including server permission/conflict responses;
+such responses do not acknowledge remote success or discard the local draft.
+Server-side authorization remains mandatory. Multi-device permission revocation
+and conflict reconciliation require a future contract decision.
 
 ## Selection and navigation
 

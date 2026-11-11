@@ -11,7 +11,7 @@ class SelectPlace(
     suspend operator fun invoke(id: Place.Id): Result =
         runCatchingSuspend {
             repository.find(id)?.let { Result.Selected(it) } ?: Result.Unavailable
-        }.getOrDefault(Result.Unavailable)
+        }.getOrDefault(Result.Failure)
 
     sealed interface Result {
         data class Selected(
@@ -19,5 +19,7 @@ class SelectPlace(
         ) : Result
 
         data object Unavailable : Result
+
+        data object Failure : Result
     }
 }

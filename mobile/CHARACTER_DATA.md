@@ -223,3 +223,54 @@ avatars, names, and personality descriptions (at most two visible lines). Room
 emissions update creation, editing, and collection membership without resetting the
 whole collection. Existing navigation opens details or an empty form and preserves
 bottom-tab owners and scroll state. No list/form input persistence is added here.
+
+## F4 details and deletion contract
+
+Details observes `Character.Id` directly through the shared repository and DAO.
+A missing/deleted ID is unavailable; a storage read failure is a distinct retryable
+state. Retry resubscribes to storage. The existing F3 `GET /characters` remains the
+network read contract: details does not require a separate GET request. A future
+`GET /characters/{id}` may return `200` with the same `CharacterDto`, or `404` for
+an unavailable ID, with no request body; it is not used by this client. Keeping the
+complete collection read avoids introducing a second snapshot consistency policy.
+
+`DELETE /characters/{id}` uses the same stable opaque ID as PUT, encoded as one
+path segment, with no request or response DTO. `204` acknowledges durable removal;
+`404` also acknowledges success, so retrying a deletion is idempotent. All other
+statuses (including `401`, `403`, `409`, `429`, and `5xx`) and transport failures
+produce a generic retryable failure; server bodies are not user-facing. There is
+no automatic HTTP retry or implicit authentication change. The backend must never
+reuse a deleted ID and must not cascade deletion into saved stories or their
+embedded cast/text/assets. Backend implementation remains outside this change.
+
+With a configured backend, DELETE must be acknowledged before local deletion;
+HTTP failure retains the visible character and confirmation dialog. If local
+persistence then fails, the UI reports failure; retrying DELETE (possibly receiving
+404) safely completes the local change. Cancellation propagates. Without a
+configured backend, no request is sent: confirmation means a durable local
+pending deletion, as explained in the confirmation copy, not server success.
+
+Room schema v5 adds `deleted = 0` via an automatic v4→v5 migration. Confirmation
+sets only the selected row's `deleted` and `pendingSync` flags. Both collection and
+ID observation hide tombstones. Snapshot replacement preserves pending rows and
+never overwrites their IDs. Tombstones survive database reopening and remote
+acknowledgement, protecting against stale snapshots; they are never uploaded as
+PUTs. Before an explicit collection refresh, the repository retries each tombstone
+DELETE. Failure stops refresh and retains all local data. No background worker is
+included. Tombstones intentionally remain durable until a future versioned sync
+contract can safely garbage-collect them.
+
+Details uses actions/state/effects: Cancel/dismiss/Back in the dialog changes no
+data; confirmation disables dismissal and all navigation until completion. Repeated
+confirmation and navigation clicks are guarded. Delete failure allows retry or
+keep; successful deletion returns to the existing main entry and selects its
+Characters tab with current rows. Ordinary Back returns to the entry context;
+edit returns to the same details owner, and story creation selects this domain ID.
+Only the navigation ID needs restoration; dialog, progress, errors, and loaded data
+are transient and reconstructed rather than persisted or replayed.
+
+A new adventure keeps only still-available character IDs from its previous cast;
+missing/deleted heroes are dropped when the current library is observed. Remaining
+heroes and other draft input are retained; an empty cast requires selecting a hero.
+Saved stories and their previous cast remain unchanged. The current saved-story
+reader is still a prototype, so this change touches no story persistence.

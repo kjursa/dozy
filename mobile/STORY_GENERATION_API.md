@@ -40,7 +40,7 @@ retaining the binding for the lifetime of the job/story. Concurrent identical
 requests must create one job. A different body with the same key returns 409
 IDEMPOTENCY_CONFLICT. Do not expire keys while clients may replay uncertain requests.
 The client persists the exact request before HTTP and accepted ID/status afterward
-in DozyDatabase v5. Retry after timeout, process death, malformed response, or local
+in DozyDatabase v6. Retry after timeout, process death, malformed response, or local
 acceptance-write failure replays the saved body/key. The draft retains the key until
 an input edit starts a new request. Accepted keys return the local job without POST.
 A changed draft intentionally represents a new request; it does not cancel a prior job.

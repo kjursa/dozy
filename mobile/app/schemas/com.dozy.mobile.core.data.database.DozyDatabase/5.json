@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "a98c62117248434ef949b00e1a6b970f",
+    "identityHash": "d9919f13c4f9c657c33e0027d311dbe5",
     "entities": [
       {
         "tableName": "characters",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `personality` TEXT NOT NULL, `appearance` TEXT NOT NULL, `type` TEXT NOT NULL, `pendingSync` INTEGER NOT NULL, `avatarId` TEXT, `avatarUrl` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `personality` TEXT NOT NULL, `appearance` TEXT NOT NULL, `type` TEXT NOT NULL, `pendingSync` INTEGER NOT NULL, `avatarId` TEXT, `avatarUrl` TEXT, `deleted` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -53,6 +53,13 @@
             "fieldPath": "avatarUrl",
             "columnName": "avatarUrl",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "deleted",
+            "columnName": "deleted",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           }
         ],
         "primaryKey": {
@@ -121,45 +128,11 @@
             "id"
           ]
         }
-      },
-      {
-        "tableName": "story_generations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`requestKey` TEXT NOT NULL, `configuration` TEXT NOT NULL, `jobId` TEXT, `status` TEXT, PRIMARY KEY(`requestKey`))",
-        "fields": [
-          {
-            "fieldPath": "requestKey",
-            "columnName": "requestKey",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "configuration",
-            "columnName": "configuration",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "jobId",
-            "columnName": "jobId",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "status",
-            "columnName": "status",
-            "affinity": "TEXT"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "requestKey"
-          ]
-        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a98c62117248434ef949b00e1a6b970f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd9919f13c4f9c657c33e0027d311dbe5')"
     ]
   }
 }

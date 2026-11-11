@@ -18,6 +18,7 @@ import com.dozy.mobile.navigation.GENERATION_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.generationAccepted
 import com.dozy.mobile.navigation.openStory
@@ -62,6 +63,15 @@ class PlaceNavigationTest {
         assertEquals("job-1", nav.currentBackStackEntry?.arguments?.getString("jobId"))
         nav.popBackStack()
         assertSame(origin, nav.currentBackStackEntry)
+    }
+
+    @Test fun characterDeletionReturnsToExistingMainAndRequestsCurrentCharacterList() {
+        val nav = controller()
+        val main = nav.currentBackStackEntry
+        nav.navigate("character/2")
+        nav.characterDeleted()
+        assertSame(main, nav.currentBackStackEntry)
+        assertEquals(true, main?.savedStateHandle?.get<Boolean>("showCharacters"))
     }
 
     @Test fun homeSelectionStartsStoryAndPreservesPlacesAsBackDestination() {
