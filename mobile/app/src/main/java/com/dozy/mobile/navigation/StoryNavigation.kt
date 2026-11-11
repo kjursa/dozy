@@ -45,3 +45,9 @@ internal fun NavHostController.characterSaved(
         }
     }
 }
+
+/** Deletion always returns to the current character collection, even when entered from Home. */
+internal fun NavHostController.characterDeleted() {
+    getBackStackEntry(MAIN_ROUTE).savedStateHandle["showCharacters"] = true
+    popBackStack(MAIN_ROUTE, inclusive = false)
+}

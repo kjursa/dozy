@@ -2,6 +2,8 @@ package com.dozy.mobile
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,6 +27,7 @@ import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.MainScreen
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
@@ -35,8 +38,11 @@ fun DozyApp() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = MAIN_ROUTE) {
-        composable(MAIN_ROUTE) {
+        composable(MAIN_ROUTE) { entry ->
+            val showCharacters by entry.savedStateHandle.getStateFlow("showCharacters", false).collectAsStateWithLifecycle()
             MainScreen(
+                showCharacters = showCharacters,
+                onCharactersShown = { entry.savedStateHandle["showCharacters"] = false },
                 onCreateStory = { navController.openStory(null) },
                 onCreateCharacter = { navController.navigate("create-character") },
                 onCharacter = { navController.navigate("character/${Uri.encode(it)}") },
@@ -107,6 +113,7 @@ fun DozyApp() {
             val vm: CharacterDetailsViewModel = koinViewModel()
             CharacterDetailsScreen(
                 vm,
+                onDeleted = { navController.characterDeleted() },
                 onBack = { navController.popBackStack() },
                 onEdit = { navController.navigate("create-character?id=${Uri.encode(it.value)}") },
                 onStory = {

@@ -25,6 +25,10 @@ class CreateCharacterViewModelTest {
     private var generate: suspend () -> Character.Avatar? = { avatar() }
     private val repository =
         object : CharacterRepository {
+            override suspend fun delete(
+                id: com.dozy.mobile.feature.character.domain.model.Character.Id,
+            ): com.dozy.mobile.feature.character.domain.model.CharacterSync = error("Unexpected deletion")
+
             override fun observe() = stored.observe()
 
             override suspend fun save(character: Character): SavedCharacter = stored.save(character)

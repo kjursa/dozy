@@ -33,6 +33,39 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class DozyDatabaseTest {
+    @Test fun deletionTombstoneSurvivesReopenAndProtectsOnlyItsOwnId() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            context.deleteDatabase("dozy.db")
+
+            fun graph() =
+                koinApplication {
+                    androidContext(context)
+                    modules(androidModule, characterModule, module { single<SQLiteDriver> { AndroidSQLiteDriver() } })
+                }
+            val first = graph()
+            try {
+                val dao = first.koin.get<CharacterDao>()
+                dao.upsert(character().toEntity(false))
+                dao.upsert(character("2", "Luna").toEntity(false))
+                first.koin.get<CharacterRepository>().delete(Character.Id("1"))
+                assertEquals(listOf("2"), dao.observe().first().map { it.id })
+                assertEquals(null, dao.observe("1").first())
+            } finally {
+                first.close()
+            }
+            val reopened = graph()
+            try {
+                val dao = reopened.koin.get<CharacterDao>()
+                assertEquals(listOf("1"), dao.deletedIds())
+                dao.replaceSnapshot(listOf(character().toEntity(false), character("2", "Luna").toEntity(false)))
+                assertEquals(listOf("2"), dao.observe().first().map { it.id })
+            } finally {
+                reopened.close()
+                context.deleteDatabase("dozy.db")
+            }
+        }
+
     @Test fun sharedDatabasePersistsAllCharacterFieldsAcrossKoinLifetimes() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()

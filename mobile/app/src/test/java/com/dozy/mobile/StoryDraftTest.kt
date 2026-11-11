@@ -52,7 +52,7 @@ class StoryDraftTest {
             advanceUntilIdle()
             draft.dispatch(CreateStoryAction.Request("Find a lost kite"))
             draft.dispatch(CreateStoryAction.Ending("Everyone gets home"))
-            draft.dispatch(CreateStoryAction.Hero("luna"))
+            draft.dispatch(CreateStoryAction.Hero("2"))
             draft.dispatch(CreateStoryAction.Length(1))
             val before = draft.uiState.value
             val open = async { draft.effects.first() }
@@ -72,6 +72,33 @@ class StoryDraftTest {
             restored.dispatch(CreateStoryAction.Setting(null))
             assertEquals(before, restored.uiState.value)
             assertFalse(restored.uiState.value.automaticPlot)
+        }
+
+    @Test fun deletedHeroesAreRemovedFromRestoredAndActiveDraftsWithoutChangingPlotInput() =
+        runTest(dispatcher) {
+            val repository = FakeCharacterRepository()
+            val handle = SavedStateHandle()
+            val draft =
+                CreateStoryViewModel(
+                    SavedStatePersistence(handle, CreateStoryUiState.serializer()),
+                    null,
+                    SelectPlace(FakePlaceRepository()),
+                    ObserveCharacters(repository),
+                )
+            advanceUntilIdle()
+            draft.dispatch(CreateStoryAction.AddHero("1"))
+            draft.dispatch(CreateStoryAction.AddHero("2"))
+            draft.dispatch(CreateStoryAction.Request("A new adventure"))
+            repository.delete(
+                com.dozy.mobile.feature.character.domain.model.Character
+                    .Id("2"),
+            )
+            advanceUntilIdle()
+            assertEquals(listOf("1"), draft.uiState.value.selectedHeroes)
+            assertEquals("A new adventure", draft.uiState.value.specialRequest)
+            val restored = vm(handle)
+            advanceUntilIdle()
+            assertEquals(listOf("1"), restored.uiState.value.selectedHeroes)
         }
 
     @Test fun homeSelectionStartsNewDraftWithSettingAndDefaultFields() =
