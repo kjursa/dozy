@@ -3,8 +3,11 @@ package com.dozy.mobile.feature.character.di
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.api.KtorCharacterApi
+import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import com.dozy.mobile.feature.character.domain.usecase.DeleteCharacter
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
@@ -23,6 +26,8 @@ internal val characterModule =
     module {
         single<CharacterApi> { KtorCharacterApi(get(), get()) }
         single<CharacterRepository> { DefaultCharacterRepository(get(), get()) }
+        factoryOf(::ObserveCharacter)
+        factoryOf(::DeleteCharacter)
         factoryOf(::SaveCharacter)
         factoryOf(::GenerateCharacterAvatar)
         factoryOf(::ObserveCharacters)
@@ -37,5 +42,11 @@ internal val characterModule =
             )
         }
         viewModelOf(::CharactersViewModel)
-        viewModel { CharacterDetailsViewModel(get(), requireNotNull(get<androidx.lifecycle.SavedStateHandle>().get<String>("id"))) }
+        viewModel {
+            CharacterDetailsViewModel(
+                get(),
+                get(),
+                Character.Id(requireNotNull(get<androidx.lifecycle.SavedStateHandle>().get<String>("id"))),
+            )
+        }
     }

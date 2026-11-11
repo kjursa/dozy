@@ -214,7 +214,9 @@ Mockup: [character.html](design/screens/character.html).
 - Cancel / dismiss dialog → the same details.
 - “Back” → the screen from which details were opened.
 
-Current assumption: a deleted character is unavailable for new stories, but saved stories remain readable. Reusing a cast containing a deleted character requires a decision.
+A deleted character is unavailable for new stories; saved stories and their original cast remain readable and unchanged. A new adventure retains only heroes still available in the current library. If none remain, select a hero before generation.
+
+Details observes the domain ID in the shared database. Storage read failures expose Retry separately from unavailable IDs. In local-only mode, confirmation records a durable pending deletion; with a configured backend, API failure retains the character for retry. Deletion tombstones survive refresh and app restart. Progress blocks repeated confirmation and dismissal. Dialog/progress/errors are transient; navigation restores the ID and reloads data. Successful deletion selects the Characters tab of the existing main entry, while ordinary Back preserves the entry context. See [the F4 API and persistence contract](CHARACTER_DATA.md#f4-details-and-deletion-contract).
 
 ## 9. Places — browsing and selecting places
 
@@ -417,7 +419,7 @@ Reader → “New adventure with these heroes” → new form with the cast → 
 
 1. Final limits for character descriptions, place descriptions, and story wishes. HTML limits are provisional except for the agreed character name limit of 50 characters.
 2. Whether and how stories and custom places can be deleted; copying predefined places into custom versions.
-3. Reusing a cast when some heroes have been deleted. Reading the existing story must remain possible.
+3. Reusing a cast when some heroes have been deleted is resolved in §8: retain available heroes without changing the saved story.
 4. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
 5. The limit on simultaneous generation jobs, cancellation, and presentation of multiple jobs on Home. Mockups show one job without a cancel action.
 6. Whether the generation screen shows an open action after success or automatically navigates to the reader; when to request notification permission.

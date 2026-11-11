@@ -1,25 +1,80 @@
 package com.dozy.mobile.feature.character.presentation.details
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.kjursa.foundation.presentation.text.resolve
 
 @Composable
 internal fun CharacterDetailsScreen(
     viewModel: CharacterDetailsViewModel,
     onBack: () -> Unit,
+    onDeleted: () -> Unit,
     onEdit: (Character.Id) -> Unit,
     onStory: (Character.Id) -> Unit,
 ) {
-    val state by viewModel.uiState.collectAsState()
+    androidx.lifecycle.compose.LifecycleResumeEffect(viewModel) {
+        viewModel.resumed()
+        onPauseOrDispose { }
+    }
+    com.kjursa.foundation.compose.mvi.MviScreen(viewModel, onEffect = { effect ->
+        when (effect) {
+            CharacterDetailsEffect.Back -> onBack()
+            CharacterDetailsEffect.Deleted -> onDeleted()
+            is CharacterDetailsEffect.Edit -> onEdit(effect.id)
+            is CharacterDetailsEffect.Story -> onStory(effect.id)
+        }
+    }) { state, dispatch ->
+        CharacterDetailsContent(state, dispatch)
+    }
+}
+
+@Composable
+internal fun CharacterDetailsContent(
+    state: CharacterDetailsUiState,
+    dispatch: (CharacterDetailsAction) -> Unit,
+) {
+    androidx.activity.compose.BackHandler { dispatch(CharacterDetailsAction.Back) }
+    if (state.deleteDialog) {
+        AlertDialog(
+            onDismissRequest = { dispatch(CharacterDetailsAction.CancelDelete) },
+            title = { Text(stringResource(R.string.character_delete_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.character_delete_description))
+                    state.deleteError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
+                    if (state.deleting) CircularProgressIndicator()
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = !state.deleting, onClick = { dispatch(CharacterDetailsAction.ConfirmDelete) }) {
+                    Text(stringResource(R.string.character_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !state.deleting, onClick = { dispatch(CharacterDetailsAction.CancelDelete) }) {
+                    Text(stringResource(R.string.character_keep))
+                }
+            },
+        )
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -27,9 +82,12 @@ internal fun CharacterDetailsScreen(
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+        TextButton(onClick = { dispatch(CharacterDetailsAction.Back) }) { Text(stringResource(R.string.back)) }
         if (state.loading) {
             CircularProgressIndicator()
+        } else if (state.readError != null) {
+            Text(state.readError.resolve())
+            TextButton(onClick = { dispatch(CharacterDetailsAction.Retry) }) { Text(stringResource(R.string.characters_retry)) }
         } else {
             val character = state.character
             if (character == null) {
@@ -47,10 +105,13 @@ internal fun CharacterDetailsScreen(
                         },
                     ),
                 )
+                Text(stringResource(R.string.personality))
                 Text(character.details.personality.value)
+                Text(stringResource(R.string.appearance))
                 Text(character.details.appearance.value)
-                TextButton(onClick = { onEdit(character.id) }) { Text(stringResource(R.string.character_edit)) }
-                Button(onClick = { onStory(character.id) }) { Text(stringResource(R.string.character_story)) }
+                TextButton(onClick = { dispatch(CharacterDetailsAction.Edit) }) { Text(stringResource(R.string.character_edit)) }
+                Button(onClick = { dispatch(CharacterDetailsAction.Story) }) { Text(stringResource(R.string.character_story)) }
+                TextButton(onClick = { dispatch(CharacterDetailsAction.Delete) }) { Text(stringResource(R.string.character_delete)) }
             }
         }
     }

@@ -22,7 +22,13 @@ internal class CreateStoryViewModel(
         resolveName()
         viewModelScope.launch {
             observeCharacters().catch { updateState { copy(characterLoadError = true) } }.collect {
-                updateState { copy(heroes = it.characters, characterLoadError = false) }
+                updateState {
+                    copy(
+                        heroes = it.characters,
+                        selectedHeroes = selectedHeroes.filter { id -> it.characters.any { hero -> hero.id.value == id } },
+                        characterLoadError = false,
+                    )
+                }
             }
         }
     }

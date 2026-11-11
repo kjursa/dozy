@@ -147,4 +147,10 @@
     <string name="characters_retry">Retry</string>
     <string name="characters_empty_title">Who will be the hero?</string>
     <string name="characters_empty_description">Describe someone special. We’ll turn your description into an avatar and bring them into your stories.</string>
+    <string name="character_delete">Delete character</string>
+    <string name="character_delete_title">Say goodbye to this character?</string>
+    <string name="character_delete_description">They will no longer be available for new stories. Saved stories will stay in your library. In local-only mode, deletion is saved on this device for later synchronization.</string>
+    <string name="character_keep">Keep character</string>
+    <string name="character_delete_failed">Could not delete this character. Please try again.</string>
+    <string name="character_read_failed">Could not load this character. Please try again.</string>
 </resources>

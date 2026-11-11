@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -141,7 +142,15 @@ class CharacterModuleTest {
             rows.value = rows.value.filter { it.pendingSync }
         }
 
-        override fun observe() = rows
+        override fun observe() = rows.map { it.filterNot { row -> row.deleted } }
+
+        override fun observe(id: String) = rows.map { it.firstOrNull { row -> row.id == id && !row.deleted } }
+
+        override suspend fun deletedIds() = rows.value.filter { it.deleted }.map { it.id }
+
+        override suspend fun markDeleted(id: String) {
+            rows.value = rows.value.map { if (it.id == id) it.copy(deleted = true, pendingSync = true) else it }
+        }
 
         override suspend fun upsert(character: CharacterEntity) {
             rows.value = rows.value.filterNot { it.id == character.id } + character

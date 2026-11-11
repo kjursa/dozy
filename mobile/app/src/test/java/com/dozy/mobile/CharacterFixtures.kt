@@ -35,6 +35,17 @@ internal class FakeCharacterRepository : CharacterRepository {
         return beforeRefresh()
     }
 
+    var deletes = 0
+    var beforeDelete: suspend () -> Unit = {}
+
+    override suspend fun delete(id: Character.Id): CharacterSync {
+        deletes++
+        beforeDelete()
+        failure?.let { throw it }
+        characters.value = characters.value.filterNot { it.id == id }
+        return CharacterSync.PENDING
+    }
+
     var saves = 0
     var beforeSave: suspend () -> Unit = {}
 

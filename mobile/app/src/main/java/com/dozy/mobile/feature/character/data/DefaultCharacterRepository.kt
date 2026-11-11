@@ -19,7 +19,17 @@ class DefaultCharacterRepository(
 
     override fun observe() = dao.observe().map { rows -> rows.map { it.toDomain() } }
 
+    override fun observe(id: Character.Id) = dao.observe(id.value).map { it?.toDomain() }
+
+    override suspend fun delete(id: Character.Id): CharacterSync {
+        val acknowledged = api.delete(id.value)
+        dao.markDeleted(id.value)
+        return if (acknowledged) CharacterSync.SYNCED else CharacterSync.PENDING
+    }
+
     override suspend fun refresh(): Boolean {
+        // Tombstones survive acknowledgements to guard against stale snapshots.
+        for (id in dao.deletedIds()) api.delete(id)
         val snapshot = api.list() ?: return false
         require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Duplicate character IDs" }
         val entities = snapshot.map { it.toDomain().toEntity(pendingSync = false) }

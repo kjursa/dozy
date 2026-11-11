@@ -17,6 +17,7 @@ import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
+import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
@@ -47,6 +48,15 @@ class PlaceNavigationTest {
                     composable(PLACE_FORM_ROUTE) { }
                 }
         }
+
+    @Test fun characterDeletionReturnsToExistingMainAndRequestsCurrentCharacterList() {
+        val nav = controller()
+        val main = nav.currentBackStackEntry
+        nav.navigate("character/2")
+        nav.characterDeleted()
+        assertSame(main, nav.currentBackStackEntry)
+        assertEquals(true, main?.savedStateHandle?.get<Boolean>("showCharacters"))
+    }
 
     @Test fun homeSelectionStartsStoryAndPreservesPlacesAsBackDestination() {
         val nav = controller()
