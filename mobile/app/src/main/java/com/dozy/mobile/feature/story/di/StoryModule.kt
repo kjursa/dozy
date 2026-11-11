@@ -5,10 +5,12 @@ import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.api.KtorGenerationApi
 import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
-import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
+import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.feature.story.presentation.generation.GenerationViewModel
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
+import com.dozy.mobile.feature.story.presentation.reader.SavedStoryViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModel
@@ -20,6 +22,13 @@ internal val storyModule =
         single<GenerationApi> { KtorGenerationApi(get(), get()) }
         single<GenerationRepository> { DefaultGenerationRepository(get(), get()) }
         factoryOf(::StartGeneration)
+        factoryOf(::ObserveGenerations)
+        factoryOf(::ObserveSavedStories)
+        factoryOf(::RefreshGeneration)
+        factoryOf(::RetryGeneration)
+        factoryOf(::ReconcileGenerations)
+        viewModelOf(::GenerationViewModel)
+        viewModelOf(::SavedStoryViewModel)
         viewModelOf(::StoriesViewModel)
         viewModel {
             val handle: SavedStateHandle = get()

@@ -76,3 +76,15 @@ internal fun NavHostController.characterDeleted() {
     getBackStackEntry(MAIN_ROUTE).savedStateHandle["showCharacters"] = true
     popBackStack(MAIN_ROUTE, inclusive = false)
 }
+
+internal const val READER_ROUTE = "reader/{storyId}"
+
+internal fun NavHostController.openSavedStory(
+    id: String,
+    fromNotification: Boolean = false,
+) {
+    navigate("reader/${Uri.encode(id)}") {
+        if (fromNotification) popUpTo(MAIN_ROUTE) { inclusive = false }
+        launchSingleTop = true
+    }
+}

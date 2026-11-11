@@ -32,7 +32,7 @@ The HTML variants are described with each screen. Shared states and additional c
 - Only custom places have “Edit this place”. Generated place illustrations are not required; current thumbnails are example assets.
 - Places use a compact layout: a small square thumbnail, name, and description. Mockup thumbnails are 48 × 48 px.
 - Editing character or place data does not rewrite the text or cover of previously saved stories.
-- A story is ready when both its text and cover are complete. This is the current proposal assumption, pending confirmation.
+- A story is ready when both its text and cover are complete and its result has been saved.
 
 ### Local data storage
 
@@ -422,8 +422,8 @@ Reader → “New adventure with these heroes” → new form with the cast → 
 2. Whether and how stories and custom places can be deleted; copying predefined places into custom versions.
 3. Reusing a cast when some heroes have been deleted is resolved in §8: retain available heroes without changing the saved story.
 4. Persistence of unsaved forms, reading position, and reader preferences; possible confirmation before discarding changes.
-5. The limit on simultaneous generation jobs, cancellation, and presentation of multiple jobs on Home. Mockups show one job without a cancel action.
-6. Whether the generation screen shows an open action after success or automatically navigates to the reader; when to request notification permission.
+5. F10 resolves generation to one active job, no cancellation, and a latest-job card on Home; the backend must enforce the same limit.
+6. F10 keeps the ready card on progress with an explicit Read story action. Notification permission is requested only from the parent’s opt-in action there.
 7. Ordering within custom places, predefined places, and saved stories, and the source of the final small Places thumbnails.
 
 Audio, story text editing, plot-based series, payments, and a separate notification center are not part of the currently described screens.
@@ -435,5 +435,10 @@ Manual ideas are limited to 1000 characters and endings to 500 characters.
 The draft keeps its idempotency key across uncertain responses and restoration;
 editing an input starts a new request. Request snapshots are persisted before HTTP.
 A null API base URL retains the draft and displays unavailability. Acceptance opens
-`generation/{jobId}` and removes the submitted form from the stack. Until F10 adds
-observation, the destination shows only confirmed acceptance and the job reference.
+`generation/{jobId}` and removes the submitted form from the stack. F10 adds durable status observation, offline/unknown status, failed-job retry, and
+WorkManager reconciliation independent of screen lifetime. Ready means the complete
+story DTO has been saved locally with its cover reference. The same saved collection
+feeds Home, library, and a minimal reader. Pending retry keys survive process death.
+Notification taps route to the exact story on cold/warm starts. Denied notifications
+retain the Home/library fallback. Polling alerts are subject to Android scheduling;
+force-stop and prompt push requirements are documented in the API contract.

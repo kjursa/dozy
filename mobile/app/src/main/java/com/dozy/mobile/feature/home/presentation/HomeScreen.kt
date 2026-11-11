@@ -63,6 +63,8 @@ internal fun HomeScreen(
     onCharacter: (String) -> Unit,
     onPlaces: () -> Unit,
     onPlaceSelected: (Place.Id?) -> Unit,
+    onGeneration: (String) -> Unit,
+    onRead: (String) -> Unit,
 ) {
     val homeViewModel: HomeViewModel = koinViewModel()
     MviScreen(
@@ -80,7 +82,14 @@ internal fun HomeScreen(
     ) { state, dispatch ->
         Column {
             if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
-            HomeContent(state = state, onAction = dispatch, onPlaces = onPlaces, onPlaceSelected = onPlaceSelected)
+            HomeContent(
+                state = state,
+                onAction = dispatch,
+                onPlaces = onPlaces,
+                onPlaceSelected = onPlaceSelected,
+                onGeneration = onGeneration,
+                onRead = onRead,
+            )
         }
     }
 }
@@ -91,6 +100,8 @@ private fun HomeContent(
     onAction: (HomeAction) -> Unit,
     onPlaces: () -> Unit,
     onPlaceSelected: (Place.Id?) -> Unit,
+    onGeneration: (String) -> Unit,
+    onRead: (String) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
@@ -105,6 +116,10 @@ private fun HomeContent(
                 Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
+                com.dozy.mobile.feature.story.presentation.generation
+                    .HomeGeneration(onGeneration, onRead)
+                com.dozy.mobile.feature.story.presentation.reader
+                    .SavedStories(onRead)
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
                 StoriesSection(state.stories, onStorySelected = {
                     onAction(HomeAction.StorySelected(it))

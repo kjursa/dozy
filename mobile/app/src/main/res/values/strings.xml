@@ -169,4 +169,22 @@
     <string name="character_keep">Keep character</string>
     <string name="character_delete_failed">Could not delete this character. Please try again.</string>
     <string name="character_read_failed">Could not load this character. Please try again.</string>
+    <string name="generation_back">Back</string>
+    <string name="generation_heading">Your new adventure</string>
+    <string name="generation_text">Dreaming up the adventure…</string>
+    <string name="generation_cover">Illustrating one cover…</string>
+    <string name="generation_ready">Your story is saved and ready to read.</string>
+    <string name="generation_failed">We could not finish this story. Try again with the same heroes and wishes.</string>
+    <string name="generation_rejected">This request could not be used to create a story.</string>
+    <string name="generation_unavailable">Progress is temporarily unavailable. Your story may still be running. Check again when connected.</string>
+    <string name="generation_background">You can leave this screen or close the app. Your story continues and will appear on Home when ready.</string>
+    <string name="generation_enable_notifications">Enable completion notifications</string>
+    <string name="generation_read">Read story</string>
+    <string name="generation_refresh">Check status</string>
+    <string name="generation_progress">View progress</string>
+    <string name="generation_story_unavailable">This story is not available on this device. Return Home to check generation.</string>
+    <string name="generation_saved">Saved stories</string>
+    <string name="generation_empty">Your finished stories will appear here.</string>
+    <string name="generation_notification_channel">Story completion</string>
+    <string name="generation_notification_title">Your bedtime story is ready</string>
 </resources>
