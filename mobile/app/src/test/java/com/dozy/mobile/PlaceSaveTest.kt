@@ -7,6 +7,8 @@ import com.dozy.mobile.feature.place.data.api.PlaceApi
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDto
+import com.dozy.mobile.feature.place.data.toEntity
+import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -16,6 +18,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -104,6 +107,75 @@ class PlaceSaveTest {
                 val api = KtorPlaceApi(client, ApiConfig("https://example.test/"))
                 assertTrue(api.save(dto))
                 assertFalse(api.save(dto))
+            } finally {
+                client.close()
+            }
+        }
+
+    @Test fun editingReplacesOneRowAndRetriesLatestFieldsIncludingClearedInhabitants() =
+        runTest {
+            val dao = FakePlaceDao()
+            val original = place().copy(inhabitants = Place.Inhabitants("Bees"))
+            dao.upsert(original.toEntity().copy(pendingSync = false))
+            val requests = mutableListOf<PlaceDto>()
+            val repository =
+                DefaultPlaceRepository(
+                    dao,
+                    object : PlaceApi {
+                        override suspend fun list() = PlacesDto(emptyList())
+
+                        override suspend fun save(place: PlaceDto): Boolean {
+                            requests += place
+                            return false
+                        }
+                    },
+                    emptyList(),
+                )
+            val updated = original.copy(name = Place.Name("New garden"), inhabitants = null)
+            assertEquals(PlaceSync.PENDING, repository.save(updated))
+            assertEquals(listOf(updated), repository.observe().first())
+            repository.refresh()
+            assertEquals(listOf(updated.toDto(), updated.toDto()), requests)
+            assertEquals(1, dao.rows.value.size)
+            assertTrue(dao.find("custom")!!.pendingSync)
+        }
+
+    @Test fun repositoryRejectsForgedPermissionForStoredAndBundledPlaces() =
+        runTest {
+            val dao = FakePlaceDao()
+            val locked = place("locked", editable = false)
+            val predefined = place("remote", custom = false)
+            dao.upsert(locked.toEntity())
+            dao.upsert(predefined.toEntity().copy(local = false))
+            val before = dao.rows.value
+            val repository =
+                DefaultPlaceRepository(dao, PlaceApi { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
+            for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
+                try {
+                    repository.save(place(id))
+                    fail("Expected permission rejection for $id")
+                } catch (_: IllegalArgumentException) {
+                }
+            }
+            assertEquals(before, dao.rows.value)
+        }
+
+    @Test fun rejectedEditsNeverAcknowledgeRemoteSuccessAndOmittedInhabitantsClearTheField() =
+        runTest {
+            val statuses = listOf(403, 404, 409, 422, 429, 500)
+            var calls = 0
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
+                        assertEquals(null, Json.decodeFromString<PlaceDto>(body).inhabitants)
+                        respond("", HttpStatusCode.fromValue(statuses[calls++]))
+                    },
+                ) { install(ContentNegotiation) { json() } }
+            try {
+                val api = KtorPlaceApi(client, ApiConfig("https://example.test"))
+                statuses.forEach { assertFalse(api.save(place().toDto())) }
+                assertEquals(statuses.size, calls)
             } finally {
                 client.close()
             }
