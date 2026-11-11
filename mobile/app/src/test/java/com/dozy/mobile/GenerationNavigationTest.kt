@@ -46,6 +46,16 @@ class GenerationNavigationTest {
         assertEquals(MAIN_ROUTE, warm.currentDestination?.route)
     }
 
+    @Test fun readerLibraryReturnsToExistingMainAndSelectsLibrary() {
+        val nav = controller()
+        val main = nav.currentBackStackEntry
+        nav.navigate("generation/job")
+        nav.openSavedStory("story")
+        nav.readerLibrary()
+        assertSame(main, nav.currentBackStackEntry)
+        assertEquals(true, main?.savedStateHandle?.get<Boolean>("showStories"))
+    }
+
     @Test fun readyActionBackReturnsToProgressAndLeavingProgressReturnsHome() {
         val nav = controller()
         nav.navigate("generation/job")

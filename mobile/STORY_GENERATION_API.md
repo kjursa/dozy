@@ -161,3 +161,23 @@ the exact saved result. The library reads the same persisted collection. Notific
 and ready-card navigation use `reader/{storyId}`; unavailable local stories show a
 return action rather than a fictitious result. Existing creation return-to-origin
 and cast-only new-adventure entry points remain shared with F9.
+
+## Reader (F11)
+
+The reader reuses the exact `GET /stories/{storyId}` and `StoryDto` above; there is
+no request body, reader-specific content endpoint, or preferences endpoint. Reading
+time is a client estimate from text at 150 words/minute (minimum one). Saved text
+and cast snapshots are authoritative and are read before any HTTP request. A fetched
+story is validated and persisted in the existing story_generations table with a
+reserved `story:<id>` key and no job ID, making it available to the same library.
+404 STORY_NOT_FOUND means missing; disabled ApiConfig, authentication errors,
+rate limits, malformed/ID-mismatched data, transport failures and 5xx mean unavailable.
+Retry is an explicit idempotent GET, with no concurrent duplicate reads per reader;
+no generation or new image is triggered. Coroutine cancellation propagates.
+
+The cover URL must remain readable for the lifetime of the saved story, rather than
+be a short-lived signed URL. Library, opening cover and full-screen preview use the
+same reference. Text works offline; cover availability offline depends on the image
+loader cache. Expiring signed URLs require a future stable-reference resolution
+contract before enabling the API. Reader settings and reading position are local to
+the restored navigation entry as described in SPEC §13, with no server synchronization.

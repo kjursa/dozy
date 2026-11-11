@@ -24,11 +24,25 @@ internal val storyModule =
         factoryOf(::StartGeneration)
         factoryOf(::ObserveGenerations)
         factoryOf(::ObserveSavedStories)
+        factoryOf(::ReadStory)
         factoryOf(::RefreshGeneration)
         factoryOf(::RetryGeneration)
         factoryOf(::ReconcileGenerations)
         viewModelOf(::GenerationViewModel)
         viewModelOf(::SavedStoryViewModel)
+        viewModel {
+            val handle: SavedStateHandle = get()
+            com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel(
+                com.dozy.mobile.feature.story.domain.model.Story
+                    .Id(requireNotNull(handle.get<String>("storyId"))),
+                get(),
+                SavedStatePersistence(
+                    handle,
+                    com.dozy.mobile.feature.story.presentation.reader.ReaderUiState
+                        .serializer(),
+                ),
+            )
+        }
         viewModelOf(::StoriesViewModel)
         viewModel {
             val handle: SavedStateHandle = get()

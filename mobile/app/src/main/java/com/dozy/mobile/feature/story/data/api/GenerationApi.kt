@@ -42,6 +42,8 @@ data class StoryDto(
     val configuration: GenerationRequestDto,
 )
 
+class StoryNotFoundException : Exception()
+
 interface GenerationApi {
     suspend fun status(id: String): GenerationStatusDto?
 
@@ -81,6 +83,7 @@ class KtorGenerationApi(
         val base = config.baseUrl ?: return null
         require(validId(id))
         val response = client.get("${base.trimEnd('/')}/stories/$id")
+        if (response.status == HttpStatusCode.NotFound) throw StoryNotFoundException()
         check(response.status == HttpStatusCode.OK)
         return response.body<StoryDto>().also {
             require(it.id == id && it.title.isNotBlank() && it.text.isNotBlank())

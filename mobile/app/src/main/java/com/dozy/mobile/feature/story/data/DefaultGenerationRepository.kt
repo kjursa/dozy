@@ -25,6 +25,27 @@ class DefaultGenerationRepository(
             rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain() } }.distinctBy { it.id }
         }
 
+    override suspend fun readStory(id: Story.Id): Story? =
+        mutex.withLock {
+            stories().first().find { it.id == id }?.let { return@withLock it }
+            val dto =
+                try {
+                    api.story(id.value) ?: error("Story service unavailable")
+                } catch (_: StoryNotFoundException) {
+                    return@withLock null
+                }
+            require(dto.id == id.value)
+            val story = dto.toDomain()
+            dao.upsert(
+                GenerationEntity(
+                    requestKey = "story:${id.value}",
+                    configuration = Json.encodeToString(dto.configuration),
+                    result = Json.encodeToString(dto),
+                ),
+            )
+            story
+        }
+
     private suspend fun row(id: GenerationJob.Id) = dao.observe().first().find { it.jobId == id.value }
 
     override suspend fun refresh(id: GenerationJob.Id): GenerationJob? =
