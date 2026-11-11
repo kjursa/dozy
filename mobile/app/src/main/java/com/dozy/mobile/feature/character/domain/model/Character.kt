@@ -4,6 +4,7 @@ package com.dozy.mobile.feature.character.domain.model
 data class Character(
     val id: Id,
     val details: Details,
+    val avatar: Avatar? = null,
 ) {
     @JvmInline value class Id(
         val value: String,
@@ -20,6 +21,19 @@ data class Character(
     @JvmInline value class Appearance(
         val value: String,
     )
+
+    data class Avatar(
+        val id: Id,
+        val url: Url,
+    ) {
+        @JvmInline value class Id(
+            val value: String,
+        )
+
+        @JvmInline value class Url(
+            val value: String,
+        )
+    }
 
     enum class Type { CHILD, ANIMAL, FANTASY, OTHER }
 

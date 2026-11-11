@@ -36,7 +36,7 @@ The HTML variants are described with each screen. Shared states and additional c
 
 ### Local data storage
 
-The app uses a single `DozyDatabase` in the `dozy.db` file. It currently contains only the character table; DAOs and entities remain in the character feature. Data from the previous `characters.db` file is neither migrated nor copied — the new database may start empty.
+The app uses a single `DozyDatabase` in the `dozy.db` file. It contains character and place tables; DAOs and entities remain in the character feature. Data from the previous `characters.db` file is neither migrated nor copied — the new database may start empty.
 
 ## 3. Navigation and shared behavior
 
@@ -182,6 +182,13 @@ A successfully generated avatar is required before a new character can be saved.
 - Save a character added during story creation → the previous story form with the new character selected and input preserved.
 - Save edits → character details with updated data.
 - “Back” → entry screen without saving changes, including when generation is running. Stop observing the abandoned attempt and ignore late responses: leaving must not create a character, update an existing character, or trigger a delayed save when generation finishes. Any existing saved character remains unchanged. Unlike story generation, this flow does not save a result in the background.
+
+The mobile implementation restores raw form input and the last successful avatar
+reference through StatePersistence. Active jobs, loading, and errors are not
+restored; generation must be explicitly retried. An absent API configuration
+shows an unavailable error and cannot produce an avatar. Existing previews can
+still be saved locally. The proposed HTTP contract, retry rules, asset lifetime,
+and database migration are documented in [CHARACTER_DATA.md](CHARACTER_DATA.md).
 
 ## 8. Character details
 

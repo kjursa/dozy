@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
+import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlaceApi
 import com.dozy.mobile.feature.place.data.api.PlaceDto
@@ -52,7 +53,7 @@ class PlaceDatabaseTest {
                         .characters()
                         .observe()
                         .first()
-                        .single()
+                        .first { it.id == "hero" }
                         .name,
                 )
                 assertTrue(
@@ -62,6 +63,7 @@ class PlaceDatabaseTest {
                         .first()
                         .isEmpty(),
                 )
+                database.characters().upsert(character("avatar-hero").copy(avatar = avatar()).toEntity(true))
                 database.places().upsert(custom)
                 database.places().replaceRemote(listOf(remote, remote.copy(id = custom.id, name = "Server overwrite")))
                 assertEquals(custom, database.places().find(custom.id))
@@ -77,6 +79,24 @@ class PlaceDatabaseTest {
                         .observe()
                         .first()
                         .toSet(),
+                )
+                assertEquals(
+                    "asset",
+                    reopened
+                        .characters()
+                        .observe()
+                        .first()
+                        .first { it.id == "avatar-hero" }
+                        .avatarId,
+                )
+                assertEquals(
+                    "https://example.test/avatar.png",
+                    reopened
+                        .characters()
+                        .observe()
+                        .first()
+                        .first { it.id == "avatar-hero" }
+                        .avatarUrl,
                 )
                 assertEquals("Turtles", reopened.places().find("remote")?.inhabitants)
                 val repository =
@@ -96,7 +116,7 @@ class PlaceDatabaseTest {
                         .characters()
                         .observe()
                         .first()
-                        .single()
+                        .first { it.id == "hero" }
                         .name,
                 )
             } finally {

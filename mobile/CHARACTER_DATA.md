@@ -43,7 +43,7 @@ not an existing backend contract. Before enabling it, agree endpoint semantics,
 authentication, validation, and synchronization/retry behavior with the backend.
 No remote list endpoint is assumed: both views load the durable local collection.
 
-Artwork remains a presentation placeholder because the backend has no image contract.
+Generated avatar references use the F2 proposal documented below; an unconfigured backend cannot generate a preview.
 
 ## Dependency injection and KMP migration
 
@@ -86,10 +86,8 @@ need to move Android presentation resources out of any shared ViewModels.
 - `navigation`: the application bottom navigation shell.
 
 The application-wide Room definition lives in `core.data.database.DozyDatabase`;
-its exported v1 schema lives in the matching qualified-name directory. Only the
-existing character table is registered. Android DI opens one `dozy.db` instance,
-provides its character DAO, and closes the database when Koin closes. Table
-definitions, schema version, and identity hash are unchanged. By product decision,
+its exported v1 schema lives in the matching qualified-name directory. Character and place tables are registered. Android DI opens one `dozy.db` instance,
+provides its character DAO, and closes the database when Koin closes. Schema v3 adds avatar references through an automatic migration. By product decision,
 there is no migration or copying from the former `characters.db` file: the new
 database starts empty. Existing repository and API contracts remain unchanged.
 
@@ -139,3 +137,54 @@ Field errors and saving/failure status are transient and restore to null/EDITING
 so a system-recreated form retains its input without stale errors or stuck progress.
 This restores the form input, not an in-flight save operation. Unit tests recreate
 ViewModels from the serialized snapshot; device process-death checks have not been run.
+
+## F2 avatar contract and lifecycle
+
+The following proposal extends the character save contract; it does not imply any
+implemented backend/generator routes. `ApiConfig.baseUrl = null` disables all
+requests. Generation then returns `Unavailable`, without creating an asset,
+character, or success preview. A previously obtained avatar can still be saved
+locally while the network is unavailable.
+
+- `POST /character-avatars`: JSON `{ "type": "CHILD", "personality": "Curious",
+  "appearance": "Green hat" }`. Uses the current validated input, without photos.
+  `202` returns `{ "jobId": "job-123", "status": "QUEUED", "asset": null,
+  "error": null }`. Job IDs are opaque nonempty ASCII letters, digits, `_`, or `-`.
+- `GET /character-avatars/{jobId}`: `200` returns the same job envelope. Status is
+  `QUEUED`, `RUNNING`, `READY`, or `FAILED`. `READY` requires
+  `asset: { "id": "asset-123", "url": "https://assets.example/asset-123.png" }`.
+  Asset IDs are opaque, nonempty strings; URLs must be stable HTTPS references.
+  The backend must retain saved assets and make their URLs readable by the image
+  client without additional API authentication. `FAILED` may include a machine
+  error code such as `GENERATION_FAILED`; raw error text is never displayed.
+- Non-success HTTP responses (including 400 validation, 404 missing job, 429 rate
+  limiting, and 5xx), malformed responses, unknown statuses, and a mismatched job
+  ID expose a retryable generation failure. The client polls at one-second
+  intervals for at most 120 status reads; timeout is a failure to observe readiness.
+  It does not imply server cancellation. Client coroutine cancellation propagates.
+- There are no automatic POST retries. Explicit Generate/Regenerate starts a new
+  independent job; a failed observation may leave a server job running. A future
+  server idempotency extension can avoid duplicate asset costs. No job ever saves
+  a character. Abandoned job results are ignored, even for noncooperative responses.
+- `PUT /characters/{id}` retains the existing local-first, idempotent save proposal
+  and adds nullable `avatar: { "id": "asset-123", "url": "https://..." }` to the
+  existing DTO. New app saves require a ready avatar; historical records may omit
+  it. The server must upsert the same client-generated character ID, acknowledge
+  only durable writes with 2xx, validate asset references, and preserve asset IDs.
+  Repeating an identical PUT must not create duplicate characters. Editing reuses
+  the existing character ID. No automatic sync worker or conflict resolution is
+  included; a failed network save leaves the durable row pending as before.
+
+Room schema v3 adds nullable `avatarId`/`avatarUrl` to the existing character table
+through an automatic v2→v3 migration. Legacy rows remain readable without an
+avatar and without reapplying current creation restrictions. No extra database
+is introduced. List, Home, details, and story hero selection use real saved rows.
+
+The form persists raw text, type, editing ID, and the successful asset reference.
+Errors, loading, and active attempts are transient. Restoring a form never resumes
+generation or saves it automatically. Fields retain the successful preview after
+any edit. Save uses the current validated fields and current asset. Regeneration
+blocks fields and Save, then replaces the preview only on success; failure retains
+any earlier preview. Leaving cancels polling and invalidates the active attempt.
+Home/list creation opens the saved details; story creation returns to the same
+navigation entry and adds the saved ID once without replacing other draft input.

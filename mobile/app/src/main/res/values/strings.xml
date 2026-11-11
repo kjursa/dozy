@@ -130,4 +130,16 @@
     <string name="place_village">Cloudtop village</string>
     <string name="place_village_description">A cosy village floating between soft clouds.</string>
     <string name="place_village_inhabitants">Cloud gardeners and sleepy birds delivering letters.</string>
+    <string name="avatar_generate">Generate avatar</string>
+    <string name="avatar_regenerate">Regenerate avatar</string>
+    <string name="avatar_unavailable">Avatar generation is unavailable. Please try again when the service is connected.</string>
+    <string name="avatar_failed">Could not generate an avatar. Your descriptions are safe. Try again.</string>
+    <string name="avatar_description_hint">Describe your hero to generate an avatar. No photo needed.</string>
+    <string name="character_inspiration">Your child can be the hero! Describe their favourite traits and let the adventure begin.</string>
+    <string name="character_name_placeholder">Their name or a storybook nickname</string>
+    <string name="character_personality_placeholder">What do they love? Brave, curious, or a little shy?</string>
+    <string name="character_appearance_placeholder">Curly hair, a favourite hoodie, colourful wellies…</string>
+    <string name="character_unavailable">This character is unavailable.</string>
+    <string name="character_edit">Edit character</string>
+    <string name="character_story">Create a story with this hero</string>
 </resources>

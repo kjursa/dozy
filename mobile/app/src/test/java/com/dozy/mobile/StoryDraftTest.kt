@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryEffect
@@ -37,12 +38,18 @@ class StoryDraftTest {
     private fun vm(
         handle: SavedStateHandle,
         initial: String? = null,
-    ) = CreateStoryViewModel(SavedStatePersistence(handle, CreateStoryUiState.serializer()), initial, SelectPlace(FakePlaceRepository()))
+    ) = CreateStoryViewModel(
+        SavedStatePersistence(handle, CreateStoryUiState.serializer()),
+        initial,
+        SelectPlace(FakePlaceRepository()),
+        ObserveCharacters(FakeCharacterRepository()),
+    )
 
     @Test fun selectingOnlyChangesSettingAndRestoresAllOtherInputAfterRecreation() =
         runTest(dispatcher) {
             val handle = SavedStateHandle()
             val draft = vm(handle)
+            advanceUntilIdle()
             draft.dispatch(CreateStoryAction.Request("Find a lost kite"))
             draft.dispatch(CreateStoryAction.Ending("Everyone gets home"))
             draft.dispatch(CreateStoryAction.Hero("luna"))
@@ -75,6 +82,6 @@ class StoryDraftTest {
             assertEquals("Garden", draft.uiState.value.placeName)
             assertEquals("", draft.uiState.value.specialRequest)
             assertFalse(draft.uiState.value.automaticPlot)
-            assertEquals(listOf("oliver", "captain_finn"), draft.uiState.value.selectedHeroes)
+            assertEquals(emptyList<String>(), draft.uiState.value.selectedHeroes)
         }
 }

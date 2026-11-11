@@ -52,6 +52,7 @@ private const val CHARACTERS_TAB = "characters"
 fun MainScreen(
     onCreateStory: () -> Unit,
     onCreateCharacter: () -> Unit,
+    onCharacter: (String) -> Unit,
     onPlaces: () -> Unit,
     onPlaceSelected: (Place.Id?) -> Unit,
 ) {
@@ -70,11 +71,12 @@ fun MainScreen(
                     onCreateStory = onCreateStory,
                     onAddCharacter = onCreateCharacter,
                     onPlaces = onPlaces,
+                    onCharacter = onCharacter,
                     onPlaceSelected = onPlaceSelected,
                 )
             }
             composable(STORIES_TAB) { StoriesTabScreen() }
-            composable(CHARACTERS_TAB) { CharactersTabScreen(onAddCharacter = onCreateCharacter) }
+            composable(CHARACTERS_TAB) { CharactersTabScreen(onAddCharacter = onCreateCharacter, onCharacter = onCharacter) }
         }
 
         MainBottomPanel(

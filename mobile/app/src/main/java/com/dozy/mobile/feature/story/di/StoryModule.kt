@@ -18,6 +18,7 @@ internal val storyModule =
                 SavedStatePersistence(handle, CreateStoryUiState.serializer()),
                 handle.get<String>("place"),
                 get(),
+                get(),
             )
         }
     }

@@ -11,16 +11,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CreateCharacterMappingTest {
-    @Test fun sampleDefaultsAreResourcesUntilInitializedAndNeverReplaceEditedText() {
+    @Test fun emptyFormHasNoProductionSampleData() {
         val initial = CreateCharacterUiState()
-        assertEquals(UiText.Resource(R.string.sample_character_name), initial.displayName)
-        assertEquals(UiText.Resource(R.string.sample_character_personality), initial.displayPersonality)
-        assertEquals(UiText.Resource(R.string.sample_character_appearance), initial.displayAppearance)
-        val edited = initial.withName("").withSampleDefaults("Localized name", "Localized personality", "Localized appearance")
-        assertEquals("", edited.name)
-        assertEquals(UiText.Plain(""), edited.displayName)
-        assertEquals("Localized personality", edited.personality)
-        assertEquals(edited, edited.withSampleDefaults("Other name", "Other personality", "Other appearance"))
+        assertEquals(UiText.Plain(""), initial.displayName)
+        assertEquals(UiText.Plain(""), initial.displayPersonality)
+        assertEquals(UiText.Plain(""), initial.displayAppearance)
+        assertFalse(initial.canSave)
     }
 
     @Test fun stableTypeValuesValidateIndependentlyOfDisplayLabels() {

@@ -44,6 +44,7 @@ class DozyDatabaseTest {
                         Character.Appearance("A green shell and a blue hat"),
                         Character.Type.ANIMAL,
                     ),
+                    avatar(),
                 )
 
             fun graph() =
@@ -80,7 +81,18 @@ class DozyDatabaseTest {
                 val dao = reopened.koin.get<CharacterDao>()
                 assertSame(reopenedDatabase.characters(), dao)
                 assertEquals(
-                    listOf(CharacterEntity("persistent-id", "Żółwik", "Curious\nand kind", "A green shell and a blue hat", "ANIMAL", true)),
+                    listOf(
+                        CharacterEntity(
+                            "persistent-id",
+                            "Żółwik",
+                            "Curious\nand kind",
+                            "A green shell and a blue hat",
+                            "ANIMAL",
+                            true,
+                            "asset",
+                            "https://example.test/avatar.png",
+                        ),
+                    ),
                     dao.observe().first(),
                 )
                 assertEquals(

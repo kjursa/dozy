@@ -11,4 +11,6 @@ data class CharacterEntity(
     val appearance: String,
     val type: String,
     val pendingSync: Boolean,
+    val avatarId: String? = null,
+    val avatarUrl: String? = null,
 )

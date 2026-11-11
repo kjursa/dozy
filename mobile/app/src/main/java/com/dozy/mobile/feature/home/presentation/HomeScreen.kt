@@ -32,15 +32,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
+import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
@@ -61,6 +60,7 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun HomeScreen(
     onCreateStory: () -> Unit,
     onAddCharacter: () -> Unit,
+    onCharacter: (String) -> Unit,
     onPlaces: () -> Unit,
     onPlaceSelected: (Place.Id?) -> Unit,
 ) {
@@ -71,8 +71,9 @@ internal fun HomeScreen(
             when (effect) {
                 HomeEffect.CreateStoryRequested -> onCreateStory()
                 HomeEffect.AddCharacterRequested -> onAddCharacter()
+                is HomeEffect.OpenCharacter -> onCharacter(effect.character.id)
                 is HomeEffect.OpenStory, HomeEffect.SeeAllStoriesRequested,
-                is HomeEffect.OpenCharacter, HomeEffect.OpenNotifications,
+                HomeEffect.OpenNotifications,
                 -> Unit
             }
         },
@@ -240,20 +241,7 @@ private fun CharactersSection(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
-                    Image(
-                        painterResource(character.image),
-                        contentDescription = character.name,
-                        modifier =
-                            Modifier
-                                .size(
-                                    80.dp,
-                                ).shadow(6.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .padding(3.dp)
-                                .clip(CircleShape),
-                        contentScale = ContentScale.Crop,
-                    )
+                    AvatarImage(character.avatarUrl, character.name, Modifier.size(80.dp))
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
             }

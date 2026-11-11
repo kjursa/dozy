@@ -1,14 +1,13 @@
 package com.dozy.mobile.feature.character.presentation.create
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -43,20 +41,19 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
+import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.dozy.mobile.feature.character.domain.model.Character
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.UiText
@@ -80,24 +77,25 @@ private val heroTypes =
 internal fun CreateCharacterScreen(
     viewModel: CreateCharacterViewModel,
     onBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSaved: (Character.Id) -> Unit,
 ) {
+    BackHandler { viewModel.dispatch(CreateCharacterAction.BackClicked) }
+    DisposableEffect(viewModel) {
+        viewModel.resume()
+        onDispose { viewModel.abandon() }
+    }
     MviScreen(
         viewModel = viewModel,
         onEffect = { effect ->
             when (effect) {
                 CreateCharacterEffect.NavigateBack -> onBack()
-                CreateCharacterEffect.Saved -> onSaved()
-                CreateCharacterEffect.PreviewRequested -> Unit
+                is CreateCharacterEffect.Saved -> onSaved(effect.id)
             }
         },
     ) { state, dispatch ->
         val name = state.displayName.resolve()
         val personality = state.displayPersonality.resolve()
         val appearance = state.displayAppearance.resolve()
-        LaunchedEffect(Unit) {
-            dispatch(CreateCharacterAction.InitializeSamples(name, personality, appearance))
-        }
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             CharacterScreenGlows()
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -110,10 +108,18 @@ internal fun CreateCharacterScreen(
                         .padding(horizontal = UiSpacing.x3),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
                 ) {
-                    CharacterPreview(name)
-                    HeroTypePicker(state.selectedType) { dispatch(CreateCharacterAction.TypeSelected(it)) }
+                    if (state.loading) CircularProgressIndicator()
+                    if (state.unavailable) Text(stringResource(R.string.character_unavailable))
+                    CharacterPreview(name, state.avatarUrl)
+                    if (state.editingId == null && name.isBlank()) Text(stringResource(R.string.character_inspiration))
+                    state.generationError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
+                    HeroTypePicker(
+                        state.selectedType,
+                        !state.busy && !state.unavailable,
+                    ) { dispatch(CreateCharacterAction.TypeSelected(it)) }
                     state.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
+                        enabled = !state.busy && !state.unavailable,
                         nameError = state.nameError,
                         personalityError = state.personalityError,
                         appearanceError = state.appearanceError,
@@ -141,6 +147,10 @@ internal fun CreateCharacterScreen(
                 onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
                 onSave = { dispatch(CreateCharacterAction.SaveClicked) },
                 saving = state.saveStatus == SaveStatus.SAVING,
+                generating = state.generating,
+                canSave = state.canSave,
+                canGenerate = !state.busy && !state.unavailable,
+                hasAvatar = state.avatarId != null,
             )
         }
     }
@@ -217,54 +227,21 @@ private fun CharacterHeader(onBack: () -> Unit) {
 }
 
 @Composable
-private fun CharacterPreview(name: String) {
-    Column(
-        Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-    ) {
-        Box(Modifier.size(256.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.padding(UiSpacing.x3).fillMaxSize().background(MaterialTheme.colorScheme.tertiary.copy(alpha = .28f), CircleShape))
-            Image(
-                painterResource(R.drawable.character_oliver),
-                contentDescription = stringResource(R.string.character_preview, name),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-            Surface(
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = UiSpacing.x1, bottom = UiSpacing.x1).shadow(5.dp, CircleShape),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                border = BorderStroke(2.dp, MaterialTheme.colorScheme.surface),
-            ) {
-                Text(
-                    stringResource(R.string.preview),
-                    modifier = Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        }
-        Text(
-            name.ifBlank {
-                stringResource(R.string.your_hero)
-            },
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            stringResource(R.string.curious_explorer_age_5),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun CharacterPreview(
+    name: String,
+    avatarUrl: String?,
+) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        AvatarImage(avatarUrl, name, Modifier.size(220.dp))
+        Text(name.ifBlank { stringResource(R.string.your_hero) }, style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.avatar_description_hint))
     }
 }
 
 @Composable
 private fun HeroTypePicker(
     selected: String,
+    enabled: Boolean,
     onSelect: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
@@ -278,7 +255,7 @@ private fun HeroTypePicker(
                 val isSelected = type.value == selected
                 val typeShape = MaterialTheme.shapes.medium
                 Surface(
-                    modifier = Modifier.weight(1f).clip(typeShape).clickable { onSelect(type.value) },
+                    modifier = Modifier.weight(1f).clip(typeShape).clickable(enabled = enabled) { onSelect(type.value) },
                     shape = typeShape,
                     color = MaterialTheme.colorScheme.surface,
                     border =
@@ -315,6 +292,7 @@ private fun HeroTypePicker(
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun CharacterDetails(
+    enabled: Boolean,
     nameError: UiText?,
     personalityError: UiText?,
     appearanceError: UiText?,
@@ -338,7 +316,13 @@ private fun CharacterDetails(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                CharacterInput(value = name, onValueChange = onNameChange, singleLine = true)
+                CharacterInput(
+                    enabled = enabled,
+                    placeholder = stringResource(R.string.character_name_placeholder),
+                    value = name,
+                    onValueChange = onNameChange,
+                    singleLine = true,
+                )
                 nameError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
@@ -347,21 +331,14 @@ private fun CharacterDetails(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                CharacterInput(value = personality, onValueChange = onPersonalityChange, minimumHeight = 96.dp)
+                CharacterInput(
+                    enabled = enabled,
+                    placeholder = stringResource(R.string.character_personality_placeholder),
+                    value = personality,
+                    onValueChange = onPersonalityChange,
+                    minimumHeight = 96.dp,
+                )
                 personalityError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-                ) {
-                    listOf(
-                        stringResource(R.string.curious),
-                        stringResource(R.string.brave),
-                        stringResource(R.string.kind),
-                        stringResource(R.string.funny),
-                    ).forEach {
-                        TraitChip(it)
-                    }
-                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
@@ -369,16 +346,14 @@ private fun CharacterDetails(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                CharacterInput(value = appearance, onValueChange = onAppearanceChange, minimumHeight = 112.dp)
+                CharacterInput(
+                    enabled = enabled,
+                    placeholder = stringResource(R.string.character_appearance_placeholder),
+                    value = appearance,
+                    onValueChange = onAppearanceChange,
+                    minimumHeight = 112.dp,
+                )
                 appearanceError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-                    verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-                ) {
-                    AppearanceChip(stringResource(R.string.yellow_hoodie), MaterialTheme.colorScheme.tertiary)
-                    AppearanceChip(stringResource(R.string.green_eyes), MaterialTheme.colorScheme.secondary)
-                    AppearanceChip(stringResource(R.string.brown_curls), MaterialTheme.colorScheme.onSurface)
-                }
             }
         }
     }
@@ -386,6 +361,8 @@ private fun CharacterDetails(
 
 @Composable
 private fun CharacterInput(
+    enabled: Boolean,
+    placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
     singleLine: Boolean = false,
@@ -400,7 +377,9 @@ private fun CharacterInput(
             Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
             contentAlignment = Alignment.CenterStart,
         ) {
+            if (value.isEmpty()) Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
             BasicTextField(
+                enabled = enabled,
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -412,51 +391,15 @@ private fun CharacterInput(
 }
 
 @Composable
-private fun TraitChip(label: String) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun AppearanceChip(
-    label: String,
-    color: Color,
-) {
-    Surface(
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Row(
-            Modifier.padding(horizontal = UiSpacing.x1, vertical = UiSpacing.x1 / 2),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement =
-                Arrangement.spacedBy(
-                    UiSpacing.x1 / 2,
-                ),
-        ) {
-            Box(Modifier.size(10.dp).clip(CircleShape).background(color))
-            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
 private fun CharacterActions(
     modifier: Modifier,
     onPreview: () -> Unit,
     onSave: () -> Unit,
     saving: Boolean,
+    generating: Boolean,
+    canSave: Boolean,
+    canGenerate: Boolean,
+    hasAvatar: Boolean,
 ) {
     Surface(
         modifier =
@@ -473,20 +416,17 @@ private fun CharacterActions(
         Row(Modifier.padding(UiSpacing.x1), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             OutlinedButton(
                 onClick = onPreview,
-                enabled = !saving,
+                enabled = canGenerate,
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(UiSpacing.x1))
-                Text(
-                    stringResource(R.string.generate_preview),
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (generating) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text(stringResource(if (hasAvatar) R.string.avatar_regenerate else R.string.avatar_generate))
+                }
             }
             if (saving) {
                 Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
@@ -495,7 +435,7 @@ private fun CharacterActions(
             } else {
                 Button(
                     onClick = onSave,
-                    enabled = !saving,
+                    enabled = canSave,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
