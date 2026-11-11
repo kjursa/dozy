@@ -1,6 +1,8 @@
 package com.dozy.mobile.feature.character.presentation.create
 
 internal sealed interface CreateCharacterAction {
+    data object RetryLoadClicked : CreateCharacterAction
+
     data object BackClicked : CreateCharacterAction
 
     data object SaveClicked : CreateCharacterAction

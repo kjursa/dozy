@@ -169,4 +169,5 @@
     <string name="character_keep">Keep character</string>
     <string name="character_delete_failed">Could not delete this character. Please try again.</string>
     <string name="character_read_failed">Could not load this character. Please try again.</string>
+    <string name="avatar_earlier_description">This avatar is from an earlier description. Regenerate to match your changes, or keep it when saving.</string>
 </resources>

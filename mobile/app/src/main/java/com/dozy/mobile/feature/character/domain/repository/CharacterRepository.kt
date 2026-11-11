@@ -5,6 +5,7 @@ import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
 import com.dozy.mobile.feature.character.domain.model.SavedCharacter
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 interface CharacterRepository {
@@ -17,6 +18,9 @@ interface CharacterRepository {
     fun observe(id: Character.Id): Flow<Character?> = observe().map { rows -> rows.firstOrNull { it.id == id } }
 
     suspend fun delete(id: Character.Id): CharacterSync
+
+    /** Null means the record disappeared; editing must never create it again. */
+    suspend fun update(character: Character): SavedCharacter? = if (observe(character.id).first() == null) null else save(character)
 
     suspend fun save(character: Character): SavedCharacter
 
