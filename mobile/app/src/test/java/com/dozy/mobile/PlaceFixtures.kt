@@ -33,6 +33,8 @@ internal class FakePlaceDao : PlaceDao() {
         rows.value = rows.value.filterNot { it.id == place.id } + place
     }
 
+    override suspend fun pending() = rows.value.filter { it.local && it.pendingSync }
+
     override suspend fun deleteRemote() {
         rows.value = rows.value.filter { it.local }
     }
@@ -54,9 +56,10 @@ internal class FakePlaceRepository : PlaceRepository {
 
     override suspend fun find(id: Place.Id) = places.value.find { it.id == id }
 
-    override suspend fun save(place: Place) {
+    override suspend fun save(place: Place): com.dozy.mobile.feature.place.domain.model.PlaceSync {
         saves++
         check(!failure)
         places.value = places.value.filterNot { it.id == place.id } + place
+        return com.dozy.mobile.feature.place.domain.model.PlaceSync.PENDING
     }
 }

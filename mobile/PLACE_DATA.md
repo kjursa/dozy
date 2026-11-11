@@ -72,12 +72,43 @@ leave the cache intact. An empty remote snapshot still leaves bundled suggestion
 and local places. Storage observation errors retain bundled suggestions and show
 a retry action. A genuine empty collection is also supported by the screen.
 
-The included add/edit form saves custom places durably on the device, including
-when the backend is disabled. It does not claim server synchronization. Uploading
-local custom places and conflict resolution are deferred until a mutation
-contract is agreed; no unimplemented write endpoint is called. New-form limits
+The add/edit form saves custom places durably before attempting upload, including
+when the backend is disabled. Schema version 3 adds `pendingSync` with an automatic
+migration from version 2. Existing local rows are pending; remote rows are never
+queued. Save returns `SYNCED` only after acknowledgement and durable metadata,
+otherwise `PENDING`. Only failure to persist the initial row fails the form save.
+A pending local save can be selected immediately and is never described as a
+successful backend operation. Cancellation propagates and leaves durable work
+pending. Local rows remain authoritative on this device, even after upload;
+GET cannot overwrite them. Multi-device conflict resolution is deferred. New-form limits
 follow SPEC section 10: trimmed required name (80 characters), required description
 (500), optional inhabitants (500), with all field errors collected.
+
+## Custom-place mutation proposal
+
+`PUT /places/{id}` uses the same opaque UUID on every retry. Path identifiers are
+encoded as a single segment. The JSON request is `PlaceDto`, matching GET items:
+`id`, `name`, `description`, `ownership: "CUSTOM"`, `editable: true`, and optional
+nullable `inhabitants`. Empty optional input becomes null. No image or character
+record is needed. The server must require path/body ID equality and authorize
+ownership; the client cannot grant permissions through `editable`.
+
+Any 2xx status acknowledges the upsert (proposed 201 for creation, 204 for update;
+no response body is required). Repeated identical PUTs produce one resource.
+400/422 indicate invalid input, 401/403 authorization, 404 unsupported endpoint,
+409 ownership conflict, 429 rate limiting, and 5xx temporary failure. Error bodies
+are not consumed or shown as user-facing copy. All non-2xx, network failures, and
+acknowledgement-storage failures retain the pending row, with no fictitious remote
+success. No backend endpoint is implemented in this task.
+
+A save attempts one PUT. Entry/explicit refresh retries persisted pending rows
+once each before GET; there is no background retry loop. Saving and refresh
+mutations are serialized to avoid an old acknowledgement overwriting a newer
+local edit. Null `ApiConfig.baseUrl` produces no requests. Reopening a form after
+an interrupted save should edit the existing saved item from the list. Pending
+rows survive process death and keep their IDs on refresh, including when the
+server accepted a request whose response was lost. This matches the local-first
+character contract while adding a durable refresh-driven retry queue.
 
 ## Selection and navigation
 

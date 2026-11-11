@@ -79,6 +79,7 @@ class PlaceDatabaseTest {
                         .toSet(),
                 )
                 assertEquals("Turtles", reopened.places().find("remote")?.inhabitants)
+                assertEquals(listOf(custom), reopened.places().pending())
                 val repository =
                     DefaultPlaceRepository(
                         reopened.places(),

@@ -23,3 +23,5 @@ fun PlaceEntity.toDomain() =
     )
 
 fun Place.toEntity() = PlaceEntity(id.value, name.value, description.value, inhabitants?.value, ownership.name, editable, true)
+
+fun Place.toDto() = PlaceDto(id.value, name.value, description.value, ownership.name, editable, inhabitants?.value)

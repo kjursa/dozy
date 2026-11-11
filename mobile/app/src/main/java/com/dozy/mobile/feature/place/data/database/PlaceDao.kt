@@ -14,6 +14,9 @@ abstract class PlaceDao {
     @Query("SELECT * FROM places WHERE id = :id")
     abstract suspend fun find(id: String): PlaceEntity?
 
+    @Query("SELECT * FROM places WHERE local = 1 AND pendingSync = 1")
+    abstract suspend fun pending(): List<PlaceEntity>
+
     @Upsert
     abstract suspend fun upsert(place: PlaceEntity)
 

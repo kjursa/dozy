@@ -46,6 +46,8 @@ class PlaceNavigationTest {
         val nav = controller()
         nav.navigate("places?fromStory=false")
         val places = nav.currentBackStackEntry
+        nav.navigate("place-form")
+        nav.popBackStack()
         nav.usePlace(Place.Id("builtin:woods"), null)
         assertEquals(CREATE_STORY_ROUTE, nav.currentDestination?.route)
         assertEquals("builtin:woods", nav.currentBackStackEntry?.arguments?.getString("place"))
@@ -82,6 +84,8 @@ class PlaceNavigationTest {
         assertSame(story, nav.currentBackStackEntry)
         assertEquals(input, draft.uiState.value)
         nav.navigate("places?fromStory=true")
+        nav.navigate("place-form")
+        nav.popBackStack()
         nav.usePlace(Place.Id("custom"), draft)
         assertSame(story, nav.currentBackStackEntry)
         assertEquals("custom", draft.uiState.value.placeId)
