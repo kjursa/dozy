@@ -19,6 +19,14 @@ class DefaultCharacterRepository(
 
     override fun observe() = dao.observe().map { rows -> rows.map { it.toDomain() } }
 
+    override suspend fun refresh(): Boolean {
+        val snapshot = api.list() ?: return false
+        require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Duplicate character IDs" }
+        val entities = snapshot.map { it.toDomain().toEntity(pendingSync = false) }
+        dao.replaceSnapshot(entities)
+        return true
+    }
+
     override suspend fun save(character: Character): SavedCharacter {
         // Fail before HTTP if the device cannot persist. Never report a non-durable save as success.
         dao.upsert(character.toEntity(pendingSync = true))

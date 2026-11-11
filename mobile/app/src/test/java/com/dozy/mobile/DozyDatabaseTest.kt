@@ -12,6 +12,8 @@ import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -68,6 +70,18 @@ class DozyDatabaseTest {
                 val saved = app.koin.get<CharacterRepository>().save(character)
                 assertEquals(CharacterSync.PENDING, saved.sync)
                 assertTrue(context.getDatabasePath("dozy.db").isFile)
+                val dao = database.characters()
+                dao.upsert(character("synced").toEntity(false))
+                val emission =
+                    async(start = CoroutineStart.UNDISPATCHED) {
+                        dao.observe().first { rows -> rows.size == 2 && rows.none { it.id == "synced" } }
+                    }
+                dao.replaceSnapshot(listOf(character.toEntity(false), character("other", "Luna").toEntity(false)))
+                val snapshot = emission.await()
+                assertEquals(setOf("persistent-id", "other"), snapshot.map { it.id }.toSet())
+                assertTrue(snapshot.single { it.id == "persistent-id" }.pendingSync)
+                dao.replaceSnapshot(emptyList())
+                assertEquals(listOf(character.toEntity(true)), dao.observe().first { it.size == 1 })
             } finally {
                 app.close()
             }

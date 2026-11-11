@@ -56,3 +56,17 @@ fun AvatarDto.toDomain(): Character.Avatar {
     require(id.isNotBlank() && parsed.protocol == URLProtocol.HTTPS && parsed.host.isNotBlank()) { "Malformed avatar asset" }
     return Character.Avatar(Character.Avatar.Id(id), Character.Avatar.Url(url))
 }
+
+fun CharacterDto.toDomain(): Character {
+    require(id.isNotBlank() && name.isNotBlank()) { "Malformed character" }
+    return Character(
+        Character.Id(id),
+        Character.Details(
+            Character.Name(name),
+            Character.Personality(personality),
+            Character.Appearance(appearance),
+            Character.Type.valueOf(type),
+        ),
+        avatar?.toDomain(),
+    )
+}

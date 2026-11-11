@@ -5,5 +5,7 @@ internal sealed interface CharactersAction {
         val character: CharacterListItem,
     ) : CharactersAction
 
+    data object Refresh : CharactersAction
+
     data object AddCharacterClicked : CharactersAction
 }

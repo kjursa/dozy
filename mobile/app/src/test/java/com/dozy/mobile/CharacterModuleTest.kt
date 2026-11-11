@@ -135,6 +135,12 @@ class CharacterModuleTest {
     private class InMemoryDao : CharacterDao {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
 
+        override suspend fun pendingIds() = rows.value.filter { it.pendingSync }.map { it.id }
+
+        override suspend fun deleteSynced() {
+            rows.value = rows.value.filter { it.pendingSync }
+        }
+
         override fun observe() = rows
 
         override suspend fun upsert(character: CharacterEntity) {

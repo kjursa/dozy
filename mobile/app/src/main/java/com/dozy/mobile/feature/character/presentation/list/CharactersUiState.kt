@@ -8,5 +8,8 @@ internal data class CharactersUiState(
     val title: UiText = UiText.Resource(R.string.characters),
     val subtitle: UiText = UiText.Resource(R.string.meet_the_heroes_of_your_bedtime_stories),
     val characters: List<CharacterListItem> = emptyList(),
+    val loading: Boolean = true,
+    val refreshing: Boolean = false,
+    val offline: Boolean = false,
     val characterLoadError: Boolean = false,
 )

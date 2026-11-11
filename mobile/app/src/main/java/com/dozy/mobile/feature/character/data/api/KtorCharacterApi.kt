@@ -16,6 +16,13 @@ class KtorCharacterApi(
     private val client: HttpClient,
     private val config: ApiConfig,
 ) : CharacterApi {
+    override suspend fun list(): List<CharacterDto>? {
+        val url = config.baseUrl ?: return null
+        val response = client.get("${url.trimEnd('/')}/characters")
+        check(response.status.value == 200) { "Character collection unavailable" }
+        return response.body()
+    }
+
     override suspend fun generateAvatar(input: AvatarRequestDto): AvatarDto? {
         val url = config.baseUrl ?: return null
         val response =

@@ -139,6 +139,10 @@ class CharacterAvatarApiTest {
     private fun repository(api: CharacterApi) =
         DefaultCharacterRepository(
             object : CharacterDao {
+                override suspend fun pendingIds() = emptyList<String>()
+
+                override suspend fun deleteSynced() = Unit
+
                 override fun observe() = flowOf(emptyList<CharacterEntity>())
 
                 override suspend fun upsert(character: CharacterEntity) {

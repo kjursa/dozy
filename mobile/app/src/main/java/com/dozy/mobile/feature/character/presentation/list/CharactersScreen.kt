@@ -19,15 +19,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
@@ -54,10 +58,7 @@ internal fun CharactersTabScreen(
             }
         },
     ) { state, dispatch ->
-        Column {
-            if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
-            CharactersTabContent(state, dispatch)
-        }
+        CharactersTabContent(state, dispatch)
     }
 }
 
@@ -88,6 +89,30 @@ internal fun CharactersTabContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (state.loading) {
+                    CircularProgressIndicator()
+                } else {
+                    if (state.refreshing) CircularProgressIndicator(Modifier.size(24.dp))
+                    if (state.characterLoadError) {
+                        Text(
+                            stringResource(R.string.could_not_load_characters),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (state.offline) Text(stringResource(R.string.characters_offline))
+                    TextButton(onClick = { onAction(CharactersAction.Refresh) }, enabled = !state.refreshing) {
+                        Text(stringResource(if (state.characterLoadError) R.string.characters_retry else R.string.characters_refresh))
+                    }
+                    if (state.characters.isEmpty() && !state.characterLoadError && !state.refreshing) {
+                        Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+                            Text(stringResource(R.string.characters_empty_title), style = MaterialTheme.typography.headlineSmall)
+                            Text(stringResource(R.string.characters_empty_description))
+                            Button(onClick = { onAction(CharactersAction.AddCharacterClicked) }) {
+                                Text(stringResource(R.string.add_a_new_character))
+                            }
+                        }
+                    }
+                }
                 state.characters.chunked(2).forEach { rowCharacters ->
                     Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                         rowCharacters.forEach { character ->
@@ -96,7 +121,11 @@ internal fun CharactersTabContent(
                         if (rowCharacters.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                CharacterLibraryCard(onAddCharacter = { onAction(CharactersAction.AddCharacterClicked) })
+                if (!state.loading &&
+                    state.characters.isNotEmpty()
+                ) {
+                    CharacterLibraryCard(onAddCharacter = { onAction(CharactersAction.AddCharacterClicked) })
+                }
             }
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
@@ -118,6 +147,13 @@ private fun CharacterLibraryCard(
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             AvatarImage(character.avatarUrl, character.name, Modifier.fillMaxWidth().aspectRatio(1f))
             Text(character.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                character.description,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

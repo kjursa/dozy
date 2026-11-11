@@ -133,7 +133,11 @@ Mockup: [characters.html](design/screens/characters.html).
 
 - **Populated:** avatars, names, and short descriptions; a card to add a new character.
 - **Empty list:** encourage describing the first hero and explain that the avatar is generated from the description.
-- **Loading / failure:** shared rules apply.
+- **Loading:** show progress until the first local collection is read; do not flash empty copy.
+- **Refreshing:** keep known cards visible with progress and disable repeated refreshes.
+- **Failure:** keep known cards and offer Retry. Do not show the empty-state message for a failed initial refresh.
+- **Offline / local-only:** show a notice and all locally saved characters, including pending saves; an empty local collection offers the creation CTA.
+- Refresh uses the complete collection proposal in `CHARACTER_DATA.md`; pending local changes take precedence over the remote snapshot.
 
 ### Actions and destinations
 
