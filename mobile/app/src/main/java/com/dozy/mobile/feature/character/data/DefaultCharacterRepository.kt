@@ -37,6 +37,15 @@ class DefaultCharacterRepository(
         return true
     }
 
+    override suspend fun update(character: Character): SavedCharacter? {
+        val row = character.toEntity(pendingSync = true)
+        val changed = dao.updateExisting(row.id, row.name, row.personality, row.appearance, row.type, row.avatarId, row.avatarUrl)
+        if (changed == 0) return null
+        // Keep edits pending until versioned sync can safely acknowledge concurrent writes.
+        runCatchingSuspend { api.save(character.toDto()) }
+        return SavedCharacter(character, CharacterSync.PENDING)
+    }
+
     override suspend fun save(character: Character): SavedCharacter {
         // Fail before HTTP if the device cannot persist. Never report a non-durable save as success.
         dao.upsert(character.toEntity(pendingSync = true))

@@ -187,4 +187,5 @@
     <string name="generation_empty">Your finished stories will appear here.</string>
     <string name="generation_notification_channel">Story completion</string>
     <string name="generation_notification_title">Your bedtime story is ready</string>
+    <string name="avatar_earlier_description">This avatar is from an earlier description. Regenerate to match your changes, or keep it when saving.</string>
 </resources>

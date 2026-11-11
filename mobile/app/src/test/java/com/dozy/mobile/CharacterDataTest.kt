@@ -369,6 +369,103 @@ class CharacterDataTest {
             }
         }
 
+    @Test fun editsUpdateOneRowAndStayDurablePendingAcrossFailuresAndSnapshots() =
+        runTest {
+            for (api in listOf(CharacterApi { true }, CharacterApi { false }, CharacterApi { error("HTTP 409") })) {
+                val dao = FakeDao()
+                dao.upsert(character().toEntity(false))
+                dao.upsert(character("2", "Luna").toEntity(false))
+                val repository = DefaultCharacterRepository(dao, api)
+                val edited = character(name = "Edited").copy(avatar = avatar())
+                assertEquals(CharacterSync.PENDING, repository.update(edited)?.sync)
+                assertEquals(2, dao.rows.value.size)
+                assertEquals(edited, repository.observe(edited.id).first())
+                dao.replaceSnapshot(listOf(character().toEntity(false), character("2", "Luna").toEntity(false)))
+                assertEquals(edited, repository.observe(edited.id).first())
+                assertTrue(
+                    dao.rows.value
+                        .single { it.id == "1" }
+                        .pendingSync,
+                )
+                assertNull(repository.update(character("missing")))
+                dao.markDeleted("1")
+                assertNull(repository.update(edited))
+                assertNull(repository.observe(edited.id).first())
+            }
+        }
+
+    @Test fun editWriteFailurePreventsHttpAndCancellationKeepsPendingEdit() =
+        runTest {
+            val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
+            dao.failAt = 2
+            var requests = 0
+            val repository =
+                DefaultCharacterRepository(
+                    dao,
+                    CharacterApi {
+                        requests++
+                        throw CancellationException()
+                    },
+                )
+            try {
+                repository.update(character(name = "Edited"))
+                fail("Expected disk failure")
+            } catch (_: IllegalStateException) {
+            }
+            assertEquals(0, requests)
+            assertEquals(
+                "Oliver",
+                dao.rows.value
+                    .single()
+                    .name,
+            )
+            dao.failAt = 0
+            try {
+                repository.update(character(name = "Edited"))
+                fail("Expected cancellation")
+            } catch (_: CancellationException) {
+            }
+            assertEquals(
+                "Edited",
+                dao.rows.value
+                    .single()
+                    .name,
+            )
+            assertTrue(
+                dao.rows.value
+                    .single()
+                    .pendingSync,
+            )
+        }
+
+    @Test fun editPutEncodesIdentityAndUsesCurrentFieldsAndAvatarWithoutAutomaticRetries() =
+        runTest {
+            val dto = character("hero/one two", "Edited").copy(avatar = avatar()).toDto()
+            var requests = 0
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        requests++
+                        assertEquals("PUT", request.method.value)
+                        assertEquals("/characters/hero%2Fone%20two", request.url.encodedPath)
+                        assertEquals(dto, Json.decodeFromString<CharacterDto>((request.body as io.ktor.http.content.TextContent).text))
+                        respond("", if (requests == 1) HttpStatusCode.Conflict else HttpStatusCode.NoContent)
+                    },
+                ) { install(ContentNegotiation) { json() } }
+            try {
+                assertFalse(KtorCharacterApi(client, ApiConfig(null)).save(dto))
+                assertEquals(0, requests)
+                val api = KtorCharacterApi(client, ApiConfig("https://example.test/"))
+                assertFalse(api.save(dto))
+                assertEquals(1, requests)
+                assertTrue(api.save(dto))
+                assertEquals(2, requests)
+            } finally {
+                client.close()
+            }
+        }
+
     private class FakeDao : CharacterDao {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
         var failAt = 0
@@ -388,6 +485,20 @@ class CharacterDataTest {
 
         override suspend fun markDeleted(id: String) {
             rows.value = rows.value.map { if (it.id == id) it.copy(deleted = true, pendingSync = true) else it }
+        }
+
+        override suspend fun updateExisting(
+            id: String,
+            name: String,
+            personality: String,
+            appearance: String,
+            type: String,
+            avatarId: String?,
+            avatarUrl: String?,
+        ): Int {
+            if (rows.value.none { it.id == id && !it.deleted }) return 0
+            upsert(CharacterEntity(id, name, personality, appearance, type, true, avatarId, avatarUrl))
+            return 1
         }
 
         override suspend fun upsert(character: CharacterEntity) {

@@ -124,6 +124,25 @@ class CharacterModuleTest {
                         .single()
                         .name,
                 )
+                val repository = app.koin.get<CharacterRepository>()
+                val original = repository.observe().first().single()
+                val edited = original.copy(details = original.details.copy(name = Character.Name("Edited hero")))
+                repository.update(edited)
+                advanceUntilIdle()
+                assertEquals(edited, repository.observe(edited.id).first())
+                assertEquals(
+                    "Edited hero",
+                    home.uiState.value.characters
+                        .single()
+                        .name,
+                )
+                assertEquals(
+                    "Edited hero",
+                    characters.uiState.value.characters
+                        .single()
+                        .name,
+                )
+                assertEquals(1, dao.rows.value.size)
             } finally {
                 owner.clear()
                 otherOwner.clear()
@@ -150,6 +169,20 @@ class CharacterModuleTest {
 
         override suspend fun markDeleted(id: String) {
             rows.value = rows.value.map { if (it.id == id) it.copy(deleted = true, pendingSync = true) else it }
+        }
+
+        override suspend fun updateExisting(
+            id: String,
+            name: String,
+            personality: String,
+            appearance: String,
+            type: String,
+            avatarId: String?,
+            avatarUrl: String?,
+        ): Int {
+            if (rows.value.none { it.id == id && !it.deleted }) return 0
+            upsert(CharacterEntity(id, name, personality, appearance, type, true, avatarId, avatarUrl))
+            return 1
         }
 
         override suspend fun upsert(character: CharacterEntity) {

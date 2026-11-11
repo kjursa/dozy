@@ -64,7 +64,8 @@ class KtorCharacterApi(
     override suspend fun save(character: CharacterDto): Boolean {
         val url = config.baseUrl ?: return false
         val response =
-            client.put("${url.trimEnd('/')}/characters/${character.id}") {
+            client.put("${url.trimEnd('/')}/characters") {
+                url { appendPathSegments(character.id, encodeSlash = true) }
                 contentType(ContentType.Application.Json)
                 setBody(character)
             }

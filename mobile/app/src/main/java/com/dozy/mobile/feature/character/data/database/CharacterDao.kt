@@ -34,6 +34,21 @@ interface CharacterDao {
         characters.filterNot { it.id in pending }.forEach { upsert(it) }
     }
 
+    @Query(
+        "UPDATE characters SET name = :name, personality = :personality, appearance = :appearance, " +
+            "type = :type, avatarId = :avatarId, avatarUrl = :avatarUrl, pendingSync = 1 " +
+            "WHERE id = :id AND deleted = 0",
+    )
+    suspend fun updateExisting(
+        id: String,
+        name: String,
+        personality: String,
+        appearance: String,
+        type: String,
+        avatarId: String?,
+        avatarUrl: String?,
+    ): Int
+
     @Upsert
     suspend fun upsert(character: CharacterEntity)
 }

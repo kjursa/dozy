@@ -274,3 +274,44 @@ missing/deleted heroes are dropped when the current library is observed. Remaini
 heroes and other draft input are retained; an empty cast requires selecting a hero.
 Saved stories and their previous cast remain unchanged. The current saved-story
 reader is still a prototype, so this change touches no story persistence.
+
+## F5 editing and regeneration
+
+Editing reuses the F2 form, validators, avatar use case, and `SaveCharacter`.
+`EditCharacterInput.from(id, fields)` requires the existing semantic ID and an
+already validated `CreateCharacterInput`; it cannot bypass shared field rules.
+Historical records load without applying these rules; saving requires correcting
+any fields that no longer meet them. Read failures offer Retry, separately from
+missing/deleted records. Restored drafts recheck existence without overwriting
+unsaved text. Errors and active jobs remain transient.
+
+The flat repository updates the existing, non-deleted row atomically by ID in
+`DozyDatabase`. A missing row returns Unavailable and is never inserted or revived.
+Local write failure prevents HTTP and permits retry. The durable edit is pending
+before HTTP; cancellation propagates and leaves the edit pending. Edits remain
+pending even after acknowledgement: without versions, an acknowledgement cannot
+safely clear pending metadata for a concurrent edit. F3 refresh therefore preserves
+them. There is still no automatic upload worker. Home, list, and details observe
+the same rows and update after saving. No story record or saved cast is modified.
+Back abandons form changes; successful Save returns to the same details owner.
+
+The existing F2 `PUT /characters/{id}` and `CharacterDto` are reused unchanged:
+`id`, `name`, `personality`, `appearance`, uppercase `type`, and nullable
+`avatar: { id, url }`. The opaque ID is encoded as one path segment and must equal
+the body ID. A 2xx response acknowledges a durable server write, with no response
+body required. Repeated identical PUTs update the same record. 400/401/403/404,
+409 version conflict, 429, 5xx, and transport errors leave the local edit pending;
+none triggers an automatic PUT retry or discards local input. No version token is
+sent yet: the provisional server policy is last acknowledged write wins. A future
+versioned sync protocol must define conflict reconciliation before enabling
+multi-device synchronization; 409 is never treated as success. Backend/generator
+implementation is outside this mobile contract change.
+
+Regeneration reuses F2 POST/poll DTOs, errors, and explicit retry semantics. The
+form persists a snapshot of type/personality/appearance alongside the successful
+avatar reference. Changing those fields labels the retained preview as coming
+from an earlier description; it does not invalidate it or silently regenerate.
+Name changes do not affect the avatar request. Save may still use that preview,
+consistent with F2. A successful regeneration replaces the reference and snapshot;
+a failed or unavailable attempt retains both, the draft, and the notice. Leaving
+invalidates the attempt so late results cannot update or save the character.
