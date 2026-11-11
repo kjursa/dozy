@@ -227,3 +227,38 @@ sorting deterministically. Summary refresh never overwrites full text, job statu
 configuration or notification state and never deletes absent stories, including on
 empty responses or temporary failures. The reader fetches full text only when no
 local result exists. A remote summary alone therefore does not promise offline text.
+
+
+## Home composition (F13)
+
+Home adds no endpoint, DTO, storage table, or repository. It composes F2/F3
+`ObserveCharacters` / `RefreshCharacters` ([character contract](CHARACTER_DATA.md)),
+F6 `ObservePlaces` / `RefreshPlaces` ([place contract](PLACE_DATA.md)), F10
+`ObserveGenerations` / `RefreshGeneration` / `RetryGeneration`, and F12
+`ObserveStoryLibrary` / `RefreshStories`. The existing flat repository implementations
+own DAO/API access in the single DozyDatabase; the existing Koin feature modules
+provide these constructor-injected use cases to Home.
+
+On entry/resume, existing GET collection contracts refresh characters, places, and
+`GET /stories?limit=100&cursor=...`; Home previews the persisted collections with
+limits/order documented in SPEC §4. These are client preview limits, not new server
+pagination parameters. Existing response DTOs, stable character/place/story IDs,
+error envelopes and cache merging rules remain authoritative. Errors retain each
+section's last known data and provide section-specific retry. Bundled predefined
+places are intentional offline content, not sample user data.
+
+The displayed job follows F10's active/pending-retry priority, otherwise the latest
+persisted job. Resume uses `GET /story-generations/{jobId}` and the existing status DTO;
+READY still requires the full `GET /stories/{storyId}` result to be saved atomically.
+An unavailable status remains unknown rather than failed. Retry explicitly uses
+`POST /story-generations/{jobId}/retry` with the existing preserved configuration and
+durable Idempotency-Key; acceptance returns to generating. Repeated taps cannot
+start parallel retries. Background reconciliation and notification delivery continue
+to belong to F10's scheduler, independent of Home.
+
+All GET retries are idempotent; POST retries retain F10's uncertain-response key.
+ApiConfig(baseUrl = null) sends no requests and cannot simulate successful generation
+or retry. Collections remain locally readable; job status can show unavailable.
+Home consumes the same Ktor clients verified by the existing MockEngine character,
+place, generation and story-library contract tests. No backend/generator change is
+included in this mobile proposal.

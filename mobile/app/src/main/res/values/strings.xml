@@ -207,4 +207,7 @@
     <string name="stories_empty">Saved adventures will appear here. Create your first story to begin.</string>
     <string name="stories_create">Create a story</string>
     <string name="stories_refresh">Refresh</string>
+    <string name="home_first_visit">Every story starts with someone. Describe your hero, choose an adventure, and read together.</string>
+    <string name="home_first_character">Create your first character</string>
+    <string name="home_first_story">Your heroes are ready. Create their first story!</string>
 </resources>

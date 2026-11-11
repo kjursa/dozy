@@ -22,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,19 +36,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.AvatarImage
-import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.presentation.list.PlaceCard
-import com.dozy.mobile.feature.place.presentation.list.PlacesAction
-import com.dozy.mobile.feature.place.presentation.list.PlacesEffect
-import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
 import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
+import com.dozy.mobile.feature.story.presentation.generation.GenerationCard
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
@@ -58,6 +56,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 internal fun HomeScreen(
+    onStories: () -> Unit,
+    onCharacters: () -> Unit,
     onCreateStory: () -> Unit,
     onAddCharacter: () -> Unit,
     onCharacter: (String) -> Unit,
@@ -67,6 +67,7 @@ internal fun HomeScreen(
     onRead: (String) -> Unit,
 ) {
     val homeViewModel: HomeViewModel = koinViewModel()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { homeViewModel.resumed() }
     MviScreen(
         viewModel = homeViewModel,
         onEffect = { effect ->
@@ -74,23 +75,17 @@ internal fun HomeScreen(
                 HomeEffect.CreateStoryRequested -> onCreateStory()
                 HomeEffect.AddCharacterRequested -> onAddCharacter()
                 is HomeEffect.OpenCharacter -> onCharacter(effect.character.id)
-                is HomeEffect.OpenStory, HomeEffect.SeeAllStoriesRequested,
-                HomeEffect.OpenNotifications,
-                -> Unit
+                is HomeEffect.OpenStory -> onRead(effect.story.id)
+                HomeEffect.SeeAllStoriesRequested -> onStories()
+                HomeEffect.SeeAllCharactersRequested -> onCharacters()
+                HomeEffect.SeeAllPlacesRequested -> onPlaces()
+                is HomeEffect.CreateStoryAtPlace -> onPlaceSelected(effect.id)
+                is HomeEffect.OpenProgress -> onGeneration(effect.id)
+                is HomeEffect.ReadStory -> onRead(effect.id)
             }
         },
     ) { state, dispatch ->
-        Column {
-            if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
-            HomeContent(
-                state = state,
-                onAction = dispatch,
-                onPlaces = onPlaces,
-                onPlaceSelected = onPlaceSelected,
-                onGeneration = onGeneration,
-                onRead = onRead,
-            )
-        }
+        HomeContent(state, dispatch)
     }
 }
 
@@ -98,10 +93,6 @@ internal fun HomeScreen(
 private fun HomeContent(
     state: HomeUiState,
     onAction: (HomeAction) -> Unit,
-    onPlaces: () -> Unit,
-    onPlaceSelected: (Place.Id?) -> Unit,
-    onGeneration: (String) -> Unit,
-    onRead: (String) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AmbientGlow(Modifier.fillMaxSize())
@@ -111,63 +102,59 @@ private fun HomeContent(
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState()),
         ) {
-            HomeHeader(state, onNotificationsClick = { onAction(HomeAction.NotificationsClicked) })
+            HomeHeader()
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
-                com.dozy.mobile.feature.story.presentation.generation
-                    .HomeGeneration(onGeneration, onRead)
-                com.dozy.mobile.feature.story.presentation.reader
-                    .SavedStories(onRead)
+                HomeJob(state, onAction)
+                if (state.firstVisit) {
+                    Text(stringResource(R.string.home_first_visit), style = MaterialTheme.typography.titleLarge)
+                    TextButton(onClick = { onAction(HomeAction.AddCharacterClicked) }) {
+                        Text(stringResource(R.string.home_first_character))
+                    }
+                }
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
-                StoriesSection(state.stories, onStorySelected = {
-                    onAction(HomeAction.StorySelected(it))
-                }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
-                CharactersSection(state.characters, onAddCharacter = {
-                    onAction(HomeAction.AddCharacterClicked)
-                }, onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) })
+                Column {
+                    HomeSectionStatus(state, HomeSection.STORIES, onAction)
+                    StoriesSection(state.stories, onStorySelected = {
+                        onAction(HomeAction.StorySelected(it))
+                    }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
+                    if (HomeSection.STORIES !in state.loading &&
+                        HomeSection.STORIES !in state.refreshing &&
+                        HomeSection.STORIES !in state.errors &&
+                        state.stories.isEmpty() &&
+                        state.characters.isNotEmpty()
+                    ) {
+                        Text(stringResource(R.string.home_first_story))
+                    }
+                }
+                Column {
+                    HomeSectionStatus(state, HomeSection.CHARACTERS, onAction)
+                    CharactersSection(
+                        state.characters,
+                        onAddCharacter = {
+                            onAction(HomeAction.AddCharacterClicked)
+                        },
+                        onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) },
+                        onSeeAll = { onAction(HomeAction.SeeAllCharactersClicked) },
+                    )
+                }
+                HomePlaces(state, onAction)
             }
-            HomePlaces(onPlaces, onPlaceSelected)
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
     }
 }
 
 @Composable
-private fun HomeHeader(
-    state: HomeUiState,
-    onNotificationsClick: () -> Unit,
-) {
-    Row(
+private fun HomeHeader() {
+    Column(
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-            Eyebrow(state.dateLabel.resolve())
-            Text(state.greeting.resolve(), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-            Text(
-                state.prompt.resolve(),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Surface(
-            modifier = Modifier.size(48.dp).shadow(8.dp, CircleShape).clickable(onClick = onNotificationsClick),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = stringResource(R.string.notifications),
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
+        Text(stringResource(R.string.good_evening), style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(R.string.ready_for_a_new_adventure), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -244,9 +231,10 @@ private fun CharactersSection(
     characters: List<HomeCharacter>,
     onAddCharacter: () -> Unit,
     onCharacterSelected: (HomeCharacter) -> Unit,
+    onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading(stringResource(R.string.cast), stringResource(R.string.your_characters))
+        SectionHeading(stringResource(R.string.cast), stringResource(R.string.your_characters), onSeeAll)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
                 Column(
@@ -291,27 +279,53 @@ private fun CharactersSection(
 }
 
 @Composable
-private fun HomePlaces(
-    onPlaces: () -> Unit,
-    onPlaceSelected: (Place.Id?) -> Unit,
+private fun HomeSectionStatus(
+    state: HomeUiState,
+    section: HomeSection,
+    onAction: (HomeAction) -> Unit,
 ) {
-    val viewModel: PlacesViewModel = koinViewModel()
-    MviScreen(viewModel, onEffect = { effect ->
-        if (effect is PlacesEffect.Selected) onPlaceSelected(effect.id)
-        viewModel.navigationHandled()
-    }) { state, dispatch ->
-        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SectionHeading(stringResource(R.string.place_setting), stringResource(R.string.places_heading), onPlaces)
-            state.places.take(3).forEach { place ->
-                PlaceCard(place, enabled = !state.navigating, onSelect = {
-                    dispatch(PlacesAction.Select(place.id))
-                })
+    if (section in state.loading || section in state.refreshing) CircularProgressIndicator()
+    state.errors[section]?.let {
+        Text(it.resolve(), color = MaterialTheme.colorScheme.error)
+        TextButton(onClick = { onAction(HomeAction.RetrySection(section)) }, enabled = section !in state.refreshing) {
+            Text(stringResource(R.string.place_retry))
+        }
+    }
+}
+
+@Composable
+private fun HomeJob(
+    state: HomeUiState,
+    onAction: (HomeAction) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+        HomeSectionStatus(state, HomeSection.GENERATION, onAction)
+        state.generation.homeJob?.let { job ->
+            GenerationCard(job, state.generation.busy) {
+                onAction(HomeAction.Generation(it))
             }
-            if (state.loading) CircularProgressIndicator()
-            state.error?.let {
-                Text(it.resolve())
-                TextButton(onClick = { dispatch(PlacesAction.Retry) }) { Text(stringResource(R.string.place_retry)) }
+            TextButton(onClick = { onAction(HomeAction.ProgressClicked(job.id.value)) }) {
+                Text(stringResource(R.string.generation_progress))
             }
+        }
+    }
+}
+
+@Composable
+private fun HomePlaces(
+    state: HomeUiState,
+    onAction: (HomeAction) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeading(stringResource(R.string.place_setting), stringResource(R.string.places_heading), {
+            onAction(HomeAction.SeeAllPlacesClicked)
+        })
+        HomeSectionStatus(state, HomeSection.PLACES, onAction)
+        state.places.forEach { place ->
+            PlaceCard(place, enabled = !state.navigating, onSelect = { onAction(HomeAction.PlaceSelected(place.id)) })
+        }
+        if (HomeSection.PLACES !in state.loading && HomeSection.PLACES !in state.errors && state.places.isEmpty()) {
+            Text(stringResource(R.string.place_empty))
         }
     }
 }
