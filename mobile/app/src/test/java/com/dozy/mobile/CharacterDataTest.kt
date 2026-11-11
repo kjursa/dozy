@@ -173,10 +173,127 @@ class CharacterDataTest {
             }
         }
 
+    @Test fun refreshMergesPendingEditsAndRemovesOnlySyncedMissingRows() =
+        runTest {
+            val dao = FakeDao()
+            dao.upsert(character().toEntity(true))
+            dao.upsert(character("deleted").toEntity(false))
+            val repository =
+                DefaultCharacterRepository(
+                    dao,
+                    object : CharacterApi {
+                        override suspend fun save(character: CharacterDto) = false
+
+                        override suspend fun list() =
+                            listOf(character("1", "Stale server value").toDto(), character("2", "Luna").copy(avatar = avatar()).toDto())
+                    },
+                )
+            assertTrue(repository.refresh())
+            assertEquals(listOf("Oliver", "Luna"), repository.observe().first().map { it.details.name.value })
+            assertTrue(
+                dao.rows.value
+                    .first()
+                    .pendingSync,
+            )
+            assertEquals(
+                avatar(),
+                repository
+                    .observe()
+                    .first()
+                    .last()
+                    .avatar,
+            )
+        }
+
+    @Test fun refreshFailureMalformedSnapshotAndCancellationKeepRows() =
+        runTest {
+            for (failure in listOf(IllegalStateException("offline"), CancellationException("cancelled"))) {
+                val dao = FakeDao()
+                dao.upsert(character().toEntity(false))
+                val repository =
+                    DefaultCharacterRepository(
+                        dao,
+                        object : CharacterApi {
+                            override suspend fun save(character: CharacterDto) = false
+
+                            override suspend fun list(): List<CharacterDto> = throw failure
+                        },
+                    )
+                try {
+                    repository.refresh()
+                    fail("Expected failure")
+                } catch (actual: Exception) {
+                    assertSame(failure, actual)
+                }
+                assertEquals(listOf(character()), repository.observe().first())
+            }
+            val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
+            val repository =
+                DefaultCharacterRepository(
+                    dao,
+                    object : CharacterApi {
+                        override suspend fun save(character: CharacterDto) = false
+
+                        override suspend fun list() = listOf(character().toDto().copy(type = "UNKNOWN"))
+                    },
+                )
+            try {
+                repository.refresh()
+                fail("Expected malformed data failure")
+            } catch (_: IllegalArgumentException) {
+            }
+            assertEquals(listOf(character()), repository.observe().first())
+            assertFalse(DefaultCharacterRepository(dao, CharacterApi { false }).refresh())
+            assertEquals(listOf(character()), repository.observe().first())
+        }
+
+    @Test fun listHttpContractHandlesEmptyDisabledAndErrors() =
+        runTest {
+            var requests = 0
+            val engine =
+                MockEngine { request ->
+                    requests++
+                    assertEquals("GET", request.method.value)
+                    assertEquals("https://example.test/characters", request.url.toString())
+                    when (requests) {
+                        1 ->
+                            respond(
+                                Json.encodeToString(listOf(character().copy(avatar = avatar()).toDto())),
+                                HttpStatusCode.OK,
+                                io.ktor.http.headersOf("Content-Type", "application/json"),
+                            )
+                        2 -> respond("[]", HttpStatusCode.OK, io.ktor.http.headersOf("Content-Type", "application/json"))
+                        else -> respond("[]", HttpStatusCode.ServiceUnavailable)
+                    }
+                }
+            val client = HttpClient(engine) { install(ContentNegotiation) { json() } }
+            try {
+                assertNull(KtorCharacterApi(client, ApiConfig(null)).list())
+                assertEquals(0, requests)
+                val api = KtorCharacterApi(client, ApiConfig("https://example.test/"))
+                assertEquals(listOf(character().copy(avatar = avatar()).toDto()), api.list())
+                assertEquals(emptyList<CharacterDto>(), api.list())
+                try {
+                    api.list()
+                    fail("Expected HTTP failure")
+                } catch (_: IllegalStateException) {
+                }
+            } finally {
+                client.close()
+            }
+        }
+
     private class FakeDao : CharacterDao {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
         var failAt = 0
         var calls = 0
+
+        override suspend fun pendingIds() = rows.value.filter { it.pendingSync }.map { it.id }
+
+        override suspend fun deleteSynced() {
+            rows.value = rows.value.filter { it.pendingSync }
+        }
 
         override fun observe() = rows
 

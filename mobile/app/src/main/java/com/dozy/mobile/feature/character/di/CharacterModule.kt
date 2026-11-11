@@ -6,6 +6,7 @@ import com.dozy.mobile.feature.character.data.api.KtorCharacterApi
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
@@ -25,6 +26,7 @@ internal val characterModule =
         factoryOf(::SaveCharacter)
         factoryOf(::GenerateCharacterAvatar)
         factoryOf(::ObserveCharacters)
+        factoryOf(::RefreshCharacters)
         viewModel {
             CreateCharacterViewModel(
                 statePersistence = SavedStatePersistence(get(), CreateCharacterUiState.serializer()),

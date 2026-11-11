@@ -142,4 +142,9 @@
     <string name="character_unavailable">This character is unavailable.</string>
     <string name="character_edit">Edit character</string>
     <string name="character_story">Create a story with this hero</string>
+    <string name="characters_offline">Offline — saved characters remain available on this device.</string>
+    <string name="characters_refresh">Refresh</string>
+    <string name="characters_retry">Retry</string>
+    <string name="characters_empty_title">Who will be the hero?</string>
+    <string name="characters_empty_description">Describe someone special. We’ll turn your description into an avatar and bring them into your stories.</string>
 </resources>

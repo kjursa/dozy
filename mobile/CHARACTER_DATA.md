@@ -41,7 +41,7 @@ is idempotent `PUT /characters/{id}` with JSON containing `id`, `name`, `persona
 acknowledges persistence; no response DTO is assumed. This shape is a proposal,
 not an existing backend contract. Before enabling it, agree endpoint semantics,
 authentication, validation, and synchronization/retry behavior with the backend.
-No remote list endpoint is assumed: both views load the durable local collection.
+Both views observe the durable local collection; the list can refresh it using the F3 proposal below.
 
 Generated avatar references use the F2 proposal documented below; an unconfigured backend cannot generate a preview.
 
@@ -188,3 +188,38 @@ blocks fields and Save, then replaces the preview only on success; failure retai
 any earlier preview. Leaving cancels polling and invalidates the active attempt.
 Home/list creation opens the saved details; story creation returns to the same
 navigation entry and adds the saved ID once without replacing other draft input.
+
+## F3 collection refresh contract
+
+`GET /characters` has no request body and returns `200` with a JSON array of the
+same `CharacterDto` objects used by F2 PUT, including optional avatar references.
+IDs are stable client-generated opaque strings. Duplicate/blank IDs, blank names,
+unknown types, malformed assets, decoding errors, and non-200 responses reject the
+entire snapshot before any local replacement. Existing description/name values are
+not revalidated against current creation restrictions.
+
+Pagination is deliberately absent for the initial small personal character library.
+The array must be a complete, consistent snapshot of all characters visible to the
+current user; `[]` is authoritative. A future paginated contract must accumulate a
+complete snapshot before applying deletions. Authentication remains to be agreed
+before enabling the API. `401`/`403`, `429`, and `5xx` all surface a retryable generic
+failure without displaying server text or deleting known rows. No automatic HTTP
+retry is performed; Refresh/Retry explicitly repeats this read-only operation.
+
+The DAO applies the snapshot in one transaction: preserve every pending local row,
+remove synced rows, then insert remote rows whose IDs do not have pending local
+changes. Thus absent synced records represent remote deletion, but pending new
+characters and edits always win, including saves made while GET was in flight.
+A failed request leaves all known data intact. There is no upload worker, local
+delete operation, or tombstone protocol in F3; pending uploads remain as described
+above. A future local delete feature must define tombstones before syncing them.
+
+The list initially shows loading until the first local observation. Empty copy
+appears only after loading/refresh completes successfully or in local-only mode.
+Refresh retains visible cards and disables repeated refresh clicks. Failures retain
+known cards and expose Retry; a null base URL sends no requests and shows an offline
+notice alongside locally saved characters or the empty CTA. Cards display saved
+avatars, names, and personality descriptions (at most two visible lines). Room
+emissions update creation, editing, and collection membership without resetting the
+whole collection. Existing navigation opens details or an empty form and preserves
+bottom-tab owners and scroll state. No list/form input persistence is added here.

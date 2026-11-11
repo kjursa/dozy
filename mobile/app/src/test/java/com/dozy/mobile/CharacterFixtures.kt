@@ -27,6 +27,14 @@ internal fun character(
 internal class FakeCharacterRepository : CharacterRepository {
     val characters = MutableStateFlow(listOf(character(), character("2", "Luna"), character("3", "Captain Finn")))
     var failure: Exception? = null
+    var refreshes = 0
+    var beforeRefresh: suspend () -> Boolean = { false }
+
+    override suspend fun refresh(): Boolean {
+        refreshes++
+        return beforeRefresh()
+    }
+
     var saves = 0
     var beforeSave: suspend () -> Unit = {}
 
