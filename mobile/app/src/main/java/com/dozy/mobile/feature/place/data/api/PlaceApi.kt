@@ -5,6 +5,9 @@ import kotlinx.serialization.Serializable
 fun interface PlaceApi {
     /** Null means disabled, never a successful remote refresh. */
     suspend fun list(): PlacesDto?
+
+    /** False means disabled or unacknowledged; the durable row remains pending. */
+    suspend fun save(place: PlaceDto): Boolean = false
 }
 
 @Serializable

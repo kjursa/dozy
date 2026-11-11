@@ -36,7 +36,7 @@ The HTML variants are described with each screen. Shared states and additional c
 
 ### Local data storage
 
-The app uses a single `DozyDatabase` in the `dozy.db` file. It contains character and place tables; DAOs and entities remain in the character feature. Data from the previous `characters.db` file is neither migrated nor copied — the new database may start empty.
+The app uses a single `DozyDatabase` in the `dozy.db` file. It contains character and place tables; DAOs and entities remain in their owning features. Data from the previous `characters.db` file is neither migrated nor copied — the new database may start empty.
 
 ## 3. Navigation and shared behavior
 
@@ -246,8 +246,8 @@ Predefined places cannot be edited directly. Copying a predefined place into a c
 The mobile collection uses bundled, offline predefined suggestions plus durable
 local custom places and a cached remote snapshot. Within each source, names and
 IDs determine order. Selection changes only the persisted story draft setting;
-inhabitants never select main characters. The add/edit form currently saves
-locally. The proposed GET contract, identifiers, ordering, migration, retry, and
+inhabitants never select main characters. The add/edit form saves locally first and queues unacknowledged uploads. The
+proposed GET/PUT contract, identifiers, ordering, migration, retry, and
 synchronization limits are documented in [PLACE_DATA.md](PLACE_DATA.md).
 
 ## 10. Creating and editing a place
