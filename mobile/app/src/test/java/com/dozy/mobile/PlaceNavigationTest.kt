@@ -14,11 +14,13 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
+import com.dozy.mobile.navigation.GENERATION_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.PLACES_ROUTE
 import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
 import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
+import com.dozy.mobile.navigation.generationAccepted
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -41,6 +43,7 @@ class PlaceNavigationTest {
             graph =
                 createGraph(startDestination = MAIN_ROUTE) {
                     composable(MAIN_ROUTE) { }
+                    composable(GENERATION_ROUTE) { }
                     composable(CREATE_CHARACTER_ROUTE) { }
                     composable("character/{id}") { }
                     composable(CREATE_STORY_ROUTE) { }
@@ -48,6 +51,19 @@ class PlaceNavigationTest {
                     composable(PLACE_FORM_ROUTE) { }
                 }
         }
+
+    @Test fun readerEntryCarriesOnlyCastAndAcceptanceRemovesForm() {
+        val nav = controller()
+        nav.navigate("character/1")
+        val origin = nav.currentBackStackEntry
+        nav.openStory(null, listOf(Character.Id("1"), Character.Id("2")))
+        assertEquals("[\"1\",\"2\"]", nav.currentBackStackEntry?.arguments?.getString("cast"))
+        assertEquals(null, nav.currentBackStackEntry?.arguments?.getString("place"))
+        nav.generationAccepted("job-1")
+        assertEquals("job-1", nav.currentBackStackEntry?.arguments?.getString("jobId"))
+        nav.popBackStack()
+        assertSame(origin, nav.currentBackStackEntry)
+    }
 
     @Test fun characterDeletionReturnsToExistingMainAndRequestsCurrentCharacterList() {
         val nav = controller()
@@ -87,6 +103,11 @@ class PlaceNavigationTest {
                 null,
                 SelectPlace(FakePlaceRepository()),
                 ObserveCharacters(FakeCharacterRepository()),
+                testStartGeneration(),
+                com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
+                    com.dozy.mobile.feature.story.domain.model.GenerationJob
+                        .RequestKey("key")
+                },
             )
         draft.dispatch(CreateStoryAction.Request("A moonlit adventure"))
         val input = draft.uiState.value
@@ -143,6 +164,11 @@ class PlaceNavigationTest {
                 null,
                 SelectPlace(FakePlaceRepository()),
                 ObserveCharacters(FakeCharacterRepository()),
+                testStartGeneration(),
+                com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
+                    com.dozy.mobile.feature.story.domain.model.GenerationJob
+                        .RequestKey("key")
+                },
             )
         draft.dispatch(CreateStoryAction.Request("Moonlit adventure"))
         draft.dispatch(CreateStoryAction.Ending("Back home"))
