@@ -94,6 +94,20 @@ fun MainScreen(
         ) {
             composable(HOME_TAB) {
                 HomeScreen(
+                    onStories = {
+                        tabController.navigate(STORIES_TAB) {
+                            popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onCharacters = {
+                        tabController.navigate(CHARACTERS_TAB) {
+                            popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     onCreateStory = onCreateStory,
                     onGeneration = onGeneration,
                     onRead = onRead,

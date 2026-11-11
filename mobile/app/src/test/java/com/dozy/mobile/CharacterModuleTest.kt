@@ -17,7 +17,12 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterView
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.feature.home.di.homeModule
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
+import com.dozy.mobile.feature.place.data.database.PlaceDao
+import com.dozy.mobile.feature.place.di.BundledPlaces
+import com.dozy.mobile.feature.place.di.placeModule
 import com.dozy.mobile.feature.story.di.storyModule
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.HttpClient
@@ -55,11 +60,14 @@ class CharacterModuleTest {
                 module {
                     single { ApiConfig(baseUrl = null) }
                     single<CharacterDao> { dao }
+                    single<PlaceDao> { FakePlaceDao() }
+                    single { BundledPlaces(listOf(place("builtin:woods", "Woods", false))) }
+                    single<GenerationKeyGenerator> { GenerationKeyGenerator { GenerationJob.RequestKey("injected-key") } }
                     single<com.dozy.mobile.feature.story.data.database.GenerationDao> { FakeGenerationDao() }
                     single<HttpClient> { client }
                     single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
                 }
-            val app = koinApplication { modules(characterModule, homeModule, storyModule, platformModule) }
+            val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, platformModule) }
             val owner = ViewModelStore()
             val otherOwner = ViewModelStore()
             try {

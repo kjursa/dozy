@@ -105,7 +105,25 @@ A greeting, story creation action, recent stories, characters, and a **Places** 
 | Try again on a job card | Retry the job; once accepted, return to the generating state. |
 | Bottom tab | Corresponding main section. |
 
-The mockup bell is a shortcut for previewing completion. A separate notification center has not been designed.
+The mockup bell is a shortcut for previewing completion. A separate notification center has not been designed; the app omits this prototype control and its sample date.
+
+Home observes the existing shared collections and latest generation job through one
+HomeViewModel. It previews three stories (newest creation timestamp, then ID), six
+characters (the shared collection order: case-insensitive name, then ID), and three
+places (custom before predefined, then case-insensitive name and ID). See all opens
+the full collection. Bundled predefined places remain available offline and on first
+visit; the existing compact place card uses a 48 dp landscape placeholder until final
+thumbnail assets are agreed.
+
+Each section loads and fails independently and retains known content during refresh
+or failure. Retry restarts a failed observation and refreshes only that section;
+repeated refresh and generation retry taps are ignored while in progress. First-visit
+copy waits for successful local story/character reads and settled refresh attempts.
+Characters without stories show the first-story prompt. Resume refreshes the shared
+collections and reconciles the displayed job; Room updates also arrive while Home is
+open. Navigation carries stable IDs, preserves the existing main tab state, and
+returns to Home on ordinary Back. Home has no form draft to persist: content and job
+state are reconstructed from DozyDatabase. See the [F13 contract](STORY_GENERATION_API.md#home-composition-f13).
 
 ## 5. My Stories — story library
 
