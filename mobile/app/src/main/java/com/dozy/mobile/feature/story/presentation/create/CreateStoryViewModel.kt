@@ -1,22 +1,30 @@
 package com.dozy.mobile.feature.story.presentation.create
 
 import androidx.lifecycle.viewModelScope
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 internal class CreateStoryViewModel(
     persistence: StatePersistence<CreateStoryUiState>,
     initialPlaceId: String?,
     private val selectPlace: SelectPlace,
+    private val observeCharacters: ObserveCharacters,
 ) : MviViewModel<CreateStoryUiState, CreateStoryAction, CreateStoryEffect>(
         CreateStoryUiState(placeId = initialPlaceId, randomSetting = initialPlaceId == null),
         persistence,
     ) {
     init {
         resolveName()
+        viewModelScope.launch {
+            observeCharacters().catch { updateState { copy(characterLoadError = true) } }.collect {
+                updateState { copy(heroes = it.characters, characterLoadError = false) }
+            }
+        }
     }
 
     private fun resolveName() {
@@ -41,6 +49,7 @@ internal class CreateStoryViewModel(
                 updateState { copy(placeId = action.id, randomSetting = action.id == null, placeName = null) }
                 resolveName()
             }
+            is CreateStoryAction.AddHero -> updateState { copy(selectedHeroes = (selectedHeroes + action.id).distinct()) }
             is CreateStoryAction.Hero ->
                 updateState {
                     copy(

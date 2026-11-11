@@ -1,7 +1,6 @@
 package com.dozy.mobile.feature.story.presentation.create
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -45,28 +44,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.R
+import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.dozy.mobile.feature.character.domain.model.Character
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
-
-private data class StoryHero(
-    val id: String,
-    val name: Int,
-    val image: Int,
-)
-
-private val storyHeroes =
-    listOf(
-        StoryHero("oliver", R.string.oliver, R.drawable.character_oliver),
-        StoryHero("luna", R.string.luna, R.drawable.character_luna),
-        StoryHero("captain_finn", R.string.captain_finn, R.drawable.character_finn),
-    )
 
 @Composable
 internal fun CreateStoryScreen(
@@ -103,7 +89,13 @@ internal fun CreateStoryScreen(
                         )
                         TextButton(onClick = { dispatch(CreateStoryAction.ChoosePlace) }) { Text(stringResource(R.string.place_choose)) }
                     }
-                    HeroPicker(state.selectedHeroes, onToggle = { dispatch(CreateStoryAction.Hero(it)) }, onNewHero = onNewHero)
+                    if (state.characterLoadError) Text(stringResource(R.string.could_not_load_characters))
+                    HeroPicker(
+                        state.heroes,
+                        state.selectedHeroes,
+                        onToggle = { dispatch(CreateStoryAction.Hero(it)) },
+                        onNewHero = onNewHero,
+                    )
                     LengthPicker(state.selectedLength, onSelect = { dispatch(CreateStoryAction.Length(it)) })
                     StoryPrompts(
                         specialRequest = state.specialRequest,
@@ -220,6 +212,7 @@ private fun StoryIntro() {
 
 @Composable
 private fun HeroPicker(
+    heroes: List<Character>,
     selected: List<String>,
     onToggle: (String) -> Unit,
     onNewHero: () -> Unit,
@@ -238,27 +231,15 @@ private fun HeroPicker(
             )
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            storyHeroes.forEach { hero ->
-                val isSelected = hero.id in selected
+            heroes.forEach { hero ->
+                val isSelected = hero.id.value in selected
                 Column(
-                    modifier = Modifier.clickable { onToggle(hero.id) },
+                    modifier = Modifier.clickable { onToggle(hero.id.value) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
                     Box {
-                        Image(
-                            painterResource(hero.image),
-                            contentDescription = stringResource(hero.name),
-                            modifier =
-                                Modifier
-                                    .size(80.dp)
-                                    .shadow(5.dp, CircleShape)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .padding(3.dp)
-                                    .clip(CircleShape),
-                            contentScale = ContentScale.Crop,
-                        )
+                        AvatarImage(hero.avatar?.url?.value, hero.details.name.value, Modifier.size(80.dp))
                         if (isSelected) {
                             Surface(
                                 modifier = Modifier.align(Alignment.BottomEnd).size(24.dp),
@@ -276,7 +257,7 @@ private fun HeroPicker(
                         }
                     }
                     Text(
-                        stringResource(hero.name),
+                        hero.details.name.value,
                         style = MaterialTheme.typography.titleMedium,
                         color = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant,
                     )

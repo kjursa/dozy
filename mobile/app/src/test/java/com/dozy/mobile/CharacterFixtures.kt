@@ -19,7 +19,7 @@ internal val validDetails =
 internal fun character(
     id: String = "1",
     name: String = "Oliver",
-) = com.dozy.mobile.feature.character.domain.model.Character(
+) = Character(
     Character.Id(id),
     validDetails.copy(name = Character.Name(name)),
 )
@@ -32,11 +32,11 @@ internal class FakeCharacterRepository : CharacterRepository {
 
     override fun observe() = characters
 
-    override suspend fun save(character: com.dozy.mobile.feature.character.domain.model.Character): SavedCharacter {
+    override suspend fun save(character: Character): SavedCharacter {
         saves++
         beforeSave()
         failure?.let { throw it }
-        characters.value = characters.value + character
+        characters.value = characters.value.filterNot { it.id == character.id } + character
         return SavedCharacter(character, CharacterSync.PENDING)
     }
 }
@@ -50,3 +50,5 @@ internal fun createInput(name: String = "Oliver"): CreateCharacterInput =
             Character.Type.CHILD,
         ) as CreateCharacterValidation.Valid
     ).input
+
+fun avatar() = Character.Avatar(Character.Avatar.Id("asset"), Character.Avatar.Url("https://example.test/avatar.png"))
