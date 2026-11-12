@@ -24,6 +24,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
 class GenerationPersistenceTest {
+    @org.junit.Before fun initializeSharedResources() {
+        initializeComposeResourceProvider()
+    }
+
     @Test fun remoteSummariesSurviveRestartWithoutDownloadingFullStories() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()

@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -17,8 +16,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AvatarImage
+import com.dozy.mobile.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -43,10 +43,12 @@ private fun ReaderContent(
     Surface(color = background, contentColor = foreground) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = { dispatch(ReaderAction.Back) }) { Text(stringResource(R.string.generation_back), color = foreground) }
+                TextButton(
+                    onClick = { dispatch(ReaderAction.Back) },
+                ) { Text(stringResource(Res.string.generation_back), color = foreground) }
                 TextButton(
                     onClick = { dispatch(ReaderAction.Settings) },
-                ) { Text(stringResource(R.string.reader_settings), color = foreground) }
+                ) { Text(stringResource(Res.string.reader_settings), color = foreground) }
             }
             Column(
                 Modifier
@@ -65,18 +67,18 @@ private fun ReaderContent(
                 when {
                     state.loading -> CircularProgressIndicator()
                     state.story == null -> {
-                        Text(stringResource(if (state.unavailable) R.string.reader_unavailable else R.string.reader_missing))
-                        Button(onClick = { dispatch(ReaderAction.Retry) }) { Text(stringResource(R.string.reader_retry)) }
-                        TextButton(onClick = { dispatch(ReaderAction.Library) }) { Text(stringResource(R.string.reader_library)) }
+                        Text(stringResource(if (state.unavailable) Res.string.reader_unavailable else Res.string.reader_missing))
+                        Button(onClick = { dispatch(ReaderAction.Retry) }) { Text(stringResource(Res.string.reader_retry)) }
+                        TextButton(onClick = { dispatch(ReaderAction.Library) }) { Text(stringResource(Res.string.reader_library)) }
                     }
                     else -> {
-                        val story = state.story
+                        val story = requireNotNull(state.story)
                         Text(story.title, style = MaterialTheme.typography.headlineLarge)
                         Text(story.configuration.cast.joinToString { it.details.name.value })
-                        Text(stringResource(R.string.reader_minutes, story.readingMinutes()))
+                        Text(stringResource(Res.string.reader_minutes, story.readingMinutes()))
                         Box(
                             Modifier.fillMaxWidth().clickable(
-                                onClickLabel = stringResource(R.string.reader_enlarge),
+                                onClickLabel = stringResource(Res.string.reader_enlarge),
                             ) { dispatch(ReaderAction.Cover) },
                         ) {
                             AvatarImage(story.coverUrl, story.title, Modifier.fillMaxWidth().height(260.dp))
@@ -88,9 +90,9 @@ private fun ReaderContent(
                                 ReaderUiState.TextSize.LARGE -> 24
                             }
                         Text(story.text, style = MaterialTheme.typography.bodyLarge, fontSize = size.sp, lineHeight = (size * 1.6).sp)
-                        Text(stringResource(R.string.reader_end), style = MaterialTheme.typography.headlineSmall)
-                        Button(onClick = { dispatch(ReaderAction.NewAdventure) }) { Text(stringResource(R.string.reader_adventure)) }
-                        TextButton(onClick = { dispatch(ReaderAction.Library) }) { Text(stringResource(R.string.reader_library)) }
+                        Text(stringResource(Res.string.reader_end), style = MaterialTheme.typography.headlineSmall)
+                        Button(onClick = { dispatch(ReaderAction.NewAdventure) }) { Text(stringResource(Res.string.reader_adventure)) }
+                        TextButton(onClick = { dispatch(ReaderAction.Library) }) { Text(stringResource(Res.string.reader_library)) }
                     }
                 }
             }
@@ -106,7 +108,7 @@ private fun ReaderContent(
                 ) {
                     Surface(Modifier.fillMaxSize(), color = background, contentColor = foreground) {
                         Column(Modifier.safeDrawingPadding()) {
-                            TextButton(onClick = { dispatch(ReaderAction.Dismiss) }) { Text(stringResource(R.string.reader_close)) }
+                            TextButton(onClick = { dispatch(ReaderAction.Dismiss) }) { Text(stringResource(Res.string.reader_close)) }
                             AvatarImage(story.coverUrl, story.title, Modifier.fillMaxWidth().weight(1f))
                         }
                     }
@@ -123,15 +125,15 @@ private fun ReaderSettings(
 ) {
     AlertDialog(
         onDismissRequest = { dispatch(ReaderAction.Dismiss) },
-        title = { Text(stringResource(R.string.reader_settings)) },
+        title = { Text(stringResource(Res.string.reader_settings)) },
         text = {
             Column {
                 ReaderUiState.TextSize.entries.forEach { size ->
                     val label =
                         when (size) {
-                            ReaderUiState.TextSize.SMALL -> R.string.reader_small
-                            ReaderUiState.TextSize.MEDIUM -> R.string.reader_medium
-                            ReaderUiState.TextSize.LARGE -> R.string.reader_large
+                            ReaderUiState.TextSize.SMALL -> Res.string.reader_small
+                            ReaderUiState.TextSize.MEDIUM -> Res.string.reader_medium
+                            ReaderUiState.TextSize.LARGE -> Res.string.reader_large
                         }
                     Row(Modifier.fillMaxWidth().clickable { dispatch(ReaderAction.Size(size)) }) {
                         RadioButton(selected = state.textSize == size, onClick = { dispatch(ReaderAction.Size(size)) })
@@ -139,11 +141,11 @@ private fun ReaderSettings(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(R.string.reader_evening), Modifier.weight(1f))
+                    Text(stringResource(Res.string.reader_evening), Modifier.weight(1f))
                     Switch(checked = state.evening, onCheckedChange = { dispatch(ReaderAction.Evening(it)) })
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { dispatch(ReaderAction.Dismiss) }) { Text(stringResource(R.string.reader_close)) } },
+        confirmButton = { TextButton(onClick = { dispatch(ReaderAction.Dismiss) }) { Text(stringResource(Res.string.reader_close)) } },
     )
 }

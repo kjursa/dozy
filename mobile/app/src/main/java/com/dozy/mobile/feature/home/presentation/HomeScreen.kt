@@ -33,12 +33,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.SectionHeading
@@ -49,9 +46,12 @@ import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.generation.GenerationCard
 import com.dozy.mobile.feature.story.presentation.list.Story
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -109,9 +109,9 @@ private fun HomeContent(
             ) {
                 HomeJob(state, onAction)
                 if (state.firstVisit) {
-                    Text(stringResource(R.string.home_first_visit), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(Res.string.home_first_visit), style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = { onAction(HomeAction.AddCharacterClicked) }) {
-                        Text(stringResource(R.string.home_first_character))
+                        Text(stringResource(Res.string.home_first_character))
                     }
                 }
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
@@ -126,7 +126,7 @@ private fun HomeContent(
                         state.stories.isEmpty() &&
                         state.characters.isNotEmpty()
                     ) {
-                        Text(stringResource(R.string.home_first_story))
+                        Text(stringResource(Res.string.home_first_story))
                     }
                 }
                 Column {
@@ -153,8 +153,8 @@ private fun HomeHeader() {
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
-        Text(stringResource(R.string.good_evening), style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(R.string.ready_for_a_new_adventure), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(Res.string.ready_for_a_new_adventure), style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -172,12 +172,12 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 Text(
-                    stringResource(R.string.create_a_new_story),
+                    stringResource(Res.string.create_a_new_story),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
                 Text(
-                    stringResource(R.string.tell_us_who_the_heroes_are_and_we_ll),
+                    stringResource(Res.string.tell_us_who_the_heroes_are_and_we_ll),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
                 )
@@ -194,7 +194,7 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            stringResource(R.string.create_story),
+                            stringResource(Res.string.create_story),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -202,8 +202,8 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                 }
             }
             Image(
-                painterResource(R.drawable.story_moon),
-                contentDescription = stringResource(R.string.open_magical_book),
+                painterResource(Res.drawable.story_moon),
+                contentDescription = stringResource(Res.string.open_magical_book),
                 modifier = Modifier.size(92.dp),
                 contentScale = ContentScale.Crop,
             )
@@ -218,7 +218,7 @@ private fun StoriesSection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading(stringResource(R.string.library), stringResource(R.string.your_stories), onSeeAll)
+        SectionHeading(stringResource(Res.string.library), stringResource(Res.string.your_stories), onSeeAll)
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             stories.take(2).forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
         }
@@ -234,7 +234,7 @@ private fun CharactersSection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading(stringResource(R.string.cast), stringResource(R.string.your_characters), onSeeAll)
+        SectionHeading(stringResource(Res.string.cast), stringResource(Res.string.your_characters), onSeeAll)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
                 Column(
@@ -262,14 +262,14 @@ private fun CharactersSection(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Default.AddCircle,
-                            contentDescription = stringResource(R.string.add_character),
+                            contentDescription = stringResource(Res.string.add_character),
                             tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(28.dp),
                         )
                     }
                 }
                 Text(
-                    stringResource(R.string.add),
+                    stringResource(Res.string.add),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -288,7 +288,7 @@ private fun HomeSectionStatus(
     state.errors[section]?.let {
         Text(it.resolve(), color = MaterialTheme.colorScheme.error)
         TextButton(onClick = { onAction(HomeAction.RetrySection(section)) }, enabled = section !in state.refreshing) {
-            Text(stringResource(R.string.place_retry))
+            Text(stringResource(Res.string.place_retry))
         }
     }
 }
@@ -305,7 +305,7 @@ private fun HomeJob(
                 onAction(HomeAction.Generation(it))
             }
             TextButton(onClick = { onAction(HomeAction.ProgressClicked(job.id.value)) }) {
-                Text(stringResource(R.string.generation_progress))
+                Text(stringResource(Res.string.generation_progress))
             }
         }
     }
@@ -317,7 +317,7 @@ private fun HomePlaces(
     onAction: (HomeAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeading(stringResource(R.string.place_setting), stringResource(R.string.places_heading), {
+        SectionHeading(stringResource(Res.string.place_setting), stringResource(Res.string.places_heading), {
             onAction(HomeAction.SeeAllPlacesClicked)
         })
         HomeSectionStatus(state, HomeSection.PLACES, onAction)
@@ -325,7 +325,7 @@ private fun HomePlaces(
             PlaceCard(place, enabled = !state.navigating, onSelect = { onAction(HomeAction.PlaceSelected(place.id)) })
         }
         if (HomeSection.PLACES !in state.loading && HomeSection.PLACES !in state.errors && state.places.isEmpty()) {
-            Text(stringResource(R.string.place_empty))
+            Text(stringResource(Res.string.place_empty))
         }
     }
 }

@@ -125,12 +125,10 @@ fun DozyApp(
                     PlacesEffect.Back -> navController.popBackStack()
                     is PlacesEffect.Form ->
                         navController.navigate(
-                            if (effect.id ==
-                                null
-                            ) {
+                            if (effect.id == null) {
                                 "place-form"
                             } else {
-                                "place-form?id=${Uri.encode(effect.id.value)}"
+                                "place-form?id=${Uri.encode(requireNotNull(effect.id).value)}"
                             },
                         ) { launchSingleTop = true }
                     is PlacesEffect.Selected -> navController.usePlace(effect.id, draft)

@@ -78,11 +78,11 @@
 ## Foundation
 
 - Use `:foundation` for reusable coroutine utilities, presentation text, Compose foundations, theme entry points, spacing, and shared MVI infrastructure. Keep it independent of app features and branding.
-- Keep application-specific palette, fonts, assets, navigation, and screen behavior in `:app`.
+- Keep application-specific resources and presentation state/ViewModels in `:shared`. Android screens, palette/typography wiring and navigation remain in `:app` until KMP4; Foundation must stay independent of both.
 - Use Material 3 components directly unless the library adds distinct reusable behavior or styling; avoid wrappers that only duplicate Material APIs.
 - Before changing public library APIs, read `foundation/AGENTS.md` and update `foundation/README.md` as needed.
 
 ### Localized UI copy
 
-- Do not hardcode static user-facing strings in UI code, ViewModels, or UI state. Define them in `res/values/strings.xml`, use `stringResource` in Composables, and supply presentation-state copy through `UiText.Resource`, resolved when rendering.
+- Do not hardcode static user-facing strings in UI code, ViewModels, or UI state. Define screen copy in `shared/src/commonMain/composeResources/values/strings.xml`, use `org.jetbrains.compose.resources.stringResource` in Composables, and supply presentation-state copy through `UiText.Resource`, resolved when rendering. Use Compose `StringResource`, `PluralStringResource`, `DrawableResource` and `FontResource` rather than Android integer IDs. Keep only Android manifest/launcher/notification-channel copy in app `res/values/strings.xml`.
 - Keep actual user-entered and backend-provided content dynamic. Use stable IDs or enums for selections and saved state rather than translated display labels.

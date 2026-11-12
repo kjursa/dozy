@@ -20,18 +20,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.story.presentation.components.StoryCard
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -85,17 +85,17 @@ internal fun StoriesTabContent(
                     SectionHeading(state.collectionEyebrow.resolve(), state.collectionTitle.resolve())
                     Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                         Button(enabled = !state.navigating, onClick = { dispatch(StoriesAction.Create) }) {
-                            Text(stringResource(R.string.stories_create))
+                            Text(stringResource(Res.string.stories_create))
                         }
                         TextButton(enabled = !state.refreshing, onClick = { dispatch(StoriesAction.Refresh) }) {
-                            Text(stringResource(R.string.stories_refresh))
+                            Text(stringResource(Res.string.stories_refresh))
                         }
                     }
                     if (state.loading || state.refreshing) CircularProgressIndicator()
                     state.error?.let { Text(it.resolve()) }
-                    if (state.offline) Text(stringResource(R.string.stories_offline))
+                    if (state.offline) Text(stringResource(Res.string.stories_offline))
                     if (!state.loading && !state.refreshing && state.error == null && state.stories.isEmpty()) {
-                        Text(stringResource(R.string.stories_empty))
+                        Text(stringResource(Res.string.stories_empty))
                     }
                     state.stories.chunked(2).forEach { pair ->
                         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {

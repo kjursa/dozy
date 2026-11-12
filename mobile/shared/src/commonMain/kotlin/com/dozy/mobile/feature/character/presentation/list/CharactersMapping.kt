@@ -1,0 +1,5 @@
+package com.dozy.mobile.feature.character.presentation.list
+
+import com.dozy.mobile.feature.character.domain.model.Character
+
+fun Character.toCharacterListItem() = CharacterListItem(details.name.value, id.value, details.personality.value, avatar?.url?.value)

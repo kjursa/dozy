@@ -10,12 +10,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -37,19 +37,19 @@ internal fun GenerationScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.generation_heading), style = MaterialTheme.typography.headlineLarge)
+            Text(stringResource(Res.string.generation_heading), style = MaterialTheme.typography.headlineLarge)
             if (state.loading) CircularProgressIndicator()
             val job = state.jobs.find { it.id.value == jobId }
-            if (!state.loading && job == null) Text(stringResource(R.string.generation_unavailable))
+            if (!state.loading && job == null) Text(stringResource(Res.string.generation_unavailable))
             job?.let { GenerationCard(it, state.busy, dispatch) }
             state.error?.let { Text(it.resolve()) }
-            Text(stringResource(R.string.generation_background))
+            Text(stringResource(Res.string.generation_background))
             if (Build.VERSION.SDK_INT >= 33) {
                 TextButton(onClick = { permission.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
-                    Text(stringResource(R.string.generation_enable_notifications))
+                    Text(stringResource(Res.string.generation_enable_notifications))
                 }
             }
-            Button(onClick = onHome) { Text(stringResource(R.string.story_back_home)) }
+            Button(onClick = onHome) { Text(stringResource(Res.string.story_back_home)) }
         }
     }
 }
@@ -72,18 +72,18 @@ internal fun GenerationCard(
                 Button(
                     onClick = { dispatch(GenerationAction.Open(job.id)) },
                     enabled = !busy,
-                ) { Text(stringResource(R.string.generation_read)) }
+                ) { Text(stringResource(Res.string.generation_read)) }
             } else {
                 if (job.status == GenerationJob.Status.FAILED && !job.statusUnknown) {
                     Button(
                         onClick = { dispatch(GenerationAction.Retry(job.id)) },
                         enabled = !busy,
-                    ) { Text(stringResource(R.string.place_retry)) }
+                    ) { Text(stringResource(Res.string.place_retry)) }
                 }
                 TextButton(
                     onClick = { dispatch(GenerationAction.Refresh(job.id)) },
                     enabled = !busy,
-                ) { Text(stringResource(R.string.generation_refresh)) }
+                ) { Text(stringResource(Res.string.generation_refresh)) }
             }
         }
     }
@@ -99,7 +99,7 @@ internal fun HomeGeneration(
         state.homeJob?.let { job ->
             Column {
                 GenerationCard(job, state.busy, dispatch)
-                TextButton(onClick = { onProgress(job.id.value) }) { Text(stringResource(R.string.generation_progress)) }
+                TextButton(onClick = { onProgress(job.id.value) }) { Text(stringResource(Res.string.generation_progress)) }
                 state.error?.let { Text(it.resolve()) }
             }
         }

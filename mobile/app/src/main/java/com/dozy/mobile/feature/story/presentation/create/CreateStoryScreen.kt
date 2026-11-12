@@ -51,7 +51,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -61,13 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.resources.*
 import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun CreateStoryScreen(
@@ -142,7 +142,7 @@ internal fun CreateStoryContent(
                 modifier = Modifier.padding(vertical = 24.dp),
             ) {
                 Text(
-                    stringResource(R.string.story_cover_hint),
+                    stringResource(Res.string.story_cover_hint),
                     Modifier.padding(18.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Normal, lineHeight = 22.sp),
                     color = colors.onSurfaceVariant,
@@ -162,7 +162,7 @@ internal fun CreateStoryContent(
                 contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
             ) {
                 Text(
-                    stringResource(R.string.generate_my_story),
+                    stringResource(Res.string.generate_my_story),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
                 )
                 Spacer(Modifier.width(14.dp))
@@ -173,7 +173,7 @@ internal fun CreateStoryContent(
                 }
             }
             Text(
-                stringResource(R.string.story_submit_hint),
+                stringResource(Res.string.story_submit_hint),
                 Modifier.fillMaxWidth().padding(top = 13.dp),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal, lineHeight = 19.sp),
@@ -200,14 +200,14 @@ private fun StoryHeader(onBack: () -> Unit) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    stringResource(R.string.back),
+                    stringResource(Res.string.back),
                     Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
         Text(
-            stringResource(R.string.story_form_title),
+            stringResource(Res.string.story_form_title),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, letterSpacing = 1.5.sp),
         )
         Spacer(Modifier.size(48.dp))
@@ -217,17 +217,17 @@ private fun StoryHeader(onBack: () -> Unit) {
 @Composable
 private fun StoryIntro() {
     Text(
-        stringResource(R.string.story_form_eyebrow),
+        stringResource(Res.string.story_form_eyebrow),
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 17.sp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Text(
-        stringResource(R.string.story_form_heading),
+        stringResource(Res.string.story_form_heading),
         Modifier.padding(top = 12.dp),
         style = MaterialTheme.typography.headlineLarge.copy(fontSize = 34.sp, lineHeight = 38.sp, letterSpacing = (-1.3).sp),
     )
     Text(
-        stringResource(R.string.story_form_intro),
+        stringResource(Res.string.story_form_intro),
         Modifier.padding(top = 16.dp, bottom = 28.dp),
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -276,13 +276,15 @@ private fun HeroPicker(
     dispatch: (CreateStoryAction) -> Unit,
     onNewHero: () -> Unit,
 ) {
-    SectionTitle(stringResource(R.string.story_cast_title))
-    Hint(stringResource(R.string.story_cast_hint), Modifier.padding(bottom = 13.dp))
+    SectionTitle(stringResource(Res.string.story_cast_title))
+    Hint(stringResource(Res.string.story_cast_hint), Modifier.padding(bottom = 13.dp))
     when {
         state.characterLoading -> CircularProgressIndicator(Modifier.size(28.dp))
         state.characterLoadError -> {
-            Text(stringResource(R.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { dispatch(CreateStoryAction.ReloadCharacters) }) { Text(stringResource(R.string.story_retry_characters)) }
+            Text(stringResource(Res.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
+            TextButton(
+                onClick = { dispatch(CreateStoryAction.ReloadCharacters) },
+            ) { Text(stringResource(Res.string.story_retry_characters)) }
         }
         state.heroes.isEmpty() -> EmptyCastCard(onNewHero)
         else -> {
@@ -297,7 +299,11 @@ private fun HeroPicker(
             TextButton(onClick = onNewHero, contentPadding = PaddingValues(vertical = 12.dp)) {
                 Icon(Icons.Default.Add, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.story_add_character), color = DozyColors.textLink, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    stringResource(Res.string.story_add_character),
+                    color = DozyColors.textLink,
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         }
     }
@@ -367,12 +373,12 @@ private fun EmptyCastCard(onNewHero: () -> Unit) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.AutoAwesome, null, Modifier.size(30.dp), tint = DozyColors.inspirationAccent)
             Text(
-                stringResource(R.string.story_empty_cast_title),
+                stringResource(Res.string.story_empty_cast_title),
                 Modifier.padding(top = 12.dp),
                 style = MaterialTheme.typography.titleLarge,
             )
-            Hint(stringResource(R.string.story_empty_cast_description), Modifier.padding(vertical = 12.dp))
-            FilledTonalButton(onClick = onNewHero) { Text(stringResource(R.string.story_create_character)) }
+            Hint(stringResource(Res.string.story_empty_cast_description), Modifier.padding(vertical = 12.dp))
+            FilledTonalButton(onClick = onNewHero) { Text(stringResource(Res.string.story_create_character)) }
         }
     }
 }
@@ -382,19 +388,19 @@ private fun StoryModePicker(
     automatic: Boolean,
     onSelect: (Boolean) -> Unit,
 ) {
-    SectionTitle(stringResource(R.string.story_mode_title))
+    SectionTitle(stringResource(Res.string.story_mode_title))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ChoiceCard(
-            stringResource(R.string.story_own_idea),
-            stringResource(R.string.story_manual_hint),
+            stringResource(Res.string.story_own_idea),
+            stringResource(Res.string.story_manual_hint),
             !automatic,
             Modifier.fillMaxWidth(),
         ) {
             onSelect(false)
         }
         ChoiceCard(
-            stringResource(R.string.story_surprise),
-            stringResource(R.string.story_automatic_hint),
+            stringResource(Res.string.story_surprise),
+            stringResource(Res.string.story_automatic_hint),
             automatic,
             Modifier.fillMaxWidth(),
         ) {
@@ -451,7 +457,7 @@ private fun StoryPlacePicker(
     state: CreateStoryUiState,
     onChoose: () -> Unit,
 ) {
-    SectionTitle(stringResource(R.string.story_setting_title))
+    SectionTitle(stringResource(Res.string.story_setting_title))
     Surface(
         onClick = onChoose,
         shape = RoundedCornerShape(22.dp),
@@ -471,22 +477,22 @@ private fun StoryPlacePicker(
             Column(Modifier.weight(1f)) {
                 Text(
                     if (state.randomSetting) {
-                        stringResource(R.string.story_surprise)
+                        stringResource(Res.string.story_surprise)
                     } else {
                         state.placeName
-                            ?: stringResource(R.string.place_selected)
+                            ?: stringResource(Res.string.place_selected)
                     },
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Hint(
-                    stringResource(if (state.randomSetting) R.string.story_random_place_hint else R.string.story_change_place_hint),
+                    stringResource(if (state.randomSetting) Res.string.story_random_place_hint else Res.string.story_change_place_hint),
                     Modifier.padding(top = 6.dp),
                 )
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp), tint = DozyColors.navigationAccent)
         }
     }
-    Hint(stringResource(R.string.story_setting_hint), Modifier.padding(top = 7.dp))
+    Hint(stringResource(Res.string.story_setting_hint), Modifier.padding(top = 7.dp))
 }
 
 @Composable
@@ -495,9 +501,9 @@ private fun StoryPrompts(
     dispatch: (CreateStoryAction) -> Unit,
 ) {
     StoryInput(
-        stringResource(R.string.story_idea_label),
+        stringResource(Res.string.story_idea_label),
         state.specialRequest,
-        stringResource(R.string.story_idea_placeholder),
+        stringResource(Res.string.story_idea_placeholder),
         state.ideaError,
         120.dp,
     ) {
@@ -505,9 +511,9 @@ private fun StoryPrompts(
     }
     Spacer(Modifier.height(25.dp))
     StoryInput(
-        stringResource(R.string.story_ending_label),
+        stringResource(Res.string.story_ending_label),
         state.ending,
-        stringResource(R.string.story_ending_placeholder),
+        stringResource(Res.string.story_ending_placeholder),
         state.endingError,
         90.dp,
     ) {
@@ -528,7 +534,7 @@ private fun StoryInput(
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium)
         Text(
-            stringResource(R.string.story_optional),
+            stringResource(Res.string.story_optional),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -592,13 +598,13 @@ private fun AutomaticStoryCard() {
         Column(Modifier.fillMaxWidth().padding(26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.AutoAwesome, null, Modifier.size(42.dp), tint = DozyColors.inspirationAccent)
             Text(
-                stringResource(R.string.story_automatic_title),
+                stringResource(Res.string.story_automatic_title),
                 Modifier.padding(vertical = 14.dp),
                 style = MaterialTheme.typography.headlineSmall.copy(fontSize = 22.sp),
                 textAlign = TextAlign.Center,
             )
             Text(
-                stringResource(R.string.story_automatic_description),
+                stringResource(Res.string.story_automatic_description),
                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.Normal, lineHeight = 23.sp),
                 color = DozyColors.onInspiration,
                 textAlign = TextAlign.Center,
@@ -612,11 +618,11 @@ private fun LengthPicker(
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    SectionTitle(stringResource(R.string.story_length_title))
+    SectionTitle(stringResource(Res.string.story_length_title))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ChoiceCard(
-            stringResource(R.string.story_short_label),
-            stringResource(R.string.text_3_5_min),
+            stringResource(Res.string.story_short_label),
+            stringResource(Res.string.text_3_5_min),
             selected == 0,
             Modifier.weight(1f),
             compact = true,
@@ -624,8 +630,8 @@ private fun LengthPicker(
             onSelect(0)
         }
         ChoiceCard(
-            stringResource(R.string.story_long_label),
-            stringResource(R.string.text_8_12_min),
+            stringResource(Res.string.story_long_label),
+            stringResource(Res.string.text_8_12_min),
             selected == 1,
             Modifier.weight(1f),
             compact = true,

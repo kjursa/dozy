@@ -16,9 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
+import com.dozy.mobile.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun AmbientGlow(modifier: Modifier = Modifier) {
@@ -62,7 +62,7 @@ internal fun SectionHeading(
             Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         }
         Text(
-            stringResource(R.string.see_all),
+            stringResource(Res.string.see_all),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.secondary,
             modifier = Modifier.padding(bottom = 3.dp).clickable(onClick = onSeeAll),
