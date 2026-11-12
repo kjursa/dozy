@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
@@ -41,6 +42,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koin.core.annotation.KoinInternalApi
 import org.koin.core.parameter.parametersOf
@@ -102,6 +104,7 @@ class CharacterModuleTest {
                         )
                     }
                 assertSame(app.koin.get<CharacterRepository>(), app.koin.get<CharacterRepository>())
+                assertTrue(app.koin.get<CharacterRepository>() is FakeAvatarGenerator)
                 val home =
                     resolveViewModel(HomeViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
                 val characters =

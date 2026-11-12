@@ -43,7 +43,7 @@ not an existing backend contract. Before enabling it, agree endpoint semantics,
 authentication, validation, and synchronization/retry behavior with the backend.
 Both views observe the durable local collection; the list can refresh it using the F3 proposal below.
 
-Generated avatar references use the F2 proposal documented below; an unconfigured backend cannot generate a preview.
+Generated avatar references use the F2 proposal documented below. When `ApiConfig.baseUrl` is null, Koin wraps the local-first repository with `FakeAvatarGenerator`: it returns a bundled example avatar after a cancellable delay without making network requests or saving a character. The image is selected by character type, not generated from the descriptions. Saving remains an explicit action backed by Room. Bundled references (`bundled-avatar://...`) are local-only and remain displayable after restart. Configuring a backend restores real generation; failed remote generation never falls back to fake success. Existing bundled previews should be regenerated before syncing to a real backend, whose asset contract requires HTTPS URLs.
 
 ## Dependency injection and KMP migration
 
@@ -142,9 +142,10 @@ ViewModels from the serialized snapshot; device process-death checks have not be
 
 The following proposal extends the character save contract; it does not imply any
 implemented backend/generator routes. `ApiConfig.baseUrl = null` disables all
-requests. Generation then returns `Unavailable`, without creating an asset,
-character, or success preview. A previously obtained avatar can still be saved
-locally while the network is unavailable.
+requests. The Ktor implementation then returns `Unavailable`; the application DI
+uses the bundled `FakeAvatarGenerator` described above for local previews instead.
+Neither generator automatically saves a character. A previously obtained avatar
+can still be saved locally while the network is unavailable.
 
 - `POST /character-avatars`: JSON `{ "type": "CHILD", "personality": "Curious",
   "appearance": "Green hat" }`. Uses the current validated input, without photos.

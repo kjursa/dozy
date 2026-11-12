@@ -22,3 +22,19 @@ internal val DozyColorScheme =
         error = Color(0xFFD63031),
         onError = Color.White,
     )
+
+internal object DozyColors {
+    val selectedBorder = Color(0xFFDB6963)
+    val selectedBackground = Color(0xFFFFF6EE)
+    val selectionControl = Color(0xFFD65F5A)
+    val inspirationBackground = Color(0xFFE4F1E7)
+    val onInspiration = Color(0xFF52695D)
+    val inspirationAccent = Color(0xFF9A778E)
+    val informationBackground = Color(0xFFF1EADC)
+    val emptyStateBackground = Color(0xFFEEE9DF)
+    val textLink = Color(0xFF267C76)
+    val settingIconBackground = Color(0xFFE4EEE0)
+    val settingIcon = Color(0xFF557E62)
+    val navigationAccent = Color(0xFF568875)
+    val placeholder = Color(0xFF868B88)
+}
