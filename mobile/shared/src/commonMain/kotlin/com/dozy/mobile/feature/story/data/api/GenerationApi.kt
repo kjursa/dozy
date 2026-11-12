@@ -8,8 +8,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.io.IOException
 import kotlinx.serialization.Serializable
-import java.io.IOException
 
 @Serializable
 data class GenerationRequestDto(

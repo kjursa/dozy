@@ -19,8 +19,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
 
 class CharacterAvatarApiTest {
     @Test fun submitsDescriptionsThenPollsSameJobUntilReady() =

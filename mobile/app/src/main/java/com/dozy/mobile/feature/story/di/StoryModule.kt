@@ -1,35 +1,19 @@
 package com.dozy.mobile.feature.story.di
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
-import com.dozy.mobile.feature.story.data.api.GenerationApi
-import com.dozy.mobile.feature.story.data.api.KtorGenerationApi
-import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
-import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.generation.GenerationViewModel
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import com.dozy.mobile.feature.story.presentation.reader.SavedStoryViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
-import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 internal val storyModule =
     module {
-        single<GenerationApi> { KtorGenerationApi(get(), get()) }
-        single<GenerationRepository> { DefaultGenerationRepository(get(), get()) }
-        factoryOf(::StartGeneration)
-        factoryOf(::ObserveGenerations)
-        factoryOf(::ObserveSavedStories)
-        factoryOf(::ObserveStoryLibrary)
-        factoryOf(::RefreshStories)
-        factoryOf(::ReadStory)
-        factoryOf(::RefreshGeneration)
-        factoryOf(::RetryGeneration)
-        factoryOf(::ReconcileGenerations)
+        includes(storyDataModule)
         viewModelOf(::GenerationViewModel)
         viewModelOf(::SavedStoryViewModel)
         viewModel {

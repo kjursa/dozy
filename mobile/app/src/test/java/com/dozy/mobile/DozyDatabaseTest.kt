@@ -1,9 +1,11 @@
 package com.dozy.mobile
 
 import android.content.Context
+import androidx.room3.Room
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
+import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.di.androidModule
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
@@ -12,6 +14,8 @@ import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import com.dozy.mobile.feature.place.data.toEntity
+import com.dozy.mobile.feature.story.data.database.GenerationEntity
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -33,6 +37,56 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class DozyDatabaseTest {
+    @Test fun extractionReopensTheInstalledVersionEightDatabaseAtTheSamePath() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            context.deleteDatabase("dozy.db")
+            val character = character().toEntity(true)
+            val place = place().toEntity()
+            val generation = GenerationEntity("existing-key", "immutable-snapshot", "existing-job", "READY", result = "saved-story")
+            // The builder used before extraction writes the installed database.
+            val original = Room.databaseBuilder<DozyDatabase>(context, "dozy.db").setDriver(AndroidSQLiteDriver()).build()
+            try {
+                original.characters().upsert(character)
+                original.places().upsert(place)
+                original.generations().upsert(generation)
+            } finally {
+                original.close()
+            }
+            val path = context.getDatabasePath("dozy.db")
+            val identity =
+                android.database.sqlite.SQLiteDatabase
+                    .openDatabase(
+                        path.path,
+                        null,
+                        android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
+                    ).use {
+                        assertEquals(8, it.version)
+                        it.rawQuery("SELECT identity_hash FROM room_master_table WHERE id = 42", null).use { cursor ->
+                            assertTrue(cursor.moveToFirst())
+                            cursor.getString(0)
+                        }
+                    }
+            // The production shared Android boundary must find that same file and data.
+            val extracted = androidDatabaseBuilder(context).setDriver(AndroidSQLiteDriver()).build()
+            try {
+                assertEquals(
+                    character,
+                    extracted
+                        .characters()
+                        .observe()
+                        .first()
+                        .single(),
+                )
+                assertEquals(place, extracted.places().find(place.id))
+                assertEquals(generation, extracted.generations().find("existing-key"))
+                assertEquals("2978184b9f87fa22118d5550770355e6", identity)
+            } finally {
+                extracted.close()
+                context.deleteDatabase("dozy.db")
+            }
+        }
+
     @Test fun deletionTombstoneSurvivesReopenAndProtectsOnlyItsOwnId() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()

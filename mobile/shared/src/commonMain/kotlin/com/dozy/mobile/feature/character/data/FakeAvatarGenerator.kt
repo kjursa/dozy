@@ -6,7 +6,7 @@ import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import kotlinx.coroutines.delay
 
 /** Local preview generator; every persistence operation still uses the real repository. */
-internal class FakeAvatarGenerator(
+class FakeAvatarGenerator(
     private val repository: CharacterRepository,
 ) : CharacterRepository by repository {
     override suspend fun generateAvatar(input: CreateCharacterInput): Character.Avatar {

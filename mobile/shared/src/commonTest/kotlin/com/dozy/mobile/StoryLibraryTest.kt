@@ -13,8 +13,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
 
 class StoryLibraryTest {
     private fun summary(
@@ -80,7 +79,7 @@ class StoryLibraryTest {
             summary("ok").copy(title = ""),
             summary("ok").copy(coverUrl = "http://bad"),
         )) {
-            assertThrows(IllegalArgumentException::class.java) { bad.toDomain() }
+            assertFailsWith<IllegalArgumentException> { bad.toDomain() }
         }
     }
 

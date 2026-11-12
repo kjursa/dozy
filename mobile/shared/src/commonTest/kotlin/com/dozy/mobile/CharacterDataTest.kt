@@ -23,8 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
-import org.junit.Assert.*
-import org.junit.Test
+import kotlin.test.*
 
 class CharacterDataTest {
     @Test fun mapsAllFieldsWithoutSwappingDescriptions() {

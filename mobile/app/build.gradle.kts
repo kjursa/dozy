@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
 }
@@ -53,7 +52,6 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.room.runtime)
-    ksp(libs.room.compiler)
     implementation(libs.sqlite.bundled)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
@@ -76,8 +74,6 @@ dependencies {
     testImplementation(libs.sqlite.framework)
     testImplementation(libs.kotlinx.coroutines.test)
 }
-
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 kotlin {
     jvmToolchain(21)
