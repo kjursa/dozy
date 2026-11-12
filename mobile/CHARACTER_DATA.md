@@ -6,8 +6,8 @@ or character validation contract to mirror. This change does not add backend rou
 
 Characters are stored in a shared Room 3 `DozyDatabase` (`dozy.db`), with string
 identity, name, personality, appearance, type, and a local `pendingSync` flag. Room
-3.0.3 compiles with the existing Kotlin 2.2.20 / AGP 8.13.2 setup using KSP
-2.2.20-2.0.4. The DAO uses Flow and suspend operations; the Android construction
+3.0.3 compiles with the existing Kotlin 2.3.21 / AGP 8.13.2 setup using KSP
+2.3.12. The DAO uses Flow and suspend operations; the Android construction
 boundary supplies a bundled SQLite driver. The exported v1 schema is checked in.
 The domain and data operations use Kotlin types and coroutine APIs. Android-specific
 construction (including the Ktor Android engine) lives in `di/AndroidModule.kt`.
@@ -62,7 +62,7 @@ checks every character field after reopening, and verifies Koin closes the datab
 The SQLite driver is injected at the Android boundary: production uses the bundled
 driver, while Robolectric supplies its native framework SQLite driver for JVM tests.
 
-Koin 4.1.1 is pinned for the current Kotlin 2.2.20 toolchain. The multiplatform
+Koin 4.1.1 is pinned for the current Kotlin 2.3.21 toolchain. The multiplatform
 `koin-compose-viewmodel` API can move with the shared graph; only Android startup
 and platform construction use `koin-android`. A future KMP migration will also
 need to move Android presentation resources out of any shared ViewModels.
