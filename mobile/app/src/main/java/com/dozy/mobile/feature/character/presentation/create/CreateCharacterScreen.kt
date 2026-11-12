@@ -47,30 +47,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 
 private data class HeroType(
     val value: String,
-    val label: Int,
+    val label: org.jetbrains.compose.resources.StringResource,
     val icon: ImageVector,
 )
 
 private val heroTypes =
     listOf(
-        HeroType("Child", R.string.child, Icons.Default.Face),
-        HeroType("Animal", R.string.animal, Icons.Default.Pets),
-        HeroType("Fantasy", R.string.fantasy, Icons.Default.AutoAwesome),
-        HeroType("Other", R.string.other, Icons.Default.Stars),
+        HeroType("Child", Res.string.child, Icons.Default.Face),
+        HeroType("Animal", Res.string.animal, Icons.Default.Pets),
+        HeroType("Fantasy", Res.string.fantasy, Icons.Default.AutoAwesome),
+        HeroType("Other", Res.string.other, Icons.Default.Stars),
     )
 
 @Composable
@@ -109,16 +109,16 @@ internal fun CreateCharacterScreen(
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
                 ) {
                     if (state.loading) CircularProgressIndicator()
-                    if (state.unavailable) Text(stringResource(R.string.character_unavailable))
+                    if (state.unavailable) Text(stringResource(Res.string.character_unavailable))
                     state.loadError?.let {
                         Text(it.resolve(), color = MaterialTheme.colorScheme.error)
                         OutlinedButton(onClick = { dispatch(CreateCharacterAction.RetryLoadClicked) }) {
-                            Text(stringResource(R.string.characters_retry))
+                            Text(stringResource(Res.string.characters_retry))
                         }
                     }
                     CharacterPreview(name, state.avatarUrl)
-                    if (state.avatarOutdated) Text(stringResource(R.string.avatar_earlier_description))
-                    if (state.editingId == null && name.isBlank()) Text(stringResource(R.string.character_inspiration))
+                    if (state.avatarOutdated) Text(stringResource(Res.string.avatar_earlier_description))
+                    if (state.editingId == null && name.isBlank()) Text(stringResource(Res.string.character_inspiration))
                     state.generationError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     HeroTypePicker(
                         state.selectedType,
@@ -138,10 +138,10 @@ internal fun CreateCharacterScreen(
                         onAppearanceChange = { dispatch(CreateCharacterAction.AppearanceChanged(it)) },
                     )
                     when (state.saveStatus) {
-                        SaveStatus.SAVING -> Text(stringResource(R.string.saving_character))
+                        SaveStatus.SAVING -> Text(stringResource(Res.string.saving_character))
                         SaveStatus.FAILURE ->
                             Text(
-                                stringResource(R.string.character_save_failed),
+                                stringResource(Res.string.character_save_failed),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         SaveStatus.EDITING -> Unit
@@ -204,7 +204,7 @@ private fun CharacterHeader(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
+                    contentDescription = stringResource(Res.string.back),
                     tint = MaterialTheme.colorScheme.secondary,
                 )
             }
@@ -226,7 +226,7 @@ private fun CharacterHeader(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    stringResource(if (editing) R.string.character_edit else R.string.new_character),
+                    stringResource(if (editing) Res.string.character_edit else Res.string.new_character),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -243,8 +243,8 @@ private fun CharacterPreview(
 ) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         AvatarImage(avatarUrl, name, Modifier.size(220.dp))
-        Text(name.ifBlank { stringResource(R.string.your_hero) }, style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(R.string.avatar_description_hint))
+        Text(name.ifBlank { stringResource(Res.string.your_hero) }, style = MaterialTheme.typography.headlineLarge)
+        Text(stringResource(Res.string.avatar_description_hint))
     }
 }
 
@@ -256,7 +256,7 @@ private fun HeroTypePicker(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         Text(
-            stringResource(R.string.who_is_this_hero),
+            stringResource(Res.string.who_is_this_hero),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -322,13 +322,13 @@ private fun CharacterDetails(
         Column(Modifier.padding(UiSpacing.x3), verticalArrangement = Arrangement.spacedBy(UiSpacing.x3)) {
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
-                    stringResource(R.string.character_name),
+                    stringResource(Res.string.character_name),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 CharacterInput(
                     enabled = enabled,
-                    placeholder = stringResource(R.string.character_name_placeholder),
+                    placeholder = stringResource(Res.string.character_name_placeholder),
                     value = name,
                     onValueChange = onNameChange,
                     singleLine = true,
@@ -337,13 +337,13 @@ private fun CharacterDetails(
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
-                    stringResource(R.string.personality),
+                    stringResource(Res.string.personality),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 CharacterInput(
                     enabled = enabled,
-                    placeholder = stringResource(R.string.character_personality_placeholder),
+                    placeholder = stringResource(Res.string.character_personality_placeholder),
                     value = personality,
                     onValueChange = onPersonalityChange,
                     minimumHeight = 96.dp,
@@ -352,13 +352,13 @@ private fun CharacterDetails(
             }
             Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(
-                    stringResource(R.string.appearance),
+                    stringResource(Res.string.appearance),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 CharacterInput(
                     enabled = enabled,
-                    placeholder = stringResource(R.string.character_appearance_placeholder),
+                    placeholder = stringResource(Res.string.character_appearance_placeholder),
                     value = appearance,
                     onValueChange = onAppearanceChange,
                     minimumHeight = 112.dp,
@@ -435,7 +435,7 @@ private fun CharacterActions(
                 if (generating) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    Text(stringResource(if (hasAvatar) R.string.avatar_regenerate else R.string.avatar_generate))
+                    Text(stringResource(if (hasAvatar) Res.string.avatar_regenerate else Res.string.avatar_generate))
                 }
             }
             if (saving) {
@@ -453,7 +453,7 @@ private fun CharacterActions(
                     Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(UiSpacing.x1))
                     Text(
-                        stringResource(R.string.save_character),
+                        stringResource(Res.string.save_character),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimary,
                         maxLines = 1,

@@ -69,32 +69,47 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Koin modules also live here. Repositories directly use DAOs and APIs.
   Packages and constructors are preserved. IDs remain unchanged. ID generators
   and StoryCompletionNotifier are injected contracts with Android implementations
-  in `:app`; no iOS notification implementation is supplied.
-- `:foundation/commonMain`: the existing cancellation-safe runCatchingSuspend.
-  Shared domain consumes this helper through the foundation dependency.
-- `:foundation/androidMain`: Compose, MVI, UiText and state persistence until KMP3.
+  in `:app`; iOS uses an explicitly unsupported notifier returning false.
+- `:foundation/commonMain`: cancellation-safe runCatchingSuspend, Compose theme/spacing,
+  MVI, UiText with Compose StringResource and resolver, and typed JSON state persistence.
+  Lifecycle 2.10.0 and SavedState 1.4.0 provide supported multiplatform APIs.
 - `:shared/androidMain`: the database builder keeps Android's existing `dozy.db`
   path. `:shared/iosMain`: Documents-directory Room builder and Darwin engine DI.
   Both platforms use bundled SQLite, generated Room constructors, and the same
   HTTP JSON configuration and 5000 ms request timeout. Koin closes the singleton
   database/client, and the client closes its owned engine.
-- `:app`: Android presentation DI, localized bundled place catalog, ID generators,
+- `:shared/commonMain`: all feature ViewModels, state, actions/effects, presentation
+  mapping and feature Koin modules. `composeResources` owns screen strings/plurals,
+  artwork and variable fonts; exported accessors use `com.dozy.mobile.resources`.
+  Android screens resolve these shared resources directly without duplicating the catalog.
+- `:app`: Android navigation/screens, localized bundled place catalog, ID generators,
   WorkManager and notifications. Feature modules include shared data modules.
   The null-base-URL fake generator preserves `bundled-avatar://` references;
-  only Android presentation resolves them to drawable resources. KMP4 owns UI.
+  Android presentation resolves them to shared DrawableResource values. KMP4 owns UI.
+  App res retains manifest and notification-channel/title strings; notification body
+  uses the shared resource. Typography still uses all original variable font weights.
 - `shared/schemas`: unchanged database package, version 8, identity hash and all
   eight schemas; automatic migrations 1 through 8 are preserved. KSP runs per
   Android/iOS target. Android generated sources are wired explicitly for the
   pinned KSP/AGP versions, including on clean builds.
 - iOS hosts can include `iosDataModule(ApiConfig(...), BundledPlaces(...))` and
   supply `CharacterIdGenerator`, `PlaceIdGenerator`, `GenerationKeyGenerator`
-  when resolving write use cases. No iOS notification or scheduler is registered.
+  when resolving write use cases. Include `iosPresentationModule` for the shared
+  feature graph and the unsupported notification adapter. No iOS scheduler exists.
+  Pass a `SavedStateHandle` containing route arguments with `parametersOf(handle)`
+  when creating a route ViewModel. Retain it with its navigation owner; the default
+  factory creates fresh handles for argument-free forms. SavedStatePersistence uses
+  that in-memory handle on iOS with no cross-relaunch or process-death guarantee.
+  Android keeps owner-provided SavedStateHandle and the same STATE key/JSON format.
 - `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
-  Repository, mapping, fake-avatar and MockEngine tests also run from commonTest.
+  Repository, mapping, fake-avatar, MockEngine, pure ViewModel/MVI and feature-graph
+  lifetime/argument tests also run from commonTest.
   Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
   so Android tests reuse domain and DAO fakes. Real Room migration/reopen and
   mixed data/presentation integration tests remain Android-hosted;
-  foundation SavedStateHandle tests remain in `androidHostTest`.
+  foundation SavedStateHandle tests remain in `androidHostTest`. Mixed form/reader
+  recreation tests stay Android-hosted and reuse common fixtures.
+  SharedResourcesTest checks Android loading, formatting, plurals and XML escapes.
 
 From the repository root:
 

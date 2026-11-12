@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.dozy.mobile.R
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.painterResource
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
@@ -29,9 +29,9 @@ internal fun AvatarImage(
 ) {
     val bundled =
         when (url) {
-            "bundled-avatar://character_oliver" -> R.drawable.character_oliver
-            "bundled-avatar://character_luna" -> R.drawable.character_luna
-            "bundled-avatar://character_finn" -> R.drawable.character_finn
+            "bundled-avatar://character_oliver" -> Res.drawable.character_oliver
+            "bundled-avatar://character_luna" -> Res.drawable.character_luna
+            "bundled-avatar://character_finn" -> Res.drawable.character_finn
             else -> null
         }
     if (bundled != null) {

@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     debugImplementation(libs.ui.tooling)
     testImplementation(libs.junit)
+    testImplementation(kotlin("test-junit"))
     testImplementation(libs.robolectric)
     testImplementation(libs.sqlite.framework)
     testImplementation(libs.kotlinx.coroutines.test)

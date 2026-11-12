@@ -30,17 +30,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -95,20 +95,20 @@ internal fun CharactersTabContent(
                     if (state.refreshing) CircularProgressIndicator(Modifier.size(24.dp))
                     if (state.characterLoadError) {
                         Text(
-                            stringResource(R.string.could_not_load_characters),
+                            stringResource(Res.string.could_not_load_characters),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
-                    if (state.offline) Text(stringResource(R.string.characters_offline))
+                    if (state.offline) Text(stringResource(Res.string.characters_offline))
                     TextButton(onClick = { onAction(CharactersAction.Refresh) }, enabled = !state.refreshing) {
-                        Text(stringResource(if (state.characterLoadError) R.string.characters_retry else R.string.characters_refresh))
+                        Text(stringResource(if (state.characterLoadError) Res.string.characters_retry else Res.string.characters_refresh))
                     }
                     if (state.characters.isEmpty() && !state.characterLoadError && !state.refreshing) {
                         Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                            Text(stringResource(R.string.characters_empty_title), style = MaterialTheme.typography.headlineSmall)
-                            Text(stringResource(R.string.characters_empty_description))
+                            Text(stringResource(Res.string.characters_empty_title), style = MaterialTheme.typography.headlineSmall)
+                            Text(stringResource(Res.string.characters_empty_description))
                             Button(onClick = { onAction(CharactersAction.AddCharacterClicked) }) {
-                                Text(stringResource(R.string.add_a_new_character))
+                                Text(stringResource(Res.string.add_a_new_character))
                             }
                         }
                     }
@@ -179,12 +179,12 @@ private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
             )
             Column {
                 Text(
-                    stringResource(R.string.add_a_new_character),
+                    stringResource(Res.string.add_a_new_character),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    stringResource(R.string.create_another_hero_for_your_stories),
+                    stringResource(Res.string.create_another_hero_for_your_stories),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

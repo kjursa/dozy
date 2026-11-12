@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
@@ -14,6 +16,7 @@ kotlin {
         namespace = "com.dozy.shared"
         compileSdk = 36
         minSdk = 26
+        androidResources.enable = true
         withHostTestBuilder {}.configure {}
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
@@ -39,6 +42,9 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            api(libs.compose.resources)
+            api(libs.lifecycle.viewmodel.savedstate)
+            implementation(libs.koin.compose.viewmodel)
             implementation(project(":foundation"))
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
@@ -78,3 +84,8 @@ kotlin.sourceSets
     .kotlin
     .srcDir(layout.buildDirectory.dir("generated/ksp/android/androidMain/kotlin"))
 tasks.named("compileAndroidMain") { dependsOn("kspAndroidMain") }
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "com.dozy.mobile.resources"
+}

@@ -9,10 +9,12 @@ A small reusable Kotlin Multiplatform library for coroutine utilities, presentat
 - `com.kjursa.foundation.compose.mvi`: reusable state, actions, effects, and screen binding.
 - `com.kjursa.foundation.compose.theme`: theme entry point and spacing scale.
 
-The Android, iosArm64 and iosSimulatorArm64 targets share coroutine helpers in
-`commonMain` and their tests in `commonTest`. Compose, MVI, UiText and state
-persistence remain in `androidMain`, with Android tests in `androidHostTest`,
-until KMP3. This library has no app-specific dependencies.
+The Android, iosArm64 and iosSimulatorArm64 targets share coroutine helpers, Compose,
+MVI, UiText and SavedStatePersistence in `commonMain`. Portable tests live in
+`commonTest`; Android SavedStateHandle restoration integration stays in
+`androidHostTest`. Lifecycle is pinned to org.jetbrains.androidx.lifecycle 2.10.0
+and SavedState to org.jetbrains.androidx.savedstate 1.4.0. This library has no
+app-specific dependencies.
 
 ## Current API
 
@@ -20,8 +22,9 @@ until KMP3. This library has no app-specific dependencies.
   `CancellationException`, and allows unrecoverable errors to propagate.
 - `UiText.Resource` represents a string resource with optional formatting arguments;
   `UiText.Plain` represents runtime text. The Composable `UiText.resolve()` extension
-  uses current Android resources/locale or returns the plain value. Consuming apps
-  supply their own resource IDs; the library contains no Dozy strings.
+  uses Compose Multiplatform resources and the current locale or returns the plain
+  value. Consuming apps supply their own `StringResource` values and formatting
+  arguments; the library contains no Dozy strings.
 
 - `FoundationTheme` accepts Material 3 color, typography, and shape configuration.
 - `UiSpacing` provides an eight-dp spacing scale (`x1` through `x8`).
@@ -133,5 +136,10 @@ save propagate so programming errors are visible. Each adapter owns its key.
 
 This follows SavedStateHandle's lifecycle: it helps restore a system-recreated
 screen and is not durable draft storage after intentional dismissal or app data
-removal. Large data belongs in a repository. The persistence interface has no
-Android/Compose imports; platform code can supply another implementation later.
+removal. Large data belongs in a repository. SavedStateHandle is a supported
+multiplatform API, so the adapter and its exact
+`KSerializer<State>` typing are shared. Android Koin obtains the handle from the
+navigation owner and retains existing process-death wiring. On iOS a future host
+can inject `SavedStatePersistence(SavedStateHandle(), State.serializer())` and
+retain that handle with its owner. This is only an in-memory adapter: no iOS
+process-death or cross-relaunch persistence is promised.

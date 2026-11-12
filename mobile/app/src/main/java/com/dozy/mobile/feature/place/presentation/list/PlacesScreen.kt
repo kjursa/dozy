@@ -24,12 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PlacesScreen(
@@ -50,30 +50,30 @@ internal fun PlacesScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            TextButton(onClick = { dispatch(PlacesAction.Back) }) { Text(stringResource(R.string.back)) }
-            Text(stringResource(R.string.places_heading), style = MaterialTheme.typography.labelLarge)
-            Text(stringResource(R.string.places_title), style = MaterialTheme.typography.headlineLarge)
-            Text(stringResource(R.string.places_intro))
+            TextButton(onClick = { dispatch(PlacesAction.Back) }) { Text(stringResource(Res.string.back)) }
+            Text(stringResource(Res.string.places_heading), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(Res.string.places_title), style = MaterialTheme.typography.headlineLarge)
+            Text(stringResource(Res.string.places_intro))
             OutlinedButton(
                 onClick = { dispatch(PlacesAction.Surprise) },
                 enabled = !state.navigating,
-            ) { Text(stringResource(R.string.place_surprise)) }
-            TextButton(onClick = { dispatch(PlacesAction.Add) }, enabled = !state.navigating) { Text(stringResource(R.string.place_add)) }
+            ) { Text(stringResource(Res.string.place_surprise)) }
+            TextButton(onClick = { dispatch(PlacesAction.Add) }, enabled = !state.navigating) { Text(stringResource(Res.string.place_add)) }
             if (state.loading) CircularProgressIndicator()
             state.error?.let {
                 Text(it.resolve(), color = MaterialTheme.colorScheme.error)
                 TextButton(
                     onClick = { dispatch(PlacesAction.Retry) },
                     enabled = !state.loading,
-                ) { Text(stringResource(R.string.place_retry)) }
+                ) { Text(stringResource(Res.string.place_retry)) }
             }
-            if (!state.hasCustom) Text(stringResource(R.string.place_no_custom))
+            if (!state.hasCustom) Text(stringResource(Res.string.place_no_custom))
             if (!state.loading && state.places.isEmpty()) {
-                Text(stringResource(R.string.place_empty))
+                Text(stringResource(Res.string.place_empty))
                 if (state.error ==
                     null
                 ) {
-                    TextButton(onClick = { dispatch(PlacesAction.Retry) }) { Text(stringResource(R.string.place_retry)) }
+                    TextButton(onClick = { dispatch(PlacesAction.Retry) }) { Text(stringResource(Res.string.place_retry)) }
                 }
             }
             state.places.forEach { place ->
@@ -108,7 +108,7 @@ internal fun PlaceCard(
                     Text(place.description.value, style = MaterialTheme.typography.bodyMedium)
                     place.inhabitants?.let {
                         Text(
-                            stringResource(R.string.place_inhabitants_value, it.value),
+                            stringResource(Res.string.place_inhabitants_value, it.value),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -117,7 +117,7 @@ internal fun PlaceCard(
             if (place.canEdit &&
                 onEdit != null
             ) {
-                TextButton(onClick = onEdit, enabled = enabled) { Text(stringResource(R.string.place_edit)) }
+                TextButton(onClick = onEdit, enabled = enabled) { Text(stringResource(Res.string.place_edit)) }
             }
         }
     }

@@ -21,15 +21,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.R
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.story.presentation.list.Story
+import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun StoryCard(
@@ -46,7 +46,7 @@ internal fun StoryCard(
         Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             AvatarImage(
                 story.coverUrl,
-                description = stringResource(R.string.story_cover, story.title.resolve()),
+                description = stringResource(Res.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -86,7 +86,7 @@ internal fun StoryWideCard(
         ) {
             AvatarImage(
                 story.coverUrl,
-                description = stringResource(R.string.story_cover, story.title.resolve()),
+                description = stringResource(Res.string.story_cover, story.title.resolve()),
                 modifier =
                     Modifier
                         .width(96.dp)
@@ -112,7 +112,7 @@ private fun ReadTime(minutes: Int) {
             modifier = Modifier.size(14.dp),
         )
         Text(
-            pluralStringResource(R.plurals.story_read_minutes, minutes, minutes),
+            pluralStringResource(Res.plurals.story_read_minutes, minutes, minutes),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -36,6 +35,14 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.kotlinx.coroutines.core)
+            api(libs.compose.resources)
+            api(libs.savedstate)
+            api(libs.kotlinx.serialization.json)
+            api(libs.lifecycle.viewmodel.savedstate)
+            api(libs.ui)
+            api(libs.compose.material3)
+            api(libs.lifecycle.viewmodel)
+            implementation(libs.lifecycle.runtime.compose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -44,17 +51,5 @@ kotlin {
         getByName("androidHostTest").dependencies {
             implementation(kotlin("test-junit"))
         }
-        androidMain.dependencies {
-            api(libs.kotlinx.serialization.json)
-            api(libs.lifecycle.viewmodel.savedstate)
-            api(libs.ui)
-            api(libs.compose.material3)
-            api(libs.lifecycle.viewmodel.ktx)
-            implementation(libs.lifecycle.runtime.compose)
-        }
     }
-}
-
-composeCompiler {
-    targetKotlinPlatforms.set(setOf(KotlinPlatformType.androidJvm))
 }
