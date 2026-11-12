@@ -65,19 +65,35 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
 
 - `:shared/commonMain`: existing character, place and story domain models,
   validated inputs, errors, repository contracts and use cases, plus ApiConfig.
+  Real repositories, DTOs, mapping, Ktor APIs, Room DAOs/entities/database and data
+  Koin modules also live here. Repositories directly use DAOs and APIs.
   Packages and constructors are preserved. IDs remain unchanged. ID generators
   and StoryCompletionNotifier are injected contracts with Android implementations
   in `:app`; no iOS notification implementation is supplied.
 - `:foundation/commonMain`: the existing cancellation-safe runCatchingSuspend.
   Shared domain consumes this helper through the foundation dependency.
 - `:foundation/androidMain`: Compose, MVI, UiText and state persistence until KMP3.
-- `:app`: Android data/API/Room, DI, WorkManager, notifications and presentation.
-  KMP2 can move data adapters without duplicating the shared domain. KMP4 owns
-  shared UI/image loading; the existing fake avatar behavior remains unchanged.
+- `:shared/androidMain`: the database builder keeps Android's existing `dozy.db`
+  path. `:shared/iosMain`: Documents-directory Room builder and Darwin engine DI.
+  Both platforms use bundled SQLite, generated Room constructors, and the same
+  HTTP JSON configuration and 5000 ms request timeout. Koin closes the singleton
+  database/client, and the client closes its owned engine.
+- `:app`: Android presentation DI, localized bundled place catalog, ID generators,
+  WorkManager and notifications. Feature modules include shared data modules.
+  The null-base-URL fake generator preserves `bundled-avatar://` references;
+  only Android presentation resolves them to drawable resources. KMP4 owns UI.
+- `shared/schemas`: unchanged database package, version 8, identity hash and all
+  eight schemas; automatic migrations 1 through 8 are preserved. KSP runs per
+  Android/iOS target. Android generated sources are wired explicitly for the
+  pinned KSP/AGP versions, including on clean builds.
+- iOS hosts can include `iosDataModule(ApiConfig(...), BundledPlaces(...))` and
+  supply `CharacterIdGenerator`, `PlaceIdGenerator`, `GenerationKeyGenerator`
+  when resolving write use cases. No iOS notification or scheduler is registered.
 - `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
+  Repository, mapping, fake-avatar and MockEngine tests also run from commonTest.
   Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
-  so Android tests reuse the same domain fakes. The separate FakePlaceDao stays
-  in app tests. Mixed data/presentation integration tests remain Android-hosted;
+  so Android tests reuse domain and DAO fakes. Real Room migration/reopen and
+  mixed data/presentation integration tests remain Android-hosted;
   foundation SavedStateHandle tests remain in `androidHostTest`.
 
 From the repository root:

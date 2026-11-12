@@ -20,13 +20,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
-import org.junit.Test
+import kotlin.test.*
 
 class PlaceDataTest {
     @Test fun localReadsMergeFallbacksWithoutHttpAndOrderCustomFirst() =
@@ -109,8 +103,8 @@ class PlaceDataTest {
                 .toDomain()
                 .inhabitants,
         )
-        assertThrows(IllegalArgumentException::class.java) { dto.copy(ownership = "PREDEFINED", editable = true).toEntity() }
-        assertThrows(IllegalArgumentException::class.java) { dto.copy(ownership = "unknown").toEntity() }
+        assertFailsWith<IllegalArgumentException> { dto.copy(ownership = "PREDEFINED", editable = true).toEntity() }
+        assertFailsWith<IllegalArgumentException> { dto.copy(ownership = "unknown").toEntity() }
     }
 
     @Test fun ktorUsesGetAndDecodesBothSourcesWithOptionalInhabitants() =
