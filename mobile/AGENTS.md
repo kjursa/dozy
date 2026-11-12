@@ -69,7 +69,8 @@
 
 ## UI
 
-- Screen descriptions, states, actions, and navigation flows are documented in `SPEC.MD`. For tasks involving UI changes, read the relevant sections before implementation.
+- Use `design/screens/` as the visual reference for UI work; start at `design/screens/index.html` and inspect the relevant rendered screen and variants. Follow their layout, typography, colors, and components. Sidebar variant selectors and simulation controls are review tools, not application UI; images alone do not define the layout.
+- For new screens or changes to UI flows, read the relevant sections of `SPEC.MD` for behavior, states, actions, and navigation. For a focused behavior fix, use the task and existing implementation as context; consult `SPEC.MD` when the expected behavior is unclear.
 - Follow Compose best practices and consider recomposition performance, but do not optimize at the expense of clarity or maintainability.
 - Keep composable functions stateless where practical. Hoist state and event handling to the caller when doing so makes the UI easier to reuse, test, or reason about.
 - When the main layout contains a logically distinct section, extract that section into a separate composable in the same file to keep the screen structure readable.

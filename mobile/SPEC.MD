@@ -12,7 +12,7 @@ Each story is independent and saved automatically. It cannot be edited. “New a
 
 This document describes intended behavior based on the agreed requirements and current designs. It does not mean that every feature has already been implemented in the app or prototype.
 
-Current mockups: [screen index](design/screens/index.html). Their English labels correspond to the names used here. Older proposals are not a source of requirements where they conflict with this document.
+The visual reference is [the screen catalog](design/screens/index.html) in `design/screens/`. Use the rendered screens and their variants for appearance, and this specification for behavior and navigation. Their English labels correspond to the names used here. Sidebar selectors and simulation controls are not part of the application UI.
 
 The HTML variants are described with each screen. Shared states and additional cases needed in the working app are described separately. Unresolved decisions are listed at the end of the document.
 
