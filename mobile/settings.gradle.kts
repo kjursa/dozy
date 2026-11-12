@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DozyMobile"
-include(":app", ":foundation")
+include(":app", ":foundation", ":shared")

@@ -3,10 +3,10 @@
 ## Run and test
 
 - Open `mobile/` in Android Studio and run the `app` configuration on an emulator or connected Android device.
-- Build the debug APK from `mobile/` with `./gradlew :app:assembleDebug`.
+- Build the debug APK from `mobile/` with `./gradlew --no-daemon :app:assembleDebug`.
 - Install the debug app on a connected emulator/device with `./gradlew :app:installDebug`.
-- Run mobile JVM unit tests from `mobile/` with `./gradlew test`.
-- Before committing Kotlin changes, run `./gradlew ktlintFormat` from `mobile/` to apply automatic formatting. Ignore its exit status and any remaining ktlint findings for now; they can be reviewed and fixed manually later.
+- Run mobile JVM unit tests from `mobile/` with `./gradlew --no-daemon :app:test :foundation:testAndroidHostTest :shared:testAndroidHostTest`.
+- Before committing Kotlin changes, run `./gradlew --no-daemon ktlintFormat` from `mobile/` to apply automatic formatting. Ignore its exit status and any remaining ktlint findings for now; they can be reviewed and fixed manually later.
 - Run the repository-wide test command from the repository root with `./test-all`; it runs backend and mobile tests.
 
 ## Architecture

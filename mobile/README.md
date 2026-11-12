@@ -5,7 +5,7 @@ This standalone Android app is a small Jetpack Compose implementation of `design
 Open `mobile/` in Android Studio, or build it from the repository root with:
 
 ```sh
-./mobile/gradlew -p mobile assembleDebug
+./mobile/gradlew -p mobile --no-daemon :app:assembleDebug
 ```
 
 The screen uses local images from `design/images` and the bundled Nunito Sans, Playfair Display, and JetBrains Mono variable fonts. Their SIL Open Font License files are included under `app/src/main/res/raw/licenses`.
@@ -29,7 +29,7 @@ From the repository root, run tests and build the APK:
 
 ```sh
 bash test-all
-./mobile/gradlew -p mobile :app:assembleDebug
+./mobile/gradlew -p mobile --no-daemon :app:assembleDebug
 ```
 
 The APK is `mobile/app/build/outputs/apk/debug/app-debug.apk`. Inspect the key and
@@ -55,3 +55,47 @@ Updating an installed app also requires the same application ID (currently
 `com.dozy.mobile`) and an appropriate `versionCode` (increment it for distributed
 updates). An APK already installed with a different signing key may require a
 one-time uninstall before installing this build; uninstalling removes its local data.
+
+## KMP source ownership and validation
+
+Versions are pinned in `gradle/libs.versions.toml`. Builds use JDK 21, Gradle
+8.14.3 and AGP 8.13.2; Android emits JVM 17 bytecode (minSdk 26,
+compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
+`--no-daemon` in task clones.
+
+- `:shared/commonMain`: existing character, place and story domain models,
+  validated inputs, errors, repository contracts and use cases, plus ApiConfig.
+  Packages and constructors are preserved. IDs remain unchanged. ID generators
+  and StoryCompletionNotifier are injected contracts with Android implementations
+  in `:app`; no iOS notification implementation is supplied.
+- `:foundation/commonMain`: the existing cancellation-safe runCatchingSuspend.
+  Shared domain consumes this helper through the foundation dependency.
+- `:foundation/androidMain`: Compose, MVI, UiText and state persistence until KMP3.
+- `:app`: Android data/API/Room, DI, WorkManager, notifications and presentation.
+  KMP2 can move data adapters without duplicating the shared domain. KMP4 owns
+  shared UI/image loading; the existing fake avatar behavior remains unchanged.
+- `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
+  Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
+  so Android tests reuse the same domain fakes. The separate FakePlaceDao stays
+  in app tests. Mixed data/presentation integration tests remain Android-hosted;
+  foundation SavedStateHandle tests remain in `androidHostTest`.
+
+From the repository root:
+
+```sh
+bash test-all
+./mobile/gradlew -p mobile --no-daemon ktlintFormat
+./mobile/gradlew -p mobile --no-daemon :app:assembleDebug :app:assembleRelease
+./mobile/gradlew -p mobile --no-daemon :foundation:compileAndroidMain :shared:compileAndroidMain
+./mobile/gradlew -p mobile --no-daemon :foundation:compileKotlinIosArm64 :foundation:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64
+./mobile/gradlew -p mobile --no-daemon :foundation:compileTestKotlinIosArm64 :foundation:compileTestKotlinIosSimulatorArm64 :shared:compileTestKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64
+./mobile/gradlew -p mobile --no-daemon :shared:linkDebugFrameworkIosArm64 :shared:linkDebugFrameworkIosSimulatorArm64
+```
+
+`test-all` runs backend tests, all app unit-test variants, and the foundation/shared
+Android host tests (including common tests). For mobile only, use
+`:app:test :foundation:testAndroidHostTest :shared:testAndroidHostTest`.
+Native compilation requires macOS with full Xcode 26.0 and its iOS SDK selected
+through xcode-select, plus Kotlin/Native toolchain download access. Both libraries
+set iOS deployment target 15.0. Shared publishes a static `DozyShared` framework;
+there is no Xcode host, signing, simulator launch or iOS app entry point.
