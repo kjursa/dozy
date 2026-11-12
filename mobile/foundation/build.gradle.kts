@@ -1,46 +1,60 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jlleitschuh.gradle.ktlint")
-}
-
-android {
-    namespace = "com.kjursa.foundation"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        compose = true
-    }
-}
-
-dependencies {
-    api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    api("androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7")
-    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    api("androidx.compose.ui:ui")
-    api("androidx.compose.material3:material3")
-    api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
+    jvmToolchain(21)
+    android {
+        namespace = "com.kjursa.foundation"
+        compileSdk = 36
+        minSdk = 26
+        withHostTestBuilder {}.configure {}
+        compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
+    val iosTargets = listOf(iosArm64(), iosSimulatorArm64())
+    iosTargets.forEach { target ->
+        target.binaries.configureEach {
+            freeCompilerArgs +=
+                "-Xoverride-konan-properties=minVersion.ios=15.0;osVersionMin.ios_arm64=15.0;osVersionMin.ios_simulator_arm64=15.0"
+        }
+        target.compilations.configureEach {
+            compileTaskProvider.configure {
+                compilerOptions.freeCompilerArgs.add(
+                    "-Xoverride-konan-properties=minVersion.ios=15.0;osVersionMin.ios_arm64=15.0;osVersionMin.ios_simulator_arm64=15.0",
+                )
+            }
+        }
+    }
+    sourceSets {
+        commonMain.dependencies {
+            api(libs.kotlinx.coroutines.core)
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(kotlin("test-junit"))
+        }
+        androidMain.dependencies {
+            api(libs.kotlinx.serialization.json)
+            api(libs.lifecycle.viewmodel.savedstate)
+            api(libs.ui)
+            api(libs.compose.material3)
+            api(libs.lifecycle.viewmodel.ktx)
+            implementation(libs.lifecycle.runtime.compose)
+        }
+    }
+}
+
+composeCompiler {
+    targetKotlinPlatforms.set(setOf(KotlinPlatformType.androidJvm))
 }

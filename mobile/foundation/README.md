@@ -1,6 +1,6 @@
 # Foundation
 
-A small reusable Android library for coroutine utilities, presentation text, and Compose foundations.
+A small reusable Kotlin Multiplatform library for coroutine utilities, presentation text, and Compose foundations.
 
 ## Packages
 
@@ -9,9 +9,10 @@ A small reusable Android library for coroutine utilities, presentation text, and
 - `com.kjursa.foundation.compose.mvi`: reusable state, actions, effects, and screen binding.
 - `com.kjursa.foundation.compose.theme`: theme entry point and spacing scale.
 
-The library currently uses the Android library plugin because it includes Compose
-UI and Android resource resolution. These package boundaries support a later KMP
-migration or extraction; they do not introduce additional Gradle modules yet.
+The Android, iosArm64 and iosSimulatorArm64 targets share coroutine helpers in
+`commonMain` and their tests in `commonTest`. Compose, MVI, UiText and state
+persistence remain in `androidMain`, with Android tests in `androidHostTest`,
+until KMP3. This library has no app-specific dependencies.
 
 ## Current API
 
@@ -93,8 +94,8 @@ because one-off effects are delivered through a single-consumer channel.
 
 ## Validation
 
-From `mobile/`, run `./gradlew :foundation:testDebugUnitTest` for library unit tests
-and `./gradlew :app:assembleDebug` to check integration with the consuming app.
+From `mobile/`, run `./gradlew --no-daemon :foundation:testAndroidHostTest` for library unit tests
+and `./gradlew --no-daemon :app:assembleDebug` to check integration with the consuming app.
 
 ## Optional state restoration
 

@@ -1,12 +1,13 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("org.jlleitschuh.gradle.ktlint")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -46,39 +47,41 @@ android {
 }
 
 dependencies {
-    implementation("androidx.work:work-runtime-ktx:2.10.1")
-    implementation(platform("io.insert-koin:koin-bom:4.1.1"))
-    implementation("io.insert-koin:koin-core")
-    implementation("io.insert-koin:koin-android")
-    implementation("io.insert-koin:koin-compose-viewmodel")
-    implementation("androidx.room3:room3-runtime:3.0.3")
-    ksp("androidx.room3:room3-compiler:3.0.3")
-    implementation("androidx.sqlite:sqlite-bundled:2.6.2")
-    implementation("io.ktor:ktor-client-core:3.6.0")
-    implementation("io.ktor:ktor-client-android:3.6.0")
-    implementation("io.ktor:ktor-client-content-negotiation:3.6.0")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.6.0")
-    testImplementation("io.ktor:ktor-client-mock:3.6.0")
+    implementation(libs.work.runtime.ktx)
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose.viewmodel)
+    implementation(libs.room.runtime)
+    ksp(libs.room.compiler)
+    implementation(libs.sqlite.bundled)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    testImplementation(libs.ktor.client.mock)
     implementation(project(":foundation"))
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.9.8")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("androidx.sqlite:sqlite-framework:2.6.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    implementation(project(":shared"))
+    implementation(libs.activity.compose)
+    implementation(libs.ui)
+    implementation(libs.ui.graphics)
+    implementation(libs.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.material.icons.extended)
+    implementation(libs.navigation.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    debugImplementation(libs.ui.tooling)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.sqlite.framework)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 kotlin {
+    jvmToolchain(21)
+    sourceSets.getByName("test").kotlin.srcDir("../shared/src/commonTest/kotlin/fixtures")
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
