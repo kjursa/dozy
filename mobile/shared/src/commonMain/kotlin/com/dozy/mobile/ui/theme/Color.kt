@@ -3,7 +3,7 @@ package com.dozy.mobile.ui.theme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-internal val DozyColorScheme =
+val DozyColorScheme =
     lightColorScheme(
         primary = Color(0xFFFF6B6B),
         onPrimary = Color.White,

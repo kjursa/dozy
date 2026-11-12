@@ -42,6 +42,14 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.ui)
+            implementation(libs.ui.backhandler)
+            implementation(libs.compose.material3)
+            implementation(libs.material.icons.extended)
+            api(libs.navigation.compose)
+            implementation(libs.lifecycle.runtime.compose)
+            api(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
             api(libs.compose.resources)
             api(libs.lifecycle.viewmodel.savedstate)
             implementation(libs.koin.compose.viewmodel)

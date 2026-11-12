@@ -46,6 +46,13 @@ class GenerationNavigationTest {
         assertEquals(MAIN_ROUTE, warm.currentDestination?.route)
     }
 
+    @Test fun encodedReaderIdsAreDecodedExactlyOnce() {
+        val nav = controller()
+        val id = "story/a?b=c&d#e%20 ż"
+        nav.openSavedStory(id)
+        assertEquals(id, nav.currentBackStackEntry?.arguments?.getString("storyId"))
+    }
+
     @Test fun readerLibraryReturnsToExistingMainAndSelectsLibrary() {
         val nav = controller()
         val main = nav.currentBackStackEntry

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.dozy.mobile.feature.character.presentation.details
 
 import androidx.compose.foundation.layout.Column
@@ -51,7 +53,8 @@ internal fun CharacterDetailsContent(
     state: CharacterDetailsUiState,
     dispatch: (CharacterDetailsAction) -> Unit,
 ) {
-    androidx.activity.compose.BackHandler { dispatch(CharacterDetailsAction.Back) }
+    androidx.compose.ui.backhandler
+        .BackHandler { dispatch(CharacterDetailsAction.Back) }
     if (state.deleteDialog) {
         AlertDialog(
             onDismissRequest = { dispatch(CharacterDetailsAction.CancelDelete) },

@@ -1,9 +1,5 @@
 package com.dozy.mobile.feature.story.presentation.generation
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,16 +19,16 @@ internal fun GenerationScreen(
     jobId: String,
     onHome: () -> Unit,
     onRead: (String) -> Unit,
+    requestNotifications: (() -> Unit)? = null,
+    backgroundCompletionSupported: Boolean = false,
 ) {
     val vm: GenerationViewModel = koinViewModel()
-    val scheduler: com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler = org.koin.compose.koinInject()
-    val permission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) scheduler.checkNow() }
     MviScreen(vm, onEffect = { if (it is GenerationEffect.Read) onRead(it.id.value) }) { state, dispatch ->
         Column(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -43,9 +39,9 @@ internal fun GenerationScreen(
             if (!state.loading && job == null) Text(stringResource(Res.string.generation_unavailable))
             job?.let { GenerationCard(it, state.busy, dispatch) }
             state.error?.let { Text(it.resolve()) }
-            Text(stringResource(Res.string.generation_background))
-            if (Build.VERSION.SDK_INT >= 33) {
-                TextButton(onClick = { permission.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+            if (backgroundCompletionSupported) Text(stringResource(Res.string.generation_background))
+            if (requestNotifications != null) {
+                TextButton(onClick = { requestNotifications() }) {
                     Text(stringResource(Res.string.generation_enable_notifications))
                 }
             }
