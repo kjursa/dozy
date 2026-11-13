@@ -3,60 +3,56 @@ package com.dozy.infrastructure.database
 import com.dozy.config.DatabaseConfig
 import java.nio.file.Files
 import java.nio.file.Path
-import java.sql.Connection
-import java.sql.DriverManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.v1.core.statements.StatementType
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.sqlite.SQLiteConfig
 
-class SqliteDatabase(private val config: DatabaseConfig) {
+class SqliteDatabase(config: DatabaseConfig) : AutoCloseable {
     private val path = Path.of(config.path).toAbsolutePath()
+    private val sqliteConfig = SQLiteConfig().apply {
+        enforceForeignKeys(true)
+        setBusyTimeout(config.busyTimeoutMillis)
+        setTransactionMode(SQLiteConfig.TransactionMode.IMMEDIATE)
+    }
+    private val database = Database.connect(
+        getNewConnection = { sqliteConfig.createConnection("jdbc:sqlite:$path") },
+    )
 
     init {
         Files.createDirectories(path.parent)
-        transaction { connection -> migrate(connection) }
-    }
-
-    suspend fun <T> write(block: (Connection) -> T): T = withContext(Dispatchers.IO) { transaction(block) }
-
-    private fun connection(): Connection {
-        val connection = DriverManager.getConnection("jdbc:sqlite:$path")
         try {
-            connection.createStatement().use { statement ->
-                statement.execute("PRAGMA foreign_keys = ON")
-                statement.execute("PRAGMA busy_timeout = ${config.busyTimeoutMillis}")
-            }
-            return connection
+            transaction(database) { migrate() }
         } catch (failure: Throwable) {
-            connection.close()
+            close()
             throw failure
         }
     }
 
-    private fun <T> transaction(block: (Connection) -> T): T = connection().use { connection ->
-        connection.createStatement().use { it.execute("BEGIN IMMEDIATE") }
-        try {
-            val result = block(connection)
-            connection.createStatement().use { it.execute("COMMIT") }
-            result
-        } catch (failure: Throwable) {
-            runCatching { connection.createStatement().use { it.execute("ROLLBACK") } }
-            throw failure
+    suspend fun <T> write(block: JdbcTransaction.() -> T): T = withContext(Dispatchers.IO) {
+        transaction(database) {
+            maxAttempts = 1
+            block()
         }
     }
 
-    private fun migrate(connection: Connection) {
-        val version = connection.createStatement().use { statement ->
-            statement.executeQuery("PRAGMA user_version").use {
-                it.next()
-                it.getInt(1)
-            }
-        }
+    override fun close() {
+        TransactionManager.closeAndUnregister(database)
+    }
+
+    private fun JdbcTransaction.migrate() {
+        val version = checkNotNull(exec("PRAGMA user_version") { rows ->
+            rows.next()
+            rows.getInt(1)
+        })
         check(version in 0..1) { "Unsupported database schema version" }
         if (version == 1) return
-        val script = checkNotNull(javaClass.getResource("/db/migration/V1__places.sql")).readText()
-        connection.createStatement().use { statement ->
-            script.split(';').map(String::trim).filter(String::isNotEmpty).forEach(statement::execute)
-            statement.execute("PRAGMA user_version = 1")
-        }
+        val script = checkNotNull(this@SqliteDatabase.javaClass.getResource("/db/migration/V1__places.sql")).readText()
+        script.split(';').map(String::trim).filter(String::isNotEmpty).forEach { exec(it) }
+        exec("PRAGMA user_version = 1", explicitStatementType = StatementType.OTHER)
     }
 }

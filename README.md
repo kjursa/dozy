@@ -34,7 +34,7 @@ See [mobile/README.md](mobile/README.md) for running and building the Android ap
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection and Ktor DI. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /places`, and `PUT /places/{id}`. Other endpoints in [the API reference](backend/API.md) remain proposals.
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /places`, and `PUT /places/{id}`. Other endpoints in [the API reference](backend/API.md) remain proposals.
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 

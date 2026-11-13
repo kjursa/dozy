@@ -9,6 +9,7 @@ repositories {
 }
 
 val ktorVersion = "3.6.0"
+val exposedVersion = "1.6.1"
 
 dependencies {
     implementation("io.ktor:ktor-server-core:$ktorVersion")
@@ -16,6 +17,8 @@ dependencies {
     implementation("io.ktor:ktor-server-di:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.xerial:sqlite-jdbc:3.54.1.0")
     runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")

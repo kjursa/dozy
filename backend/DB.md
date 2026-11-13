@@ -15,13 +15,23 @@ creates only `installations` and `places`, including an owner index and the thre
 read-only `builtin:` places. These SQLite IDs are TEXT, and timestamps use
 `CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
 
+Data access uses Exposed 1.6.1 SQL DSL over the SQLite JDBC driver, without ORM
+entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
+to domain models. SQL remains only in the versioned schema migration and SQLite
+PRAGMA setup. The existing version 1 schema and saved data remain compatible.
+
 Each operation uses a connection with foreign keys enabled and the configured
-busy timeout. JDBC work runs on `Dispatchers.IO`; connections and statements are
-closed after use. `BEGIN IMMEDIATE` transactions make owner checks and upserts
+busy timeout. Exposed manages transactions, statement execution, and connection
+cleanup on `Dispatchers.IO`. The SQLite driver uses `IMMEDIATE` transaction mode
+to acquire the write reservation before reading ownership. These transactions make owner checks and upserts
 atomic, including concurrent claims of an ID. Reads register the installation
 and collect its custom places plus shared places in one transaction. This simple
 single-file implementation is intended for the initial local backend, not as a
 production capacity claim. Keep the file on persistent writable storage.
+
+Ktor DI unregisters the Exposed database when the application stops. SQL statement
+logging is disabled to keep user-provided place content out of logs; request
+status logging remains enabled.
 
 API code depends on `PlaceService` and the domain `PlaceRepository` contract.
 SQLite queries and repository implementation remain in the data layer, so a

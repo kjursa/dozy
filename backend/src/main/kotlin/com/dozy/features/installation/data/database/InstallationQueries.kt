@@ -1,11 +1,9 @@
 package com.dozy.features.installation.data.database
 
 import com.dozy.features.installation.domain.model.InstallationId
-import java.sql.Connection
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 
-internal fun Connection.registerInstallation(installation: InstallationId) {
-    prepareStatement("INSERT INTO installations(id) VALUES (?) ON CONFLICT(id) DO NOTHING").use {
-        it.setString(1, installation.value)
-        it.executeUpdate()
-    }
+internal fun JdbcTransaction.registerInstallation(installation: InstallationId) {
+    Installations.insertIgnore { it[id] = installation.value }
 }
