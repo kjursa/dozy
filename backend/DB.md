@@ -1,4 +1,58 @@
-# Proposed PostgreSQL database
+# Dozy database
+
+## Current SQLite implementation
+
+The initial backend stores installations and places in a local SQLite file.
+`application.yaml` supplies the path and lock timeout through typed `AppConfig` /
+`DatabaseConfig`; use `DOZY_DATABASE_PATH` and `DOZY_DATABASE_BUSY_TIMEOUT_MS` to
+override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
+server working directory. There is no external database service requirement.
+
+`SqliteDatabase` creates parent directories and runs Flyway 13.6.0 before serving
+requests. Flyway discovers versioned SQL in `classpath:db/migration`, applies
+pending migrations in order, and tracks versions and checksums in
+`flyway_schema_history`. Applied script checksum mismatches fail startup.
+`V1__places.sql` creates `installations` and `places`, including an owner index and the three
+read-only `builtin:` places. These SQLite IDs are TEXT, and timestamps use
+`CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
+
+Data access uses Exposed 1.6.1 SQL DSL over the SQLite JDBC driver, without ORM
+entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
+to domain models. Flyway and Exposed share the configured SQLite data source.
+Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
+
+Add future changes as `V2__description.sql`, `V3__description.sql`, and so on;
+do not edit an applied migration. There is no automatic baseline for unmanaged
+non-empty databases. For a database created by the pre-Flyway version of this PR,
+verify it has the V1 schema, then explicitly baseline it at version 1 before
+starting this backend. For example, with the Flyway CLI:
+
+```sh
+flyway -url=jdbc:sqlite:/absolute/path/dozy.db -baselineVersion=1 baseline
+```
+
+This preserves existing data and lets Flyway apply subsequent migrations.
+SQLite migration startup should run in one process at a time; Flyway does not
+provide concurrent migration locking for SQLite.
+
+Each operation uses a connection with foreign keys enabled and the configured
+busy timeout. Exposed manages transactions, statement execution, and connection
+cleanup on `Dispatchers.IO`. The SQLite driver uses `IMMEDIATE` transaction mode
+to acquire the write reservation before reading ownership. These transactions make owner checks and upserts
+atomic, including concurrent claims of an ID. Reads register the installation
+and collect its custom places plus shared places in one transaction. This simple
+single-file implementation is intended for the initial local backend, not as a
+production capacity claim. Keep the file on persistent writable storage.
+
+Ktor DI unregisters the Exposed database when the application stops. SQL statement
+logging is disabled to keep user-provided place content out of logs; request
+status logging remains enabled.
+
+API code depends on `PlaceService` and the domain `PlaceRepository` contract.
+SQLite queries and repository implementation remain in the data layer, so a
+future PostgreSQL implementation can replace them through DI.
+
+## Proposed PostgreSQL database
 
 ## Scope
 

@@ -1,14 +1,15 @@
-# Proposed Dozy HTTP API
+# Dozy HTTP API
 
 Open the [interactive endpoint reference](api/index.html) in a browser for request
 and response examples. It works locally without a build step or API calls.
 
 ## Status and sources
 
-This is a backend implementation proposal consolidated from the current mobile
-contracts and actual Ktor clients. It does not add routes or claim they exist.
-The backend currently implements only `GET /hello`, returning
-`200 {"message":"Hello world from Dozy"}`.
+This document combines implemented routes and proposals consolidated from the
+mobile contracts. The backend implements `GET /hello`, `GET /places`, and
+`PUT /places/{id}`. All other feature endpoints remain proposals. `/hello` returns
+`200 {"message":"Hello world from Dozy"}`. Places use a local SQLite database;
+see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
 Sources:
 
@@ -17,7 +18,7 @@ Sources:
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
 - Clients: `KtorCharacterApi`, `KtorPlaceApi`, and `KtorGenerationApi` under
-  `mobile/app/src/main/java/com/dozy/mobile/feature/`.
+  `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
 
 Later feature amendments take precedence over historical implementation notes.
@@ -202,6 +203,10 @@ required/max 500, inhabitants optional/max 500, using trimmed UTF-16 lengths.
 
 ### GET /places
 
+Implemented. Requires `X-Installation-Id`. The backend returns custom places first,
+then sorts each group by lowercase name and ID. A fresh database includes all
+three predefined places, so it does not return an empty collection.
+
 No body/query. Return `200 {"places":[<Place>,...]}` containing a complete consistent
 collection of accessible custom and predefined places. Three bundled mobile IDs
 are `builtin:woods`, `builtin:island`, `builtin:village`; preserve their identity.
@@ -212,13 +217,29 @@ known local data; there is no GET-by-ID requirement.
 
 ### PUT /places/{id}
 
+Implemented. Requires `X-Installation-Id` and `Content-Type: application/json`.
+
 Body: full Place with matching ID, `ownership: "CUSTOM"`, `editable: true`.
 Omitted/null inhabitants clears the previous value. Only the owner may upsert a
-custom record; reject writes to the predefined namespace. Proposed responses:
+custom record; reject writes to the predefined namespace. Responses:
 `201` creation, `204` update, no body; mobile accepts any 2xx.
-Repeated identical PUTs replace one resource. Errors: `400`/`422` invalid input,
-`401`/`403` unauthorized, `404` unavailable resource, `409` ownership conflict,
-`429`, `5xx`. Edits cannot rewrite existing story configurations. Versioned
+Repeated identical PUTs replace one resource. A transaction checks ownership and
+writes the replacement atomically. `editable: true` does not bypass permissions.
+
+Implemented place errors use `{"code":"..."}`:
+
+| Status | Code | Cause |
+| --- | --- | --- |
+| 400 | `INVALID_INSTALLATION_ID` | Missing, duplicated, or non-canonical UUID header |
+| 400 | `INVALID_REQUEST` | Malformed/missing JSON fields, path/body ID mismatch, incorrect ownership/editable flags |
+| 422 | `INVALID_REQUEST` | Invalid trimmed name, description, or inhabitants |
+| 403 | `FORBIDDEN` | Attempt to write any `builtin:` ID, including unknown ones |
+| 409 | `CONFLICT` | Custom ID already belongs to another installation |
+| 503 | `UNAVAILABLE` | SQLite operation failed |
+
+GET can return the installation-header and database errors above. Rate limiting
+and authentication are not implemented. Edits cannot rewrite existing story
+configurations when those are introduced. Versioned
 multi-device reconciliation is not defined; no version precondition is submitted.
 
 ## Story generation
