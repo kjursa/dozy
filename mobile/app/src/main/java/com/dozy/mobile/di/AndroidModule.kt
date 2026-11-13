@@ -28,7 +28,7 @@ internal val androidModule =
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
         // Enable after the backend exposes the agreed API contract.
         single { ApiConfig(baseUrl = null) }
-        includes(databaseModule, httpClientModule)
+        includes(databaseModule, httpClientModule, imageModule)
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }
         single<HttpEngineFactory> { HttpEngineFactory { Android.create() } }
         single<com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator> {

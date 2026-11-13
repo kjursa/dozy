@@ -1,6 +1,7 @@
-# Dozy Android prototype
+# Dozy mobile
 
-This standalone Android app is a small Jetpack Compose implementation of `design/home.html`.
+The Android application hosts shared Compose Multiplatform screens and navigation.
+The iOS framework exposes an embeddable controller; this repository has no Xcode host.
 
 Open `mobile/` in Android Studio, or build it from the repository root with:
 
@@ -10,7 +11,7 @@ Open `mobile/` in Android Studio, or build it from the repository root with:
 
 The screen uses local images from `design/images` and the bundled Nunito Sans, Playfair Display, and JetBrains Mono variable fonts. Their SIL Open Font License files are included under `app/src/main/res/raw/licenses`.
 
-Shared app colors, typography, shapes, and the 8 dp spacing scale live in `app/src/main/java/com/dozy/mobile/ui/theme`.
+Shared app colors, typography, shapes, and the 8 dp spacing scale live in `shared/src/commonMain/kotlin/com/dozy/mobile/ui/theme`.
 
 ## Shared debug signing
 
@@ -81,26 +82,40 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
 - `:shared/commonMain`: all feature ViewModels, state, actions/effects, presentation
   mapping and feature Koin modules. `composeResources` owns screen strings/plurals,
   artwork and variable fonts; exported accessors use `com.dozy.mobile.resources`.
-  Android screens resolve these shared resources directly without duplicating the catalog.
-- `:app`: Android navigation/screens, localized bundled place catalog, ID generators,
-  WorkManager and notifications. Feature modules include shared data modules.
-  The null-base-URL fake generator preserves `bundled-avatar://` references;
-  Android presentation resolves them to shared DrawableResource values. KMP4 owns UI.
-  App res retains manifest and notification-channel/title strings; notification body
-  uses the shared resource. Typography still uses all original variable font weights.
+  Shared screens resolve these resources directly without duplicating the catalog.
+- `:shared/commonMain`: all existing feature screens/components, Dozy theme and
+  NavHost/NavController navigation (JetBrains Navigation Compose 2.9.2).
+  Tab owners, saved scroll state, form drafts, return paths and reader settings
+  retain the existing implementation. Route values are percent-encoded from UTF-8.
+  Common insets, keyboard padding and back handlers adapt to the host.
+- `:app`: Application/Activity/manifest, localized bundled place catalog, ID generators,
+  WorkManager, notification delivery, permission launcher and signing. MainActivity
+  hosts `DozyApp`, forwards notification story IDs and passes narrow notification
+  callbacks/capabilities. Scheduling and worker reconciliation remain Android-only.
+- Shared `AvatarImage` resolves persisted `bundled-avatar://` references to the
+  same DrawableResources. HTTPS avatars/covers/previews use Coil 3.3.0 with
+  `coil-network-ktor3` and the injected Ktor 3.6.0 client/platform engine.
+  Loading/errors retain the face placeholder and accessibility description;
+  bundled images crop and remote images fit as before. Unsupported URL schemes
+  never reach the network. The image loader is registered by `imageModule` and
+  receives a platform `PlatformContext`.
 - `shared/schemas`: unchanged database package, version 8, identity hash and all
   eight schemas; automatic migrations 1 through 8 are preserved. KSP runs per
   Android/iOS target. Android generated sources are wired explicitly for the
   pinned KSP/AGP versions, including on clean builds.
-- iOS hosts can include `iosDataModule(ApiConfig(...), BundledPlaces(...))` and
-  supply `CharacterIdGenerator`, `PlaceIdGenerator`, `GenerationKeyGenerator`
-  when resolving write use cases. Include `iosPresentationModule` for the shared
-  feature graph and the unsupported notification adapter. No iOS scheduler exists.
-  Pass a `SavedStateHandle` containing route arguments with `parametersOf(handle)`
-  when creating a route ViewModel. Retain it with its navigation owner; the default
-  factory creates fresh handles for argument-free forms. SavedStatePersistence uses
-  that in-memory handle on iOS with no cross-relaunch or process-death guarantee.
-  Android keeps owner-provided SavedStateHandle and the same STATE key/JSON format.
+- The future iOS host calls `initializeDozy(config, places, characterIds, placeIds,
+  requestKeys)` once, then embeds `DozyViewController()` from `DozyShared`.
+  The bootstrap composes `iosDataModule`, `iosPresentationModule` and injected ID
+  providers. Preserve resource IDs during updates; new character/place IDs must
+  be UUIDv7 and request keys UUIDv4, reused on uncertain retries. Supply the localized
+  bundled place catalog and API configuration at this boundary.
+  Shared Navigation supplies route-scoped SavedStateHandles and ViewModel owners.
+  StatePersistence retains its STATE key/JSON format; iOS has no cross-relaunch
+  restoration guarantee. Do not register a global empty SavedStateHandle.
+  iOS intentionally hides notification opt-in and background-delivery promises.
+  Foreground refresh, retry and navigation work through the same shared use cases;
+  UnsupportedStoryCompletionNotifier returns false. There is no iOS scheduler/push.
+  The host owns Koin startup/shutdown; do not initialize the global graph twice.
 - `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
   Repository, mapping, fake-avatar, MockEngine, pure ViewModel/MVI and feature-graph
   lifetime/argument tests also run from commonTest.
@@ -129,4 +144,5 @@ Android host tests (including common tests). For mobile only, use
 Native compilation requires macOS with full Xcode 26.0 and its iOS SDK selected
 through xcode-select, plus Kotlin/Native toolchain download access. Both libraries
 set iOS deployment target 15.0. Shared publishes a static `DozyShared` framework;
-there is no Xcode host, signing, simulator launch or iOS app entry point.
+there is no Xcode host, signing or simulator launch. The iOS controller factory
+is compiled into the framework without building or running an iOS application.

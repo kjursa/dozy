@@ -65,6 +65,20 @@ class PlaceNavigationTest {
         assertSame(origin, nav.currentBackStackEntry)
     }
 
+    @Test fun encodedPlaceAndCastArgumentsPreserveTheirOriginalValues() {
+        val nav = controller()
+        val place = "custom:a/b?c&d#% ż"
+        val cast = listOf("hero/a", "hero?b&c%20 ż")
+        nav.openStory(Place.Id(place), cast.map { Character.Id(it) })
+        assertEquals(place, nav.currentBackStackEntry?.arguments?.getString("place"))
+        assertEquals(
+            cast,
+            kotlinx.serialization.json.Json.decodeFromString<List<String>>(
+                requireNotNull(nav.currentBackStackEntry?.arguments?.getString("cast")),
+            ),
+        )
+    }
+
     @Test fun characterDeletionReturnsToExistingMainAndRequestsCurrentCharacterList() {
         val nav = controller()
         val main = nav.currentBackStackEntry

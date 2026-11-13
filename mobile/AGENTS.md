@@ -78,7 +78,7 @@
 ## Foundation
 
 - Use `:foundation` for reusable coroutine utilities, presentation text, Compose foundations, theme entry points, spacing, and shared MVI infrastructure. Keep it independent of app features and branding.
-- Keep application-specific resources and presentation state/ViewModels in `:shared`. Android screens, palette/typography wiring and navigation remain in `:app` until KMP4; Foundation must stay independent of both.
+- Keep application-specific resources and presentation state/ViewModels in `:shared`. Screens, Dozy palette/typography and navigation live in `:shared/commonMain`; Foundation must stay independent of both.
 - Use Material 3 components directly unless the library adds distinct reusable behavior or styling; avoid wrappers that only duplicate Material APIs.
 - Before changing public library APIs, read `foundation/AGENTS.md` and update `foundation/README.md` as needed.
 
