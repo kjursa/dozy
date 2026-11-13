@@ -5,12 +5,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.v1.core.statements.StatementType
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.sqlite.SQLiteConfig
+import org.sqlite.SQLiteDataSource
 
 class SqliteDatabase(config: DatabaseConfig) : AutoCloseable {
     private val path = Path.of(config.path).toAbsolutePath()
@@ -19,14 +20,20 @@ class SqliteDatabase(config: DatabaseConfig) : AutoCloseable {
         setBusyTimeout(config.busyTimeoutMillis)
         setTransactionMode(SQLiteConfig.TransactionMode.IMMEDIATE)
     }
-    private val database = Database.connect(
-        getNewConnection = { sqliteConfig.createConnection("jdbc:sqlite:$path") },
-    )
+    private val dataSource = SQLiteDataSource(sqliteConfig).apply {
+        url = "jdbc:sqlite:$path"
+    }
+    private val database = Database.connect(dataSource)
 
     init {
         Files.createDirectories(path.parent)
         try {
-            transaction(database) { migrate() }
+            Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration")
+                .validateMigrationNaming(true)
+                .load()
+                .migrate()
         } catch (failure: Throwable) {
             close()
             throw failure
@@ -42,17 +49,5 @@ class SqliteDatabase(config: DatabaseConfig) : AutoCloseable {
 
     override fun close() {
         TransactionManager.closeAndUnregister(database)
-    }
-
-    private fun JdbcTransaction.migrate() {
-        val version = checkNotNull(exec("PRAGMA user_version") { rows ->
-            rows.next()
-            rows.getInt(1)
-        })
-        check(version in 0..1) { "Unsupported database schema version" }
-        if (version == 1) return
-        val script = checkNotNull(this@SqliteDatabase.javaClass.getResource("/db/migration/V1__places.sql")).readText()
-        script.split(';').map(String::trim).filter(String::isNotEmpty).forEach { exec(it) }
-        exec("PRAGMA user_version = 1", explicitStatementType = StatementType.OTHER)
     }
 }

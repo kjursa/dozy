@@ -19,6 +19,7 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+    implementation("org.flywaydb:flyway-core:13.6.0")
     implementation("org.xerial:sqlite-jdbc:3.54.1.0")
     runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")

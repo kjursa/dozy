@@ -45,7 +45,7 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 | `DOZY_DATABASE_PATH` | `data/dozy.db` | Persistent SQLite file, relative to the server working directory |
 | `DOZY_DATABASE_BUSY_TIMEOUT_MS` | `5000` | SQLite lock wait, from 1 to 60000 ms |
 
-The database and its parent directory are created automatically. Version 1 creates installation/place tables and seeds three shared predefined places. Local database files are ignored by Git when running from `backend/`.
+The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Local database files are ignored by Git when running from `backend/`.
 
 Place requests require a canonical UUID in `X-Installation-Id`. Custom places are private to that installation; predefined places are read-only. This is the initial installation-based contract, without accounts or authentication. The mobile clients do not send this shared header yet. See [API.md](backend/API.md) for bodies and errors, and [DB.md](backend/DB.md) for the SQLite implementation and future PostgreSQL design.
 

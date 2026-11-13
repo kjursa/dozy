@@ -23,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.junit.jupiter.api.AfterEach
+import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.io.TempDir
 
 class SqlitePlaceRepositoryTest {
@@ -103,23 +104,6 @@ class SqlitePlaceRepositoryTest {
     }
 
     @Test
-    fun `rejects unknown schema version without overwriting it`() {
-        val path = directory.resolve("future.db")
-        DriverManager.getConnection("jdbc:sqlite:$path").use { connection ->
-            connection.createStatement().use { it.execute("PRAGMA user_version = 2") }
-        }
-        assertFailsWith<IllegalStateException> { SqliteDatabase(DatabaseConfig(path.toString(), 5000)) }
-        DriverManager.getConnection("jdbc:sqlite:$path").use { connection ->
-            connection.createStatement().use { statement ->
-                statement.executeQuery("PRAGMA user_version").use {
-                    it.next()
-                    assertEquals(2, it.getInt(1))
-                }
-            }
-        }
-    }
-
-    @Test
     fun `propagates coroutine cancellation`() = runBlocking<Unit> {
         assertFailsWith<CancellationException> { database().write { throw CancellationException("Cancelled") } }
     }
@@ -142,6 +126,8 @@ class SqlitePlaceRepositoryTest {
                 statement.executeUpdate()
             }
         }
+        Flyway.configure().dataSource("jdbc:sqlite:$path", null, null)
+            .baselineVersion("1").load().baseline()
         val repository = repository()
         assertEquals("Old garden", repository.list(owner).single { it.id == id }.name)
         assertEquals(SavePlaceResult.Updated, repository.save(owner, id, input))

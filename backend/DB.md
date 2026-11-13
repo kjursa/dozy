@@ -8,17 +8,32 @@ The initial backend stores installations and places in a local SQLite file.
 override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
 server working directory. There is no external database service requirement.
 
-`SqliteDatabase` creates parent directories and applies
-`src/main/resources/db/migration/V1__places.sql` once, tracked with
-`PRAGMA user_version = 1`. Startup rejects unknown schema versions. The migration
-creates only `installations` and `places`, including an owner index and the three
+`SqliteDatabase` creates parent directories and runs Flyway 13.6.0 before serving
+requests. Flyway discovers versioned SQL in `classpath:db/migration`, applies
+pending migrations in order, and tracks versions and checksums in
+`flyway_schema_history`. Applied script checksum mismatches fail startup.
+`V1__places.sql` creates `installations` and `places`, including an owner index and the three
 read-only `builtin:` places. These SQLite IDs are TEXT, and timestamps use
 `CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
 
 Data access uses Exposed 1.6.1 SQL DSL over the SQLite JDBC driver, without ORM
 entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
-to domain models. SQL remains only in the versioned schema migration and SQLite
-PRAGMA setup. The existing version 1 schema and saved data remain compatible.
+to domain models. Flyway and Exposed share the configured SQLite data source.
+Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
+
+Add future changes as `V2__description.sql`, `V3__description.sql`, and so on;
+do not edit an applied migration. There is no automatic baseline for unmanaged
+non-empty databases. For a database created by the pre-Flyway version of this PR,
+verify it has the V1 schema, then explicitly baseline it at version 1 before
+starting this backend. For example, with the Flyway CLI:
+
+```sh
+flyway -url=jdbc:sqlite:/absolute/path/dozy.db -baselineVersion=1 baseline
+```
+
+This preserves existing data and lets Flyway apply subsequent migrations.
+SQLite migration startup should run in one process at a time; Flyway does not
+provide concurrent migration locking for SQLite.
 
 Each operation uses a connection with foreign keys enabled and the configured
 busy timeout. Exposed manages transactions, statement execution, and connection
