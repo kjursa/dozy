@@ -1,4 +1,33 @@
-# Proposed PostgreSQL database
+# Dozy database
+
+## Current SQLite implementation
+
+The initial backend stores installations and places in a local SQLite file.
+`application.yaml` supplies the path and lock timeout through typed `AppConfig` /
+`DatabaseConfig`; use `DOZY_DATABASE_PATH` and `DOZY_DATABASE_BUSY_TIMEOUT_MS` to
+override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
+server working directory. There is no external database service requirement.
+
+`SqliteDatabase` creates parent directories and applies
+`src/main/resources/db/migration/V1__places.sql` once, tracked with
+`PRAGMA user_version = 1`. Startup rejects unknown schema versions. The migration
+creates only `installations` and `places`, including an owner index and the three
+read-only `builtin:` places. These SQLite IDs are TEXT, and timestamps use
+`CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
+
+Each operation uses a connection with foreign keys enabled and the configured
+busy timeout. JDBC work runs on `Dispatchers.IO`; connections and statements are
+closed after use. `BEGIN IMMEDIATE` transactions make owner checks and upserts
+atomic, including concurrent claims of an ID. Reads register the installation
+and collect its custom places plus shared places in one transaction. This simple
+single-file implementation is intended for the initial local backend, not as a
+production capacity claim. Keep the file on persistent writable storage.
+
+API code depends on `PlaceService` and the domain `PlaceRepository` contract.
+SQLite queries and repository implementation remain in the data layer, so a
+future PostgreSQL implementation can replace them through DI.
+
+## Proposed PostgreSQL database
 
 ## Scope
 

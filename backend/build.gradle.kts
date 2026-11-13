@@ -12,6 +12,12 @@ val ktorVersion = "3.6.0"
 
 dependencies {
     implementation("io.ktor:ktor-server-core:$ktorVersion")
+    implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
+    implementation("io.ktor:ktor-server-di:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+    implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
+    implementation("org.xerial:sqlite-jdbc:3.54.1.0")
+    runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
