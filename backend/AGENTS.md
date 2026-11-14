@@ -33,6 +33,9 @@ Use feature-specific packages such as `com.dozy.features.story` and `com.dozy.fe
 ### Domain — models and contracts
 
 - Put business models, value objects, and domain rules in `domain.model`.
+- Model business rules for individual fields (such as requiredness, maximum length, UUID syntax, or a required hex format) in domain value types. Prefer types nested in their owning model when they are specific to it, such as `Place.Name` or `Place.Id`.
+- Create validated value types through parsing/factory functions that return an explicit success-or-error result; do not use `null` when callers need to know why parsing failed, and do not use exceptions for expected invalid input. Give each value type its own error type containing only errors that can actually occur for that value. A small generic result container may be shared.
+- Normalize input such as trimming whitespace in the value type parser when that is part of the domain rule. Successful parsing returns the normalized, valid value; invalid parsing returns a domain-level error without HTTP status codes or presentation text.
 - Put data-access contracts required by the application in `domain.repository`; group other contracts by business area.
 - Keep domain independent of other layers, frameworks, databases, and HTTP transport.
 - Keep database models and external-service DTOs outside the domain.
@@ -42,6 +45,8 @@ Use feature-specific packages such as `com.dozy.features.story` and `com.dozy.fe
 - Put business operations and orchestration here. Use a focused `<Action><Feature>UseCase` when it contains meaningful logic, coordinates dependencies, or is reused.
 - For several small, closely related operations in one feature, a single concrete `<Feature>Service` can be simpler than one class per operation. Do not create both a service and a use case when they duplicate responsibilities.
 - Receive domain contracts and other collaborators through constructors.
+- Have services/use cases accept validated domain values rather than raw strings or transport DTOs. When an operation needs several values, group them in a focused command/domain parameter object such as `SavePlace`, rather than growing a long parameter list. The object should contain the exact validated values required by that operation.
+- Keep state-dependent checks (such as whether an ID exists, belongs to an installation, or may be changed) in the application/service or repository flow; validated value types cover the value's own format and intrinsic business constraints.
 - Do not create concrete repositories, network clients, or adapters inside use cases.
 - Keep SQL, HTTP, process handling, and framework configuration out of application code.
 - Name use cases for the action they perform, such as `CreateStoryUseCase`. Avoid a class that only delegates one call without adding responsibility.
@@ -62,6 +67,7 @@ Use feature-specific packages such as `com.dozy.features.story` and `com.dozy.fe
 - Pass requests to application operations and map results to HTTP responses.
 - Keep business logic, database queries, and third-party integration details out of route handlers.
 - Validate input format at the API boundary; keep business rules in the domain/application layers.
+- Convert request fields to validated domain value types at the API boundary. Map their typed domain errors to the appropriate HTTP error response there; do not make domain types depend on HTTP or presentation models.
 - Name inbound models `<Action><Feature>Request`, such as `CreateStoryRequest`, and outbound models `<Feature>Response`, such as `StoryResponse`.
 - Keep request/response models separate from domain models. Use simple top-level mapping extensions in feature-specific `*Mappers.kt` files; use mapper classes only when mapping needs injected dependencies or state.
 

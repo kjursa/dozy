@@ -2,7 +2,7 @@ package com.dozy.features.place.data.database
 
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
-import com.dozy.features.place.domain.model.PlaceInput
+import com.dozy.features.place.domain.model.SavePlace
 import org.jetbrains.exposed.v1.core.CustomFunction
 import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.eq
@@ -21,13 +21,13 @@ internal fun JdbcTransaction.existingPlace(id: Place.Id): ExistingPlace? =
     Places.selectAll().where { Places.id eq id.value }
         .singleOrNull()?.let { ExistingPlace(it[Places.installationId]) }
 
-internal fun JdbcTransaction.upsertPlace(installation: InstallationId, id: Place.Id, input: PlaceInput) {
+internal fun JdbcTransaction.upsertPlace(installation: InstallationId, id: Place.Id, command: SavePlace) {
     Places.upsert(Places.id, onUpdateExclude = listOf(Places.installationId, Places.ownership)) {
         it[Places.id] = id.value
         it[installationId] = installation.value
-        it[name] = input.name
-        it[description] = input.description
-        it[inhabitants] = input.inhabitants
+        it[name] = command.name.value
+        it[description] = command.description.value
+        it[inhabitants] = command.inhabitants?.value
         it[ownership] = Place.Ownership.CUSTOM
         it[updatedAt] = CustomFunction("datetime", TextColumnType(), stringLiteral("now"))
     }

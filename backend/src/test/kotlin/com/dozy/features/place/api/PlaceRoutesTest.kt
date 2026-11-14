@@ -3,7 +3,7 @@ package com.dozy.features.place.api
 import com.dozy.databaseConfig
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
-import com.dozy.features.place.domain.model.PlaceInput
+import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.module
@@ -165,7 +165,7 @@ class PlaceRoutesTest {
 
     private class FailingRepository : PlaceRepository {
         override suspend fun list(installation: InstallationId): List<Place> = throw SQLException("Private database path")
-        override suspend fun save(installation: InstallationId, id: Place.Id, input: PlaceInput): SavePlaceResult =
+        override suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult =
             throw SQLException("Private database path")
     }
 }
