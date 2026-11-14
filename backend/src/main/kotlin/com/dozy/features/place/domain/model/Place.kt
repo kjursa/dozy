@@ -5,13 +5,13 @@ data class Place(
     val name: Name,
     val description: Description,
     val inhabitants: Inhabitants?,
-    val ownership: Ownership,
+    val origin: Origin,
 ) {
     @JvmInline value class Id(val value: String)
     @JvmInline value class Name(val value: String)
     @JvmInline value class Description(val value: String)
     @JvmInline value class Inhabitants(val value: String)
-    enum class Ownership { CUSTOM, PREDEFINED }
+    enum class Origin { USER, SYSTEM }
 }
 
 sealed interface ParseResult<out T, out E> {

@@ -14,13 +14,13 @@ class KtorPlaceApi(
     private val client: HttpClient,
     private val config: ApiConfig,
 ) : PlaceApi {
-    override suspend fun save(place: PlaceDto): Boolean {
+    override suspend fun save(id: String, request: SavePlaceRequestDto): Boolean {
         val base = config.baseUrl ?: return false
         val response =
             client.put("${base.trimEnd('/')}/places") {
-                url { appendPathSegments(place.id, encodeSlash = true) }
+                url { appendPathSegments(id, encodeSlash = true) }
                 contentType(ContentType.Application.Json)
-                setBody(place)
+                setBody(request)
             }
         return response.status.value in 200..299
     }

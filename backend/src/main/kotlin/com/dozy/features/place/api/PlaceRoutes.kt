@@ -25,7 +25,7 @@ fun Route.placeRoutes(service: PlaceService) {
         put("/{id}") {
             val installation = call.installationId()
             val request = call.receive<SavePlaceRequest>()
-            val id = requirePlaceId(call.parameters["id"], request)
+            val id = requirePlaceId(call.parameters["id"])
             val command = when (val result = SavePlace.parse(request.name, request.description, request.inhabitants)) {
                 is ParseResult.Valid -> result.value
                 is ParseResult.Invalid -> throw result.error.toApiException()
@@ -35,8 +35,8 @@ fun Route.placeRoutes(service: PlaceService) {
     }
 }
 
-private fun requirePlaceId(path: String?, request: SavePlaceRequest): Place.Id {
-    if (path.isNullOrBlank() || path != request.id || request.ownership != "CUSTOM" || !request.editable) {
+private fun requirePlaceId(path: String?): Place.Id {
+    if (path.isNullOrBlank()) {
         throw ApiException(HttpStatusCode.BadRequest, "INVALID_REQUEST")
     }
     return Place.Id(path)

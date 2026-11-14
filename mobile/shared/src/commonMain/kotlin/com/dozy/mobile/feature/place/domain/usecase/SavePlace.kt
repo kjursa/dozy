@@ -23,7 +23,7 @@ class SavePlace(
                 val existing = repository.find(id) ?: return@runCatchingSuspend Result.Unavailable
                 if (!existing.canEdit) return@runCatchingSuspend Result.NotEditable
             }
-            val place = Place(id ?: ids.generate(), input.name, input.description, input.inhabitants, Place.Ownership.CUSTOM, true)
+            val place = Place(id ?: ids.generate(), input.name, input.description, input.inhabitants, Place.Origin.USER, true)
             val sync = repository.save(place)
             Result.Saved(place, sync)
         }.getOrDefault(Result.Failure)

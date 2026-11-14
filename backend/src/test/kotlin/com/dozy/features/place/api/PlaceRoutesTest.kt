@@ -44,14 +44,14 @@ class PlaceRoutesTest {
         val initial = client.places()
         assertEquals(3, initial.size)
         assertEquals(setOf("builtin:village", "builtin:island", "builtin:woods"), initial.map { it.id }.toSet())
-        initial.forEach { assertFalse(it.editable); assertEquals("PREDEFINED", it.ownership) }
+        initial.forEach { assertFalse(it.editable); assertEquals("SYSTEM", it.origin) }
         val created = client.save(body = body(name = "  Garden  ", inhabitants = "Owls"))
         assertEquals(HttpStatusCode.Created, created.status)
         assertEquals("", created.bodyAsText())
         val saved = client.places().first()
         assertEquals(id, saved.id)
         assertEquals("Garden", saved.name)
-        assertEquals("CUSTOM", saved.ownership)
+        assertEquals("USER", saved.origin)
         assertEquals(true, saved.editable)
         assertEquals("Owls", saved.inhabitants)
         val updated = client.save()
@@ -80,7 +80,7 @@ class PlaceRoutesTest {
     }
 
     @Test
-    fun `accepts canonical UUID case and retains ownership isolation`() = testApplication {
+    fun `accepts canonical UUID case and retains origin isolation`() = testApplication {
         configurePlacesTest()
         val uppercase = "019A0000-0000-7000-8000-00000000000A"
         assertEquals(HttpStatusCode.Created, client.save(installation = uppercase).status)
@@ -94,17 +94,17 @@ class PlaceRoutesTest {
     fun `protects predefined namespace even for unknown IDs`() = testApplication {
         configurePlacesTest()
         for (builtin in listOf("builtin:woods", "builtin:missing")) {
-            assertError(client.save(path = builtin, body = body(resourceId = builtin)), HttpStatusCode.Forbidden, "FORBIDDEN")
+            assertError(client.save(path = builtin, body = body()), HttpStatusCode.Forbidden, "FORBIDDEN")
         }
         assertEquals("Whispering woods", client.places().single { it.id == "builtin:woods" }.name)
     }
 
     @Test
-    fun `rejects mismatched identity flags malformed JSON and missing fields`() = testApplication {
+    fun `rejects malformed JSON and missing fields`() = testApplication {
         configurePlacesTest()
         val invalidBodies = listOf(
-            body(resourceId = stranger), body().replace("CUSTOM", "PREDEFINED"),
-            body().replace("true", "false"), "{", "{}",
+            "{", "{}", """{"name":"Garden"}""",
+            """{"name":"Garden","description":"Quiet","origin":"SYSTEM","editable":true}""",
         )
         for (invalid in invalidBodies) {
             assertError(client.save(body = invalid), HttpStatusCode.BadRequest, "INVALID_REQUEST")
@@ -164,8 +164,8 @@ class PlaceRoutesTest {
         setBody(body)
     }
 
-    private fun body(resourceId: String = id, name: String = "Garden", description: String = "Quiet garden", inhabitants: String? = null) =
-        Json.encodeToString(SavePlaceRequest(resourceId, name, description, "CUSTOM", true, inhabitants))
+    private fun body(name: String = "Garden", description: String = "Quiet garden", inhabitants: String? = null) =
+        Json.encodeToString(SavePlaceRequest(name, description, inhabitants))
 
     private suspend fun assertError(response: HttpResponse, status: HttpStatusCode, code: String) {
         assertEquals(status, response.status)

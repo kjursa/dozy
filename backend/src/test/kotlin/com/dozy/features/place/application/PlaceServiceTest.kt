@@ -17,7 +17,7 @@ class PlaceServiceTest {
     @Test
     fun `orders custom places first with deterministic name and ID ties`() = runBlocking {
         val repository = FakeRepository(listOf(
-            place("builtin:woods", "A", Place.Ownership.PREDEFINED),
+            place("builtin:woods", "A", Place.Origin.SYSTEM),
             place("c", "Zoo"), place("b", "alpha"), place("a", "Alpha"),
         ))
         assertEquals(listOf("a", "b", "c", "builtin:woods"),
@@ -41,8 +41,8 @@ class PlaceServiceTest {
         assertEquals(Triple(installation, id, command), repository.saved)
     }
 
-    private fun place(id: String, name: String, ownership: Place.Ownership = Place.Ownership.CUSTOM) =
-        Place(placeId(id), placeName(name), placeDescription("Forest"), null, ownership)
+    private fun place(id: String, name: String, origin: Place.Origin = Place.Origin.USER) =
+        Place(placeId(id), placeName(name), placeDescription("Forest"), null, origin)
 
     private fun placeId(value: String) = Place.Id(value)
     private fun placeName(value: String) = Place.Name(value)

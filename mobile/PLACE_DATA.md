@@ -21,14 +21,14 @@ A successful response is HTTP 200 with `Content-Type: application/json`:
       "name": "Grandma's garden",
       "description": "A sunny garden with an old apple tree.",
       "inhabitants": "A friendly hedgehog",
-      "ownership": "CUSTOM",
+      "origin": "USER",
       "editable": true
     },
     {
       "id": "builtin:woods",
       "name": "Whispering woods",
       "description": "A peaceful forest with glowing paths and old trees.",
-      "ownership": "PREDEFINED",
+      "origin": "SYSTEM",
       "editable": false
     }
   ]
@@ -36,12 +36,12 @@ A successful response is HTTP 200 with `Content-Type: application/json`:
 ```
 
 IDs are stable, unique opaque strings; local custom places use UUIDs. The
-`builtin:` namespace is reserved for predefined catalogue entries. `ownership`
-is `CUSTOM` or `PREDEFINED`; only a custom place with `editable: true` offers
+`builtin:` namespace is reserved for predefined catalogue entries. `origin`
+is `USER` or `SYSTEM`; only a custom place with `editable: true` offers
 editing. Predefined entries must have `editable: false`. `inhabitants` may be
 omitted or null; blank values are treated as absent. No image field is required.
 Existing names/descriptions are not subjected to new-form length restrictions.
-Missing required fields, blank identifiers/names/descriptions, unknown ownership,
+Missing required fields, blank identifiers/names/descriptions, unknown origin,
 duplicate IDs, or editable predefined entries reject the entire snapshot before
 cache mutation.
 
@@ -59,7 +59,7 @@ an offline result rather than claiming a remote refresh succeeded.
 Three resource-backed suggestions ship in the app: `builtin:woods`,
 `builtin:island`, and `builtin:village`. They are available on first launch and
 with a disabled API. Persisted entries with matching IDs override those bundled
-fallbacks. The collection is sorted by custom ownership first, then by
+fallbacks. The collection is sorted by USER origin first, then by
 lowercased name and ID within each source. It has no source-based headings.
 Home uses the first three entries from the same collection.
 
@@ -88,12 +88,13 @@ follow SPEC section 10: trimmed required name (80 characters), required descript
 ## Custom-place mutation proposal
 
 `PUT /places/{id}` uses the same opaque UUID on every retry. Path identifiers are
-encoded as a single segment. The JSON request is `PlaceDto`, matching GET items:
-`id`, `name`, `description`, `ownership: "CUSTOM"`, `editable: true`, and optional
-nullable `inhabitants`. Empty optional input becomes null. PUT replaces the full setting: an omitted or
+encoded as a single segment. The JSON request uses `SavePlaceRequestDto`:
+`name`, `description`, and optional `inhabitants`. The ID is supplied only in the path;
+`origin` and `editable` are response fields assigned by the backend.
+Empty optional input becomes null. PUT replaces the full setting: an omitted or
 null `inhabitants` field clears previously saved inhabitants. No image or character
-record is needed. The server must require path/body ID equality and authorize
-ownership; the client cannot grant permissions through `editable`.
+record is needed. The server takes the ID from the path and independently authorizes
+writes using the installation header. The client does not submit `origin` or `editable`.
 
 Any 2xx status acknowledges the upsert (proposed 201 for creation, 204 for update;
 no response body is required). Repeated identical PUTs produce one resource.
@@ -101,7 +102,7 @@ no response body is required). Repeated identical PUTs produce one resource.
 409 ownership conflict, 429 rate limiting, and 5xx temporary failure. Error bodies
 are not consumed or shown as user-facing copy. All non-2xx, network failures, and
 acknowledgement-storage failures retain the pending row, with no fictitious remote
-success. No backend endpoint is implemented in this task.
+success. The backend implements the GET and PUT endpoints.
 
 A save attempts one PUT. Entry/explicit refresh retries persisted pending rows
 once each before GET; there is no background retry loop. Saving and refresh
@@ -122,7 +123,7 @@ error. Back remains available. The form restores unsaved input and the original
 ID through `StatePersistence`, never overwriting restored input with a reload.
 Saving rechecks existence and editability in the use case. The repository also
 checks stored/bundled permissions under its mutation lock, and rejects custom
-writes into the reserved `builtin:` namespace, even if a caller forges ownership.
+writes into the reserved `builtin:` namespace, even if a caller forges origin.
 
 Edits upsert the original ID, with no duplicate row or new ID generation. Clearing
 inhabitants writes null. Collection and Home observe the same database and see
@@ -147,3 +148,10 @@ the Places entry on the back stack; cancel returns there, and save selects the
 place through the same selection flow. Form fields and draft input use typed
 `StatePersistence`; errors, progress, and derived names are transient. One-off
 navigation uses effects. Buttons guard duplicate selection, refresh, and save.
+
+## Development schema reset
+
+Places persist `origin` (`SYSTEM`/`USER`) instead of `ownership`. This development
+change updates the current Room schema without an upgrade migration. Clear app
+data or reinstall if Room reports an incompatible schema. Historical migrations
+are not an upgrade path into this reset schema.

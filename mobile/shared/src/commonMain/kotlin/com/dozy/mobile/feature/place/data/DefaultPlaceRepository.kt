@@ -45,7 +45,7 @@ class DefaultPlaceRepository(
     override suspend fun save(place: Place): PlaceSync =
         mutations.withLock {
             require(place.canEdit && !place.id.value.startsWith("builtin:"))
-            // Check the stored authority too: caller-supplied ownership cannot grant edit permission.
+            // Check the stored authority too: caller-supplied origin cannot grant edit permission.
             val existing = find(place.id)
             require(existing == null || existing.canEdit)
             val row = place.toEntity()
@@ -54,7 +54,7 @@ class DefaultPlaceRepository(
         }
 
     private suspend fun synchronize(row: PlaceEntity): PlaceSync {
-        val acknowledged = runCatchingSuspend { api.save(row.toDomain().toDto()) }.getOrDefault(false)
+        val acknowledged = runCatchingSuspend { api.save(row.id, row.toDomain().toSaveRequest()) }.getOrDefault(false)
         if (!acknowledged) return PlaceSync.PENDING
         val updated = runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }
         return if (updated.isSuccess) PlaceSync.SYNCED else PlaceSync.PENDING

@@ -10,7 +10,7 @@ class ObservePlaces(
     operator fun invoke() =
         repository.observe().map { places ->
             places.sortedWith(
-                compareBy<Place> { it.ownership != Place.Ownership.CUSTOM }.thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
+                compareBy<Place> { it.origin != Place.Origin.USER }.thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
             )
         }
 }

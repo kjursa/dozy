@@ -47,8 +47,8 @@ class PlaceDataTest {
             var snapshot =
                 PlacesDto(
                     listOf(
-                        PlaceDto("same", "Server", "Old description", "CUSTOM", true),
-                        PlaceDto("remote", "Island", "Sandy", "PREDEFINED", false),
+                        PlaceDto("same", "Server", "Old description", "USER", true),
+                        PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
             val repository = DefaultPlaceRepository(dao, PlaceApi { snapshot }, emptyList())
@@ -74,7 +74,7 @@ class PlaceDataTest {
             val existing = place().toEntity()
             dao.upsert(existing)
             val repository =
-                DefaultPlaceRepository(dao, PlaceApi { PlacesDto(listOf(PlaceDto("x", "", "desc", "CUSTOM", true))) }, emptyList())
+                DefaultPlaceRepository(dao, PlaceApi { PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true))) }, emptyList())
             try {
                 repository.refresh()
                 fail("Expected invalid transport")
@@ -91,7 +91,7 @@ class PlaceDataTest {
         }
 
     @Test fun mappingKeepsLegacyValuesAndOptionalInhabitantsAndRejectsEditablePredefined() {
-        val dto = PlaceDto("old", "x".repeat(90), "Old description", "CUSTOM", false, "An owl")
+        val dto = PlaceDto("old", "x".repeat(90), "Old description", "USER", false, "An owl")
         val place = dto.toEntity().toDomain()
         assertEquals(dto.name, place.name.value)
         assertEquals("An owl", place.inhabitants?.value)
@@ -103,8 +103,8 @@ class PlaceDataTest {
                 .toDomain()
                 .inhabitants,
         )
-        assertFailsWith<IllegalArgumentException> { dto.copy(ownership = "PREDEFINED", editable = true).toEntity() }
-        assertFailsWith<IllegalArgumentException> { dto.copy(ownership = "unknown").toEntity() }
+        assertFailsWith<IllegalArgumentException> { dto.copy(origin = "SYSTEM", editable = true).toEntity() }
+        assertFailsWith<IllegalArgumentException> { dto.copy(origin = "unknown").toEntity() }
     }
 
     @Test fun ktorUsesGetAndDecodesBothSourcesWithOptionalInhabitants() =
@@ -115,7 +115,7 @@ class PlaceDataTest {
                         assertEquals("GET", request.method.value)
                         assertEquals("https://example.test/places", request.url.toString())
                         respond(
-                            """{"places":[{"id":"one","name":"Garden","description":"Sunny","ownership":"CUSTOM","editable":true,"inhabitants":"Bees"},{"id":"two","name":"Woods","description":"Quiet","ownership":"PREDEFINED","editable":false}]}""",
+                            """{"places":[{"id":"one","name":"Garden","description":"Sunny","origin":"USER","editable":true,"inhabitants":"Bees"},{"id":"two","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false}]}""",
                             HttpStatusCode.OK,
                             headersOf(HttpHeaders.ContentType, "application/json"),
                         )

@@ -7,10 +7,10 @@ data class Place(
     val name: Name,
     val description: Description,
     val inhabitants: Inhabitants? = null,
-    val ownership: Ownership,
+    val origin: Origin,
     val editable: Boolean,
 ) {
-    val canEdit: Boolean get() = ownership == Ownership.CUSTOM && editable
+    val canEdit: Boolean get() = origin == Origin.USER && editable
 
     @JvmInline value class Id(
         val value: String,
@@ -28,5 +28,5 @@ data class Place(
         val value: String,
     )
 
-    enum class Ownership { CUSTOM, PREDEFINED }
+    enum class Origin { USER, SYSTEM }
 }

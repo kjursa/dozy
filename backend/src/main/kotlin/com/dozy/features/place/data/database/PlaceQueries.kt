@@ -14,7 +14,7 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 
 internal fun JdbcTransaction.visiblePlaces(installation: InstallationId): List<Place> =
     Places.selectAll().where {
-        (Places.installationId eq installation.value) or (Places.ownership eq Place.Ownership.PREDEFINED)
+        (Places.installationId eq installation.value) or (Places.origin eq Place.Origin.SYSTEM)
     }.map { it.toPlace() }
 
 internal fun JdbcTransaction.existingPlace(id: Place.Id): ExistingPlace? =
@@ -22,13 +22,13 @@ internal fun JdbcTransaction.existingPlace(id: Place.Id): ExistingPlace? =
         .singleOrNull()?.let { ExistingPlace(it[Places.installationId]) }
 
 internal fun JdbcTransaction.upsertPlace(installation: InstallationId, id: Place.Id, command: SavePlace) {
-    Places.upsert(Places.id, onUpdateExclude = listOf(Places.installationId, Places.ownership)) {
+    Places.upsert(Places.id, onUpdateExclude = listOf(Places.installationId, Places.origin)) {
         it[Places.id] = id.value
         it[installationId] = installation.value
         it[name] = command.name.value
         it[description] = command.description.value
         it[inhabitants] = command.inhabitants?.value
-        it[ownership] = Place.Ownership.CUSTOM
+        it[origin] = Place.Origin.USER
         it[updatedAt] = CustomFunction("datetime", TextColumnType(), stringLiteral("now"))
     }
 }

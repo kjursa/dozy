@@ -8,7 +8,7 @@ import com.dozy.features.place.domain.repository.PlaceRepository
 
 class PlaceService(private val repository: PlaceRepository) {
     suspend fun list(installation: InstallationId) = repository.list(installation).sortedWith(
-        compareBy<Place> { it.ownership != Place.Ownership.CUSTOM }
+        compareBy<Place> { it.origin != Place.Origin.USER }
             .thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
     )
 

@@ -147,7 +147,7 @@
       &quot;name&quot;: &quot;Grandma&#x27;s garden&quot;,
       &quot;description&quot;: &quot;A peaceful forest with glowing paths.&quot;,
       &quot;inhabitants&quot;: null,
-      &quot;ownership&quot;: &quot;CUSTOM&quot;,
+      &quot;origin&quot;: &quot;USER&quot;,
       &quot;editable&quot;: true
     },
     {
@@ -155,7 +155,7 @@
       &quot;name&quot;: &quot;Whispering woods&quot;,
       &quot;description&quot;: &quot;A peaceful forest with glowing paths.&quot;,
       &quot;inhabitants&quot;: null,
-      &quot;ownership&quot;: &quot;PREDEFINED&quot;,
+      &quot;origin&quot;: &quot;SYSTEM&quot;,
       &quot;editable&quot;: false
     }
   ]
@@ -171,14 +171,11 @@
 <article class="endpoint" id="places-save" data-method="PUT" data-search="places put /places/{id} create or replace a custom place replace the full setting under the same id. an omitted/null inhabitants field clears its previous value.">
  <div class="endpoint-top"><span class="method put">PUT</span><code class="path">/places/{id}</code><span class="badge">Implemented</span><a class="permalink" href="#places-save" aria-label="Link to Create or replace a custom place">#</a></div>
  <h2>Create or replace a custom place</h2><p class="description">Replace the full setting under the same ID. An omitted/null inhabitants field clears its previous value.</p>
- <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>X-Installation-Id</td><td>Required UUID</td><td>Persistent client installation ID; no account/login or separate secret.</td></tr><tr><td>Content-Type</td><td>application/json</td><td>Request body encoding.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>id</td><td>path</td><td>string</td><td>Required; body.id must match. Custom IDs cannot start with builtin:.</td></tr></tbody></table></div><h3>Request body</h3><details open><summary>Custom place</summary><pre><code>{
-  &quot;id&quot;: &quot;c48b54fb-033f-49ac-b48c-c665644775d1&quot;,
+ <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>X-Installation-Id</td><td>Required UUID</td><td>Persistent client installation ID; no account/login or separate secret.</td></tr><tr><td>Content-Type</td><td>application/json</td><td>Request body encoding.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>id</td><td>path</td><td>string</td><td>Required resource ID, supplied only in the path. Custom IDs cannot start with builtin:.</td></tr></tbody></table></div><h3>Request body</h3><details open><summary>Custom place</summary><pre><code>{
   &quot;name&quot;: &quot;Grandma&#x27;s garden&quot;,
   &quot;description&quot;: &quot;A peaceful forest with glowing paths.&quot;,
-  &quot;inhabitants&quot;: null,
-  &quot;ownership&quot;: &quot;CUSTOM&quot;,
-  &quot;editable&quot;: true
-}</code></pre></details><h3>Contract rules</h3><ul><li>ownership must be CUSTOM and editable true; server permissions remain authoritative.</li><li>Trim input: name required/max 80; description required/max 500; inhabitants optional/max 500 UTF-16 units.</li><li>Existing story snapshots remain unchanged after edits.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">201</span> Created</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status ok">204</span> Updated</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status error">400</span> INVALID_REQUEST</summary><pre><code>{
+  &quot;inhabitants&quot;: null
+}</code></pre></details><h3>Contract rules</h3><ul><li>Body contains name, description and optional inhabitants only. The server assigns USER origin and derives edit permissions.</li><li>Trim input: name required/max 80; description required/max 500; inhabitants optional/max 500 UTF-16 units.</li><li>Existing story snapshots remain unchanged after edits.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">201</span> Created</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status ok">204</span> Updated</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status error">400</span> INVALID_REQUEST</summary><pre><code>{
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
@@ -227,7 +224,7 @@
     &quot;name&quot;: &quot;Whispering woods&quot;,
     &quot;description&quot;: &quot;A peaceful forest with glowing paths.&quot;,
     &quot;inhabitants&quot;: null,
-    &quot;ownership&quot;: &quot;PREDEFINED&quot;,
+    &quot;origin&quot;: &quot;SYSTEM&quot;,
     &quot;editable&quot;: false
   },
   &quot;idea&quot;: &quot;Help a lost star&quot;,
@@ -357,7 +354,7 @@
       &quot;name&quot;: &quot;Whispering woods&quot;,
       &quot;description&quot;: &quot;A peaceful forest with glowing paths.&quot;,
       &quot;inhabitants&quot;: null,
-      &quot;ownership&quot;: &quot;PREDEFINED&quot;,
+      &quot;origin&quot;: &quot;SYSTEM&quot;,
       &quot;editable&quot;: false
     },
     &quot;idea&quot;: &quot;Help a lost star&quot;,
