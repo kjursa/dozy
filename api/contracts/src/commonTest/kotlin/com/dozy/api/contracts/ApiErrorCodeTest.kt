@@ -12,6 +12,7 @@ class ApiErrorCodeTest {
     fun `known v1 error codes have stable wire values`() {
         val expected = mapOf(
             ApiErrorCode.INVALID_REQUEST to "INVALID_REQUEST",
+            ApiErrorCode.VALIDATION_FAILED to "VALIDATION_FAILED",
             ApiErrorCode.INVALID_INSTALLATION_ID to "INVALID_INSTALLATION_ID",
             ApiErrorCode.FORBIDDEN to "FORBIDDEN",
             ApiErrorCode.CONFLICT to "CONFLICT",

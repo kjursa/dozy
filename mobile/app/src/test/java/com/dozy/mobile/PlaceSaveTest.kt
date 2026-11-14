@@ -236,7 +236,7 @@ class PlaceSaveTest {
                             when (status) {
                                 403 -> """{"code":"FORBIDDEN"}"""
                                 409 -> """{"code":"CONFLICT"}"""
-                                422 -> """{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG"}"""
+                                422 -> """{"code":"VALIDATION_FAILED","field":"name","reason":"TOO_LONG"}"""
                                 else -> """{"code":"FUTURE_ERROR"}"""
                             }
                         respond(error, HttpStatusCode.fromValue(status))

@@ -6,20 +6,20 @@ import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ApiErrorResponse
 
 internal fun ApiErrorResponse.checkRequest(status: Int) {
-    if (status == 400 && ApiErrorCode.fromValue(code) in setOf(ApiErrorCode.INVALID_REQUEST, ApiErrorCode.INVALID_INSTALLATION_ID)) {
+    if (ApiErrorCode.fromValue(code) in setOf(ApiErrorCode.INVALID_REQUEST, ApiErrorCode.INVALID_INSTALLATION_ID)) {
         throw InvalidRequestException(status, this)
     }
 }
 
 internal fun ApiErrorResponse.toListError(status: Int): PlacesListError =
-    if (status == 503 && ApiErrorCode.fromValue(code) == ApiErrorCode.UNAVAILABLE) PlacesListError.Unavailable
+    if (ApiErrorCode.fromValue(code) == ApiErrorCode.UNAVAILABLE) PlacesListError.Unavailable
     else PlacesListError.Unknown(status, this)
 
-internal fun ApiErrorResponse.toSaveError(status: Int): PlacesSaveError = when (status to ApiErrorCode.fromValue(code)) {
-    403 to ApiErrorCode.FORBIDDEN -> PlacesSaveError.Forbidden
-    409 to ApiErrorCode.CONFLICT -> PlacesSaveError.Conflict
-    503 to ApiErrorCode.UNAVAILABLE -> PlacesSaveError.Unavailable
-    422 to ApiErrorCode.INVALID_REQUEST -> validationError(status)
+internal fun ApiErrorResponse.toSaveError(status: Int): PlacesSaveError = when (ApiErrorCode.fromValue(code)) {
+    ApiErrorCode.FORBIDDEN -> PlacesSaveError.Forbidden
+    ApiErrorCode.CONFLICT -> PlacesSaveError.Conflict
+    ApiErrorCode.UNAVAILABLE -> PlacesSaveError.Unavailable
+    ApiErrorCode.VALIDATION_FAILED -> validationError(status)
     else -> PlacesSaveError.Unknown(status, this)
 }
 

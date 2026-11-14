@@ -231,11 +231,11 @@ custom record; reject writes to the predefined namespace. Responses:
 Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
-Implemented place errors use the common error shape. A `422 INVALID_REQUEST` caused
+Implemented place errors use the common error shape. A `422 VALIDATION_FAILED` caused
 by field validation includes the field and reason:
 
 ```json
-{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG"}
+{"code":"VALIDATION_FAILED","field":"name","reason":"TOO_LONG"}
 ```
 
 `REQUIRED` means the trimmed value is empty. `TOO_LONG` means the trimmed value
@@ -246,7 +246,7 @@ readable even if they exceed a later write limit.
 | --- | --- | --- |
 | 400 | `INVALID_INSTALLATION_ID` | Missing, duplicated, or non-canonical UUID header |
 | 400 | `INVALID_REQUEST` | Malformed/missing JSON fields or a blank path ID |
-| 422 | `INVALID_REQUEST` | Invalid trimmed name, description, or inhabitants; response identifies the field and reason |
+| 422 | `VALIDATION_FAILED` | Invalid trimmed name, description, or inhabitants; response identifies the field and reason |
 | 403 | `FORBIDDEN` | Attempt to write any `builtin:` ID, including unknown ones |
 | 409 | `CONFLICT` | Custom ID already belongs to another installation |
 | 503 | `UNAVAILABLE` | SQLite operation failed |

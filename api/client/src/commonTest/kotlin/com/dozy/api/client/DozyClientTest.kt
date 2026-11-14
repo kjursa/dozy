@@ -60,16 +60,18 @@ class DozyClientTest {
     }
 
     @Test
-    fun `maps defined errors by both status and code`() = runTest {
+    fun `maps defined errors by body code independently of error status`() = runTest {
         val errors = listOf(
             Triple(403, """{"code":"FORBIDDEN"}""", PlacesSaveError.Forbidden),
             Triple(409, """{"code":"CONFLICT"}""", PlacesSaveError.Conflict),
+            Triple(500, """{"code":"CONFLICT"}""", PlacesSaveError.Conflict),
+            Triple(400, """{"code":"FORBIDDEN"}""", PlacesSaveError.Forbidden),
             Triple(503, """{"code":"UNAVAILABLE"}""", PlacesSaveError.Unavailable),
-            Triple(422, """{"code":"INVALID_REQUEST","field":"name","reason":"REQUIRED"}""",
+            Triple(400, """{"code":"VALIDATION_FAILED","field":"name","reason":"REQUIRED"}""",
                 PlacesSaveError.Validation(PlacesSaveError.Validation.Field.NAME, PlacesSaveError.Validation.Reason.REQUIRED)),
-            Triple(422, """{"code":"INVALID_REQUEST","field":"description","reason":"TOO_LONG"}""",
+            Triple(422, """{"code":"VALIDATION_FAILED","field":"description","reason":"TOO_LONG"}""",
                 PlacesSaveError.Validation(PlacesSaveError.Validation.Field.DESCRIPTION, PlacesSaveError.Validation.Reason.TOO_LONG)),
-            Triple(422, """{"code":"INVALID_REQUEST","field":"inhabitants","reason":"TOO_LONG"}""",
+            Triple(422, """{"code":"VALIDATION_FAILED","field":"inhabitants","reason":"TOO_LONG"}""",
                 PlacesSaveError.Validation(PlacesSaveError.Validation.Field.INHABITANTS, PlacesSaveError.Validation.Reason.TOO_LONG)),
         )
         for ((status, body, expected) in errors) {
@@ -77,21 +79,21 @@ class DozyClientTest {
             try { assertEquals(ApiResult.Failure(expected), sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))) }
             finally { http.close() }
         }
-        val unavailable = HttpClient(MockEngine { respond("""{"code":"UNAVAILABLE"}""", HttpStatusCode.ServiceUnavailable) })
+        val unavailable = HttpClient(MockEngine { respond("""{"code":"UNAVAILABLE"}""", HttpStatusCode.InternalServerError) })
         try { assertEquals(ApiResult.Failure(PlacesListError.Unavailable), sdk(unavailable).places.v1.list()) }
         finally { unavailable.close() }
     }
 
     @Test
-    fun `preserves new codes fields reasons and unexpected status combinations as Unknown`() = runTest {
+    fun `preserves new codes fields and reasons as Unknown`() = runTest {
         val replies = listOf(
             409 to """{"code":"NEW_RULE"}""",
             403 to """{"code":"FORBID"}""",
             400 to """{"code":"NEW_RULE"}""",
-            500 to """{"code":"CONFLICT"}""",
-            422 to """{"code":"INVALID_REQUEST","field":"newField","reason":"REQUIRED"}""",
-            422 to """{"code":"INVALID_REQUEST","field":"name","reason":"NEW_RULE"}""",
-            422 to """{"code":"INVALID_REQUEST","field":"inhabitants","reason":"REQUIRED"}""",
+
+            422 to """{"code":"VALIDATION_FAILED","field":"newField","reason":"REQUIRED"}""",
+            422 to """{"code":"VALIDATION_FAILED","field":"name","reason":"NEW_RULE"}""",
+            422 to """{"code":"VALIDATION_FAILED","field":"inhabitants","reason":"REQUIRED"}""",
         )
         for ((status, body) in replies) {
             val http = HttpClient(MockEngine { respond(body, HttpStatusCode.fromValue(status)) })
@@ -106,12 +108,12 @@ class DozyClientTest {
 
     @Test
     fun `invalid request and installation errors throw outside ApiResult`() = runTest {
-        for (code in listOf("INVALID_REQUEST", "INVALID_INSTALLATION_ID")) {
-            val http = HttpClient(MockEngine { respond("""{"code":"$code"}""", HttpStatusCode.BadRequest) })
+        for ((code, status) in listOf("INVALID_REQUEST" to 400, "INVALID_REQUEST" to 422, "INVALID_INSTALLATION_ID" to 503)) {
+            val http = HttpClient(MockEngine { respond("""{"code":"$code"}""", HttpStatusCode.fromValue(status)) })
             try {
                 val list = assertFailsWith<InvalidRequestException> { sdk(http).places.v1.list() }
                 assertEquals(code, list.error.code)
-                assertEquals(400, list.status)
+                assertEquals(status, list.status)
                 assertFailsWith<InvalidRequestException> { sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")) }
             } finally { http.close() }
         }
@@ -126,7 +128,7 @@ class DozyClientTest {
                 assertFailsWith<SerializationException> { sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")) }
             } finally { http.close() }
         }
-        val malformedValidation = HttpClient(MockEngine { respond("""{"code":"INVALID_REQUEST"}""", HttpStatusCode.UnprocessableEntity) })
+        val malformedValidation = HttpClient(MockEngine { respond("""{"code":"VALIDATION_FAILED"}""", HttpStatusCode.UnprocessableEntity) })
         val unexpectedSuccess = HttpClient(MockEngine { respond("", HttpStatusCode.OK) })
         try {
             assertFailsWith<InvalidResponseException> { sdk(malformedValidation).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")) }

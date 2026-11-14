@@ -52,8 +52,8 @@
   }
 }</code></pre></details><h3>Contract rules</h3><ul><li>type: CHILD, ANIMAL, FANTASY, OTHER.</li><li>Trim input: name required, single line, max 50 UTF-16 units; personality and appearance required, max 2000 each.</li><li>New mobile saves require a ready avatar; historical records may have avatar: null. Asset ID/URL must match an owned HTTPS asset.</li><li>Editing descriptions may retain an older avatar. No version token is currently submitted.</li><li>Deleted character IDs cannot be revived.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">201</span> Created</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status ok">204</span> Updated</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status error">400</span> INVALID_REQUEST</summary><p>Invalid payload or path/body ID mismatch.</p><pre><code>{
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> INVALID_REQUEST</summary><p>Example validation error; detailed field errors are not yet specified.</p><pre><code>{
-  &quot;code&quot;: &quot;INVALID_REQUEST&quot;
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> VALIDATION_FAILED</summary><p>Example validation error; detailed field errors are not yet specified.</p><pre><code>{
+  &quot;code&quot;: &quot;VALIDATION_FAILED&quot;
 }</code></pre></details><details class="response"><summary><span class="status error">403</span> FORBIDDEN</summary><pre><code>{
   &quot;code&quot;: &quot;FORBIDDEN&quot;
 }</code></pre></details><details class="response"><summary><span class="status error">404</span> NOT_FOUND</summary><pre><code>{
@@ -179,7 +179,7 @@
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> INVALID_REQUEST</summary><p>Field validation errors identify the field and reason.</p><pre><code>{
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> VALIDATION_FAILED</summary><p>Field validation errors identify the field and reason.</p><pre><code>{
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
   &quot;field&quot;: &quot;name&quot;,
   &quot;reason&quot;: &quot;TOO_LONG&quot;

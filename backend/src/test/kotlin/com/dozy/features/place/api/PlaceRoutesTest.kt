@@ -181,7 +181,7 @@ class PlaceRoutesTest {
     private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String) {
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
         val error = decodeError(response)
-        assertEquals("INVALID_REQUEST", error.code)
+        assertEquals("VALIDATION_FAILED", error.code)
         assertEquals(field, error.field)
         assertEquals(reason, error.reason)
     }

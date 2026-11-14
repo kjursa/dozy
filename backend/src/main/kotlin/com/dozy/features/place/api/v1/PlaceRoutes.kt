@@ -54,7 +54,7 @@ private fun SavePlace.Error.toApiException(): ApiException = when (this) {
 }
 
 private fun fieldError(field: String, reason: String) =
-    ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.INVALID_REQUEST, field, reason)
+    ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field, reason)
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created

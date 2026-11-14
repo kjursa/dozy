@@ -50,16 +50,21 @@ not authentication credentials. Clearing application data can lose the namespace
 and client. Error envelopes retain a string code; `fromValue` returns null for
 unrecognized values so future codes can still become `Unknown`.
 
+For HTTP error responses, `body.code` determines the error meaning independently
+of the HTTP status. Status is used for success validation and retained in diagnostic
+exceptions/unknown errors. The backend emits 400 for invalid request structure and
+422 with `VALIDATION_FAILED` for invalid user-entered values.
+
 Each operation returns `ApiResult<SuccessPayload, OperationError>`. V1 list returns
 `ApiResult<PlacesResponse, PlacesListError>`; save returns
 `ApiResult<Unit, PlacesSaveError>`. Handle `Success` and `Failure` exhaustively.
 Save has typed validation (field/reason), forbidden, conflict, unavailable and
 unknown errors. List has unavailable and unknown errors. `Unknown` preserves the
 HTTP status and the original error envelope for a new code, field, reason or
-unrecognized status/code combination, without requiring a new SDK release.
+unrecognized operation error code, without requiring a new SDK release.
 
-Structural `400 INVALID_REQUEST` and `400 INVALID_INSTALLATION_ID` responses throw
-`InvalidRequestException`, outside the result. `422 INVALID_REQUEST` with a known
+Structural `INVALID_REQUEST` and `INVALID_INSTALLATION_ID` response codes throw
+`InvalidRequestException`, outside the result. `VALIDATION_FAILED` with a known
 field/reason is a validation failure value. Unknown validation fields/reasons
 become `Unknown`; missing required validation metadata throws
 `InvalidResponseException`. Invalid JSON or missing required response fields
