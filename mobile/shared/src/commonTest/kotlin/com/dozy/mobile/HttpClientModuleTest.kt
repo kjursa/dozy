@@ -3,7 +3,6 @@ package com.dozy.mobile
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.httpClientModule
-import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -46,8 +45,8 @@ class HttpClientModuleTest {
             val client = graph.koin.get<HttpClient>()
             try {
                 assertSame(client, graph.koin.get<HttpClient>())
-                assertEquals(emptyList(), KtorPlaceApi(client, ApiConfig("https://example.test")).list()?.places)
-                assertEquals(emptyList(), KtorPlaceApi(client, ApiConfig("https://example.test")).list()?.places)
+                assertEquals(emptyList(), placesClient(client, ApiConfig("https://example.test")).list())
+                assertEquals(emptyList(), placesClient(client, ApiConfig("https://example.test")).list())
                 assertEquals(1, engines)
             } finally {
                 graph.close()

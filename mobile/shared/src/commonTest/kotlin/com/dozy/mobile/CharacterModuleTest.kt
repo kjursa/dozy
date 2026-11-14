@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.api.client.InstallationIdProvider
+import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
@@ -57,6 +59,7 @@ class CharacterModuleTest {
             val platformModule =
                 module {
                     single { ApiConfig(baseUrl = null) }
+                    single<InstallationIdProvider> { InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" } }
                     single<CharacterDao> { dao }
                     single<PlaceDao> { FakePlaceDao() }
                     single { BundledPlaces(listOf(place("builtin:woods", "Woods", false))) }
@@ -71,7 +74,7 @@ class CharacterModuleTest {
                     }
                     single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
                 }
-            val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, platformModule) }
+            val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, dozyClientModule, platformModule) }
             val owner = ViewModelStore()
             val otherOwner = ViewModelStore()
             try {

@@ -1,8 +1,10 @@
 package com.dozy.mobile.di
 
 import androidx.work.WorkManager
+import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
+import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
@@ -28,7 +30,8 @@ internal val androidModule =
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
         // Enable after the backend exposes the agreed API contract.
         single { ApiConfig(baseUrl = null) }
-        includes(databaseModule, httpClientModule, imageModule)
+        includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
+        single<InstallationIdProvider> { AndroidInstallationIdProvider(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }
         single<HttpEngineFactory> { HttpEngineFactory { Android.create() } }
         single<com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator> {

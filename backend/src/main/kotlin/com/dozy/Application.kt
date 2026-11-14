@@ -1,5 +1,6 @@
 package com.dozy
 
+import com.dozy.api.contracts.ApiVersion
 import com.dozy.di.configureDependencies
 import com.dozy.features.place.api.placeRoutes
 import com.dozy.features.place.application.PlaceService
@@ -13,6 +14,7 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -28,7 +30,7 @@ fun Application.module() {
     val places: PlaceService by dependencies
     routing {
         get("/hello") { call.respond(HelloResponse("Hello world from Dozy")) }
-        placeRoutes(places)
+        route(ApiVersion.V1.path) { placeRoutes(places) }
     }
 }
 

@@ -226,20 +226,20 @@ class GenerationProgressTest {
 
     @Test fun statusRetryAndResultHttpContractAndDisabledMode() =
         runTest {
-            val expected = mutableListOf("GET /story-generations/job", "POST /story-generations/job/retry", "GET /stories/story")
+            val expected = mutableListOf("GET /api/v1/story-generations/job", "POST /api/v1/story-generations/job/retry", "GET /api/v1/stories/story")
             val dto = StoryDto("story", "Title", "Text", "https://example.test/cover.png", ProgressApi().configuration.toDto())
             val http =
                 HttpClient(
                     MockEngine { request ->
                         assertEquals(expected.removeAt(0), "${request.method.value} ${request.url.encodedPath}")
                         when (request.url.encodedPath) {
-                            "/story-generations/job" ->
+                            "/api/v1/story-generations/job" ->
                                 respond(
                                     """{"jobId":"job","status":"READY","storyId":"story"}""",
                                     HttpStatusCode.OK,
                                     headersOf(HttpHeaders.ContentType, "application/json"),
                                 )
-                            "/story-generations/job/retry" -> {
+                            "/api/v1/story-generations/job/retry" -> {
                                 assertEquals("retry-key", request.headers["Idempotency-Key"])
                                 respond(
                                     """{"jobId":"job","status":"QUEUED"}""",
