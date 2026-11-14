@@ -1,5 +1,6 @@
 package com.dozy.mobile.feature.character.di
 
+import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
@@ -15,7 +16,7 @@ val characterModule =
     module {
         includes(characterDataModule)
         viewModel {
-            val handle: androidx.lifecycle.SavedStateHandle = get()
+            val handle: SavedStateHandle = get()
             CreateCharacterViewModel(
                 statePersistence = SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
                 saveCharacter = get(),
@@ -29,7 +30,7 @@ val characterModule =
             CharacterDetailsViewModel(
                 get(),
                 get(),
-                Character.Id(requireNotNull(get<androidx.lifecycle.SavedStateHandle>().get<String>("id"))),
+                Character.Id(requireNotNull(get<SavedStateHandle>().get<String>("id"))),
             )
         }
     }

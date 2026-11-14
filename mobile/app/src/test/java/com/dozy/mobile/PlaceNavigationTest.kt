@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import android.app.Application
 import androidx.lifecycle.ViewModelStore
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
@@ -9,6 +10,8 @@ import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
@@ -24,6 +27,7 @@ import com.dozy.mobile.navigation.generationAccepted
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.usePlace
 import com.kjursa.foundation.compose.mvi.StatePersistence
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -34,7 +38,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = android.app.Application::class)
+@Config(sdk = [35], application = Application::class)
 class PlaceNavigationTest {
     private fun controller() =
         NavHostController(RuntimeEnvironment.getApplication()).apply {
@@ -73,7 +77,7 @@ class PlaceNavigationTest {
         assertEquals(place, nav.currentBackStackEntry?.arguments?.getString("place"))
         assertEquals(
             cast,
-            kotlinx.serialization.json.Json.decodeFromString<List<String>>(
+            Json.decodeFromString<List<String>>(
                 requireNotNull(nav.currentBackStackEntry?.arguments?.getString("cast")),
             ),
         )
@@ -118,8 +122,8 @@ class PlaceNavigationTest {
                 SelectPlace(FakePlaceRepository()),
                 ObserveCharacters(FakeCharacterRepository()),
                 testStartGeneration(),
-                com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
-                    com.dozy.mobile.feature.story.domain.model.GenerationJob
+                GenerationKeyGenerator {
+                    GenerationJob
                         .RequestKey("key")
                 },
             )
@@ -179,8 +183,8 @@ class PlaceNavigationTest {
                 SelectPlace(FakePlaceRepository()),
                 ObserveCharacters(FakeCharacterRepository()),
                 testStartGeneration(),
-                com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
-                    com.dozy.mobile.feature.story.domain.model.GenerationJob
+                GenerationKeyGenerator {
+                    GenerationJob
                         .RequestKey("key")
                 },
             )

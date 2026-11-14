@@ -1,7 +1,9 @@
 package com.dozy.mobile.feature.character.domain.usecase
 
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
+import kotlinx.coroutines.CancellationException
 
 class DeleteCharacter(
     private val repository: CharacterRepository,
@@ -9,7 +11,7 @@ class DeleteCharacter(
     suspend operator fun invoke(id: Character.Id): Result =
         try {
             Result.Deleted(repository.delete(id))
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             Result.Failure
@@ -17,7 +19,7 @@ class DeleteCharacter(
 
     sealed interface Result {
         data class Deleted(
-            val sync: com.dozy.mobile.feature.character.domain.model.CharacterSync,
+            val sync: CharacterSync,
         ) : Result
 
         data object Failure : Result

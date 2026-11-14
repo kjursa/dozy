@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.*
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.list.*
 import kotlinx.coroutines.*
@@ -78,13 +79,13 @@ class StoriesViewModelTest {
             val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
             advanceUntilIdle()
             repo.start(
-                com.dozy.mobile.feature.story.domain.model.GenerationJob
+                GenerationJob
                     .RequestKey("key"),
                 api.configuration,
             )
             api.remote = GenerationStatusDto("job", "READY", "story")
             repo.refresh(
-                com.dozy.mobile.feature.story.domain.model.GenerationJob
+                GenerationJob
                     .Id("job"),
             )
             advanceUntilIdle()

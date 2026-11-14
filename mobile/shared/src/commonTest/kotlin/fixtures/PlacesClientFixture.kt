@@ -33,8 +33,8 @@ internal fun <T, E> apiFailure(result: ApiResult<T, E>): E =
         is ApiResult.Failure -> result.error
     }
 
-internal fun fakePlacesClient(list: suspend () -> ApiResult<PlacesResponse, PlacesListError>): com.dozy.api.client.place.v1.PlacesClient =
-    object : com.dozy.api.client.place.v1.PlacesClient {
+internal fun fakePlacesClient(list: suspend () -> ApiResult<PlacesResponse, PlacesListError>): PlacesClient =
+    object : PlacesClient {
         override suspend fun list() = list.invoke()
 
         override suspend fun save(

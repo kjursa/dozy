@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import android.app.Application
 import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
@@ -19,7 +20,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = android.app.Application::class)
+@Config(sdk = [35], application = Application::class)
 class PlaceDatabaseTest {
     private fun open(context: Context) =
         Room

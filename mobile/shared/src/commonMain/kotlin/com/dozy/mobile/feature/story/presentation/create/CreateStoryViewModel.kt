@@ -12,6 +12,7 @@ import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
 import com.kjursa.foundation.presentation.text.UiText
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
@@ -27,7 +28,7 @@ class CreateStoryViewModel(
         CreateStoryUiState(placeId = initialPlaceId, randomSetting = initialPlaceId == null, selectedHeroes = initialCast),
         persistence,
     ) {
-    private var characterObservation: kotlinx.coroutines.Job? = null
+    private var characterObservation: Job? = null
 
     init {
         resolveName()

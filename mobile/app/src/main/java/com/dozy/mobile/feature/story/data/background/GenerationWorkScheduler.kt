@@ -2,6 +2,7 @@ package com.dozy.mobile.feature.story.data.background
 
 import android.content.Context
 import androidx.work.*
+import com.dozy.mobile.feature.story.domain.usecase.ReconcileGenerations
 import java.util.concurrent.TimeUnit
 
 class GenerationWorkScheduler(
@@ -28,7 +29,7 @@ class GenerationWorkScheduler(
 }
 
 class GenerationWorkerFactory(
-    private val reconcile: com.dozy.mobile.feature.story.domain.usecase.ReconcileGenerations,
+    private val reconcile: ReconcileGenerations,
 ) : WorkerFactory() {
     override fun createWorker(
         appContext: Context,

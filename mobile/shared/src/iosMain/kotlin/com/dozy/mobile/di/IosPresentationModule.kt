@@ -1,5 +1,6 @@
 package com.dozy.mobile.di
 
+import coil3.PlatformContext
 import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.home.di.homeModule
 import com.dozy.mobile.feature.place.di.placeModule
@@ -12,6 +13,6 @@ import org.koin.dsl.module
 val iosPresentationModule =
     module {
         includes(characterModule, homeModule, placeModule, storyModule, imageModule)
-        single<coil3.PlatformContext> { coil3.PlatformContext.INSTANCE }
+        single<PlatformContext> { PlatformContext.INSTANCE }
         single<StoryCompletionNotifier> { UnsupportedStoryCompletionNotifier() }
     }

@@ -2,6 +2,7 @@ package com.dozy.api.client
 
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
+import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -96,7 +97,7 @@ class DozyClientTest {
             try {
                 val error = assertIs<PlacesSaveError.Unknown>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
                 assertEquals(status, error.status)
-                assertEquals(Json.decodeFromString<com.dozy.api.contracts.v1.ApiErrorResponse>(body), error.error)
+                assertEquals(Json.decodeFromString<ApiErrorResponse>(body), error.error)
                 assertIs<PlacesListError.Unknown>(failure(sdk(http).places.v1.list()))
             } finally { http.close() }
         }

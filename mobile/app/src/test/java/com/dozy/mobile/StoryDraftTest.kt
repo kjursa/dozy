@@ -1,8 +1,11 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryEffect
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
@@ -44,8 +47,8 @@ class StoryDraftTest {
         SelectPlace(FakePlaceRepository()),
         ObserveCharacters(FakeCharacterRepository()),
         testStartGeneration(),
-        com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
-            com.dozy.mobile.feature.story.domain.model.GenerationJob
+        GenerationKeyGenerator {
+            GenerationJob
                 .RequestKey("key")
         },
     )
@@ -90,8 +93,8 @@ class StoryDraftTest {
                     SelectPlace(FakePlaceRepository()),
                     ObserveCharacters(repository),
                     testStartGeneration(),
-                    com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
-                        com.dozy.mobile.feature.story.domain.model.GenerationJob
+                    GenerationKeyGenerator {
+                        GenerationJob
                             .RequestKey("key")
                     },
                 )
@@ -100,7 +103,7 @@ class StoryDraftTest {
             draft.dispatch(CreateStoryAction.AddHero("2"))
             draft.dispatch(CreateStoryAction.Request("A new adventure"))
             repository.delete(
-                com.dozy.mobile.feature.character.domain.model.Character
+                Character
                     .Id("2"),
             )
             advanceUntilIdle()

@@ -12,6 +12,8 @@ import com.dozy.mobile.R
 import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.domain.usecase.StoryCompletionNotifier
 import com.dozy.mobile.resources.*
+import org.jetbrains.compose.resources.getString
+import android.R as AndroidR
 
 class AndroidStoryCompletionNotifier(
     private val context: Context,
@@ -44,11 +46,10 @@ class AndroidStoryCompletionNotifier(
         val notification =
             Notification
                 .Builder(context, "stories")
-                .setSmallIcon(android.R.drawable.ic_menu_agenda)
+                .setSmallIcon(AndroidR.drawable.ic_menu_agenda)
                 .setContentTitle(context.getString(R.string.generation_notification_title))
                 .setContentText(
-                    org.jetbrains.compose.resources
-                        .getString(Res.string.generation_ready),
+                    getString(Res.string.generation_ready),
                 ).setContentIntent(pending)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)

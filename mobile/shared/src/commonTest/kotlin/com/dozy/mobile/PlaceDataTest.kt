@@ -1,14 +1,16 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
-import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListError
+import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDomain
 import com.dozy.mobile.feature.place.data.toEntity
+import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -40,8 +42,7 @@ class PlaceDataTest {
                     DefaultPlaceRepository(
                         dao,
                         fakePlacesClient {
-                            throw com.dozy.api.client
-                                .ApiDisabledException()
+                            throw ApiDisabledException()
                         },
                         bundled,
                     ),
@@ -54,8 +55,7 @@ class PlaceDataTest {
                 DefaultPlaceRepository(
                     dao,
                     fakePlacesClient {
-                        throw com.dozy.api.client
-                            .ApiDisabledException()
+                        throw ApiDisabledException()
                     },
                     emptyList(),
                 ).observe().first(),
@@ -64,8 +64,7 @@ class PlaceDataTest {
                 DefaultPlaceRepository(
                     dao,
                     fakePlacesClient {
-                        throw com.dozy.api.client
-                            .ApiDisabledException()
+                        throw ApiDisabledException()
                     },
                     bundled,
                 ).refresh(),
@@ -89,7 +88,7 @@ class PlaceDataTest {
                 "Local edit",
                 repository
                     .find(
-                        com.dozy.mobile.feature.place.domain.model.Place
+                        Place
                             .Id("same"),
                     )?.name
                     ?.value,
@@ -110,8 +109,7 @@ class PlaceDataTest {
                     ApiResult.Failure(
                         PlacesListError.Unknown(
                             500,
-                            com.dozy.api.contracts.v1
-                                .ApiErrorResponse("NEW_RULE"),
+                            ApiErrorResponse("NEW_RULE"),
                         ),
                     )
                 }
@@ -198,7 +196,7 @@ class PlaceDataTest {
                     },
                 )
             try {
-                assertFailsWith<com.dozy.api.client.ApiDisabledException> { placesClient(client, ApiConfig(null)).list() }
+                assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).list() }
                 assertEquals(0, calls)
                 assertEquals(PlacesListError.Unavailable, apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
                 assertEquals(1, calls)

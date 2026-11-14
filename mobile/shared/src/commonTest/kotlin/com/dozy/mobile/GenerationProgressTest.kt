@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import androidx.lifecycle.ViewModelStore
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.*
@@ -172,7 +173,7 @@ class GenerationProgressTest {
     @Test fun viewModelBlocksRepeatedRetryAndEmitsSpecificReaderEffect() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-            val scope = androidx.lifecycle.ViewModelStore()
+            val scope = ViewModelStore()
             try {
                 val api = ProgressApi()
                 val repository = DefaultGenerationRepository(FakeGenerationDao(), api)
@@ -226,7 +227,8 @@ class GenerationProgressTest {
 
     @Test fun statusRetryAndResultHttpContractAndDisabledMode() =
         runTest {
-            val expected = mutableListOf("GET /api/v1/story-generations/job", "POST /api/v1/story-generations/job/retry", "GET /api/v1/stories/story")
+            val expected =
+                mutableListOf("GET /api/v1/story-generations/job", "POST /api/v1/story-generations/job/retry", "GET /api/v1/stories/story")
             val dto = StoryDto("story", "Title", "Text", "https://example.test/cover.png", ProgressApi().configuration.toDto())
             val http =
                 HttpClient(

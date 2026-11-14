@@ -3,6 +3,7 @@ package com.dozy.mobile
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
@@ -90,9 +91,7 @@ class PlaceSaveTest {
             var calls = 0
             val api =
                 object : PlacesClient {
-                    override suspend fun list(): ApiResult<PlacesDto, com.dozy.api.client.place.v1.PlacesListError> =
-                        throw com.dozy.api.client
-                            .ApiDisabledException()
+                    override suspend fun list(): ApiResult<PlacesDto, PlacesListError> = throw ApiDisabledException()
 
                     override suspend fun save(
                         id: String,

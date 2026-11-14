@@ -1,15 +1,20 @@
 package com.dozy.mobile
 
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
 import com.dozy.mobile.feature.character.presentation.list.CharactersAction
 import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.presentation.text.UiText
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -18,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.*
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
+import kotlin.test.fail
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CharactersViewModelTest {
@@ -37,8 +43,7 @@ class CharactersViewModelTest {
             val viewModel =
                 CharactersViewModel(
                     ObserveCharacters(repository),
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .RefreshCharacters(repository),
+                    RefreshCharacters(repository),
                 )
             assertEquals(true, viewModel.uiState.value.loading)
             advanceUntilIdle()
@@ -68,13 +73,12 @@ class CharactersViewModelTest {
 
     @Test fun refreshRetainsKnownRowsPreventsDuplicateRequestsAndCanRetry() =
         runTest(dispatcher) {
-            val gate = kotlinx.coroutines.CompletableDeferred<Boolean>()
+            val gate = CompletableDeferred<Boolean>()
             val repository = FakeCharacterRepository().apply { beforeRefresh = { gate.await() } }
             val viewModel =
                 CharactersViewModel(
                     ObserveCharacters(repository),
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .RefreshCharacters(repository),
+                    RefreshCharacters(repository),
                 )
             advanceUntilIdle()
             assertEquals(true, viewModel.uiState.value.refreshing)
@@ -97,16 +101,15 @@ class CharactersViewModelTest {
             val stored = FakeCharacterRepository()
             var failObservation = true
             val repository =
-                object : com.dozy.mobile.feature.character.domain.repository.CharacterRepository by stored {
+                object : CharacterRepository by stored {
                     override fun observe() =
-                        kotlinx.coroutines.flow.flow {
+                        flow {
                             if (failObservation) error("database unavailable")
                             emit(stored.characters.value)
                         }
                 }
             val refresh =
-                com.dozy.mobile.feature.character.domain.usecase
-                    .RefreshCharacters(repository)
+                RefreshCharacters(repository)
             val viewModel = CharactersViewModel(ObserveCharacters(repository), refresh)
             advanceUntilIdle()
             assertEquals(false, viewModel.uiState.value.loading)
@@ -116,21 +119,19 @@ class CharactersViewModelTest {
             advanceUntilIdle()
             assertEquals(false, viewModel.uiState.value.characterLoadError)
             assertEquals(3, viewModel.uiState.value.characters.size)
-            stored.beforeRefresh = { throw kotlinx.coroutines.CancellationException("cancelled") }
+            stored.beforeRefresh = { throw CancellationException("cancelled") }
             try {
                 refresh()
-                kotlin.test.fail("Expected cancellation")
-            } catch (_: kotlinx.coroutines.CancellationException) {
+                fail("Expected cancellation")
+            } catch (_: CancellationException) {
             }
         }
 
     @Test fun initialStateExposesPersistedCharacters() {
         val viewModel =
             CharactersViewModel(
-                com.dozy.mobile.feature.character.domain.usecase
-                    .ObserveCharacters(FakeCharacterRepository()),
-                com.dozy.mobile.feature.character.domain.usecase
-                    .RefreshCharacters(FakeCharacterRepository()),
+                ObserveCharacters(FakeCharacterRepository()),
+                RefreshCharacters(FakeCharacterRepository()),
             )
         dispatcher.scheduler.advanceUntilIdle()
         val state = viewModel.uiState.value
@@ -142,10 +143,8 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .ObserveCharacters(FakeCharacterRepository()),
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .RefreshCharacters(FakeCharacterRepository()),
+                    ObserveCharacters(FakeCharacterRepository()),
+                    RefreshCharacters(FakeCharacterRepository()),
                 )
             advanceUntilIdle()
             val character =
@@ -161,10 +160,8 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .ObserveCharacters(FakeCharacterRepository()),
-                    com.dozy.mobile.feature.character.domain.usecase
-                        .RefreshCharacters(FakeCharacterRepository()),
+                    ObserveCharacters(FakeCharacterRepository()),
+                    RefreshCharacters(FakeCharacterRepository()),
                 )
             val effect = async { viewModel.effects.first() }
             viewModel.dispatch(CharactersAction.AddCharacterClicked)

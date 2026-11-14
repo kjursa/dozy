@@ -1,5 +1,6 @@
 package com.dozy.mobile.navigation
 
+import kotlinx.serialization.json.Json
 import androidx.navigation.NavHostController
 import androidx.savedstate.read
 import com.dozy.mobile.feature.character.domain.model.Character
@@ -24,7 +25,7 @@ fun NavHostController.openStory(
             if (cast.isNotEmpty()) {
                 add(
                     "cast=${encodeRouteArgument(
-                        kotlinx.serialization.json.Json
+                        Json
                             .encodeToString(cast.map { it.value }),
                     )}",
                 )

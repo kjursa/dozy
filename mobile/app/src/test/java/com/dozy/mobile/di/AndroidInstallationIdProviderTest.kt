@@ -1,5 +1,6 @@
 package com.dozy.mobile.di
 
+import android.app.Application
 import android.content.Context
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -10,7 +11,7 @@ import org.robolectric.annotation.Config
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = android.app.Application::class)
+@Config(sdk = [35], application = Application::class)
 class AndroidInstallationIdProviderTest {
     @Test
     fun reusesTheInstallationUuidAcrossProviderRecreation() {

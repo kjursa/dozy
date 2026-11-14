@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -38,10 +39,10 @@ internal class FakePlaceRepository : PlaceRepository {
         return places.value.find { it.id == id }
     }
 
-    override suspend fun save(place: Place): com.dozy.mobile.feature.place.domain.model.PlaceSync {
+    override suspend fun save(place: Place): PlaceSync {
         saves++
         check(!failure)
         places.value = places.value.filterNot { it.id == place.id } + place
-        return com.dozy.mobile.feature.place.domain.model.PlaceSync.PENDING
+        return PlaceSync.PENDING
     }
 }

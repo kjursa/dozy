@@ -1,19 +1,21 @@
 package com.dozy.mobile
 
+import android.app.Application
 import com.dozy.mobile.resources.*
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = android.app.Application::class)
+@Config(sdk = [35], application = Application::class)
 class SharedResourcesTest {
-    @org.junit.Before fun initializeSharedResources() {
+    @Before fun initializeSharedResources() {
         initializeComposeResourceProvider()
     }
 
