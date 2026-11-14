@@ -11,15 +11,35 @@ import java.sql.SQLException
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ErrorResponse(val code: String)
+data class ApiErrorResponse(
+    val code: String,
+    val field: String? = null,
+    val reason: String? = null,
+)
 
-class ApiException(val status: HttpStatusCode, val code: String) : RuntimeException()
+class ApiException(
+    val status: HttpStatusCode,
+    val code: String,
+    val field: String? = null,
+    val reason: String? = null,
+) : RuntimeException()
 
 fun Application.configureErrors() {
     install(StatusPages) {
-        exception<ApiException> { call, failure -> call.respond(failure.status, ErrorResponse(failure.code)) }
-        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_REQUEST")) }
-        exception<ContentTransformationException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorResponse("INVALID_REQUEST")) }
-        exception<SQLException> { call, _ -> call.respond(HttpStatusCode.ServiceUnavailable, ErrorResponse("UNAVAILABLE")) }
+        exception<ApiException> { call, failure ->
+            call.respond(
+                failure.status,
+                ApiErrorResponse(failure.code, failure.field, failure.reason),
+            )
+        }
+        exception<BadRequestException> { call, _ ->
+            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse("INVALID_REQUEST"))
+        }
+        exception<ContentTransformationException> { call, _ ->
+            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse("INVALID_REQUEST"))
+        }
+        exception<SQLException> { call, _ ->
+            call.respond(HttpStatusCode.ServiceUnavailable, ApiErrorResponse("UNAVAILABLE"))
+        }
     }
 }

@@ -3,7 +3,8 @@ package com.dozy.features.place.api
 import com.dozy.features.installation.api.installationId
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.domain.model.Place
-import com.dozy.features.place.domain.model.PlaceInput
+import com.dozy.features.place.domain.model.ParseResult
+import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
 import io.ktor.http.HttpStatusCode
@@ -25,9 +26,11 @@ fun Route.placeRoutes(service: PlaceService) {
             val installation = call.installationId()
             val request = call.receive<SavePlaceRequest>()
             val id = requirePlaceId(call.parameters["id"], request)
-            val input = PlaceInput.from(request.name, request.description, request.inhabitants)
-                ?: throw ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST")
-            call.respond(service.save(installation, id, input).status())
+            val command = when (val result = SavePlace.parse(request.name, request.description, request.inhabitants)) {
+                is ParseResult.Valid -> result.value
+                is ParseResult.Invalid -> throw result.error.toApiException()
+            }
+            call.respond(service.save(installation, id, command).status())
         }
     }
 }
@@ -38,6 +41,17 @@ private fun requirePlaceId(path: String?, request: SavePlaceRequest): Place.Id {
     }
     return Place.Id(path)
 }
+
+private fun SavePlace.Error.toApiException(): ApiException = when (this) {
+    SavePlace.Error.Name.Required -> fieldError("name", "REQUIRED")
+    SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG")
+    SavePlace.Error.Description.Required -> fieldError("description", "REQUIRED")
+    SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG")
+    SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG")
+}
+
+private fun fieldError(field: String, reason: String) =
+    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason)
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created

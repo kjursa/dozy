@@ -2,29 +2,63 @@ package com.dozy.features.place.domain.model
 
 data class Place(
     val id: Id,
-    val name: String,
-    val description: String,
-    val inhabitants: String?,
+    val name: Name,
+    val description: Description,
+    val inhabitants: Inhabitants?,
     val ownership: Ownership,
 ) {
     @JvmInline value class Id(val value: String)
+    @JvmInline value class Name(val value: String)
+    @JvmInline value class Description(val value: String)
+    @JvmInline value class Inhabitants(val value: String)
     enum class Ownership { CUSTOM, PREDEFINED }
 }
 
-class PlaceInput private constructor(
-    val name: String,
-    val description: String,
-    val inhabitants: String?,
+sealed interface ParseResult<out T, out E> {
+    data class Valid<T>(val value: T) : ParseResult<T, Nothing>
+    data class Invalid<E>(val error: E) : ParseResult<Nothing, E>
+}
+
+class SavePlace private constructor(
+    val name: Place.Name,
+    val description: Place.Description,
+    val inhabitants: Place.Inhabitants?,
 ) {
+    sealed interface Error {
+        sealed interface Name : Error {
+            data object Required : Name
+            data object TooLong : Name
+        }
+        sealed interface Description : Error {
+            data object Required : Description
+            data object TooLong : Description
+        }
+        sealed interface Inhabitants : Error {
+            data object TooLong : Inhabitants
+        }
+    }
+
     companion object {
-        fun from(name: String, description: String, inhabitants: String?): PlaceInput? {
+        fun parse(name: String, description: String, inhabitants: String?): ParseResult<SavePlace, Error> {
             val normalizedName = name.trim()
+            val parsedName = when {
+                normalizedName.isEmpty() -> return ParseResult.Invalid(Error.Name.Required)
+                normalizedName.length > 80 -> return ParseResult.Invalid(Error.Name.TooLong)
+                else -> Place.Name(normalizedName)
+            }
             val normalizedDescription = description.trim()
+            val parsedDescription = when {
+                normalizedDescription.isEmpty() -> return ParseResult.Invalid(Error.Description.Required)
+                normalizedDescription.length > 500 -> return ParseResult.Invalid(Error.Description.TooLong)
+                else -> Place.Description(normalizedDescription)
+            }
             val normalizedInhabitants = inhabitants?.trim()?.takeIf { it.isNotEmpty() }
-            if (normalizedName.isEmpty() || normalizedName.length > 80) return null
-            if (normalizedDescription.isEmpty() || normalizedDescription.length > 500) return null
-            if ((normalizedInhabitants?.length ?: 0) > 500) return null
-            return PlaceInput(normalizedName, normalizedDescription, normalizedInhabitants)
+            val parsedInhabitants = when {
+                normalizedInhabitants == null -> null
+                normalizedInhabitants.length > 500 -> return ParseResult.Invalid(Error.Inhabitants.TooLong)
+                else -> Place.Inhabitants(normalizedInhabitants)
+            }
+            return ParseResult.Valid(SavePlace(parsedName, parsedDescription, parsedInhabitants))
         }
     }
 }

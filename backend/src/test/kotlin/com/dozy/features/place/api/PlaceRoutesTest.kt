@@ -3,8 +3,9 @@ package com.dozy.features.place.api
 import com.dozy.databaseConfig
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
-import com.dozy.features.place.domain.model.PlaceInput
+import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
+import com.dozy.plugins.ApiErrorResponse
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.module
 import io.ktor.client.HttpClient
@@ -28,6 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.io.TempDir
 
 class PlaceRoutesTest {
@@ -113,9 +115,16 @@ class PlaceRoutesTest {
     @Test
     fun `invalid business input does not persist a place`() = testApplication {
         configurePlacesTest()
-        for (invalid in listOf(body(name = " "), body(name = "n".repeat(81)),
-            body(description = " "), body(description = "d".repeat(501)), body(inhabitants = "i".repeat(501)))) {
-            assertError(client.save(body = invalid), HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST")
+        val invalidInputs = listOf(
+            body(name = " ") to ("name" to "REQUIRED"),
+            body(name = "n".repeat(81)) to ("name" to "TOO_LONG"),
+            body(description = " ") to ("description" to "REQUIRED"),
+            body(description = "d".repeat(501)) to ("description" to "TOO_LONG"),
+            body(inhabitants = "i".repeat(501)) to ("inhabitants" to "TOO_LONG"),
+        )
+        for ((invalid, expected) in invalidInputs) {
+            val response = client.save(body = invalid)
+            assertFieldError(response, expected.first, expected.second)
         }
         assertEquals(3, client.places().size)
     }
@@ -160,12 +169,29 @@ class PlaceRoutesTest {
 
     private suspend fun assertError(response: HttpResponse, status: HttpStatusCode, code: String) {
         assertEquals(status, response.status)
-        assertEquals("""{"code":"$code"}""", response.bodyAsText())
+        val error = decodeError(response)
+        assertEquals(code, error.code)
+        assertEquals(null, error.field)
+        assertEquals(null, error.reason)
+    }
+
+    private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String) {
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        val error = decodeError(response)
+        assertEquals("INVALID_REQUEST", error.code)
+        assertEquals(field, error.field)
+        assertEquals(reason, error.reason)
+    }
+
+    private suspend fun decodeError(response: HttpResponse): ApiErrorResponse {
+        val body = response.bodyAsText()
+        assertEquals(setOf("code", "field", "reason"), Json.parseToJsonElement(body).jsonObject.keys)
+        return Json.decodeFromString(body)
     }
 
     private class FailingRepository : PlaceRepository {
         override suspend fun list(installation: InstallationId): List<Place> = throw SQLException("Private database path")
-        override suspend fun save(installation: InstallationId, id: Place.Id, input: PlaceInput): SavePlaceResult =
+        override suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult =
             throw SQLException("Private database path")
     }
 }

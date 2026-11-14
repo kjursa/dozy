@@ -5,8 +5,8 @@ import org.jetbrains.exposed.v1.core.ResultRow
 
 internal fun ResultRow.toPlace() = Place(
     id = Place.Id(this[Places.id]),
-    name = this[Places.name],
-    description = this[Places.description],
-    inhabitants = this[Places.inhabitants],
+    name = Place.Name(this[Places.name]),
+    description = Place.Description(this[Places.description]),
+    inhabitants = this[Places.inhabitants]?.let { Place.Inhabitants(it) },
     ownership = this[Places.ownership],
 )
