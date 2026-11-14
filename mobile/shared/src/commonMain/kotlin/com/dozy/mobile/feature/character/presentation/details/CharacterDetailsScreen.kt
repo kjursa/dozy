@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalComposeUiApi::class)
 
 package com.dozy.mobile.feature.character.presentation.details
 
@@ -16,11 +16,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.resources.*
+import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
 
@@ -32,11 +36,11 @@ internal fun CharacterDetailsScreen(
     onEdit: (Character.Id) -> Unit,
     onStory: (Character.Id) -> Unit,
 ) {
-    androidx.lifecycle.compose.LifecycleResumeEffect(viewModel) {
+    LifecycleResumeEffect(viewModel) {
         viewModel.resumed()
         onPauseOrDispose { }
     }
-    com.kjursa.foundation.compose.mvi.MviScreen(viewModel, onEffect = { effect ->
+    MviScreen(viewModel, onEffect = { effect ->
         when (effect) {
             CharacterDetailsEffect.Back -> onBack()
             CharacterDetailsEffect.Deleted -> onDeleted()
@@ -53,8 +57,7 @@ internal fun CharacterDetailsContent(
     state: CharacterDetailsUiState,
     dispatch: (CharacterDetailsAction) -> Unit,
 ) {
-    androidx.compose.ui.backhandler
-        .BackHandler { dispatch(CharacterDetailsAction.Back) }
+    BackHandler { dispatch(CharacterDetailsAction.Back) }
     if (state.deleteDialog) {
         AlertDialog(
             onDismissRequest = { dispatch(CharacterDetailsAction.CancelDelete) },

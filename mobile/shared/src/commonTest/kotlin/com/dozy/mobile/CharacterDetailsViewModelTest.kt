@@ -1,11 +1,13 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.DeleteCharacter
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsAction
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsEffect
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,12 +44,12 @@ class CharacterDetailsViewModelTest {
             val operation = DeleteCharacter(repository)
             repository.failure = IllegalStateException("disk")
             assertEquals(DeleteCharacter.Result.Failure, operation(Character.Id("1")))
-            val cancellation = kotlinx.coroutines.CancellationException("cancelled")
+            val cancellation = CancellationException("cancelled")
             repository.failure = cancellation
             try {
                 operation(Character.Id("1"))
                 fail("Expected cancellation")
-            } catch (actual: kotlinx.coroutines.CancellationException) {
+            } catch (actual: CancellationException) {
                 assertSame(cancellation, actual)
             }
             assertEquals(3, repository.characters.value.size)
@@ -153,7 +155,7 @@ class CharacterDetailsViewModelTest {
         runTest(dispatcher) {
             var fail = true
             val source =
-                object : com.dozy.mobile.feature.character.domain.repository.CharacterRepository by repository {
+                object : CharacterRepository by repository {
                     override fun observe(id: Character.Id) =
                         flow {
                             if (fail) error("disk")

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +28,9 @@ import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryScreen
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.feature.story.presentation.generation.GenerationScreen
+import com.dozy.mobile.feature.story.presentation.reader.ReaderEffect
+import com.dozy.mobile.feature.story.presentation.reader.ReaderScreen
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.GENERATION_ROUTE
@@ -43,6 +47,7 @@ import com.dozy.mobile.navigation.openSavedStory
 import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.readerLibrary
 import com.dozy.mobile.navigation.usePlace
+import com.dozy.mobile.ui.theme.DozyTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -53,14 +58,14 @@ fun DozyApp(
     onNotificationHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
-    androidx.compose.runtime.LaunchedEffect(notificationStory) {
+    LaunchedEffect(notificationStory) {
         notificationStory?.let {
             navController.openSavedStory(it, fromNotification = true)
             onNotificationHandled()
         }
     }
 
-    com.dozy.mobile.ui.theme.DozyTheme {
+    DozyTheme {
         NavHost(
             navController = navController,
             startDestination = MAIN_ROUTE,
@@ -85,7 +90,7 @@ fun DozyApp(
             }
             composable(CREATE_STORY_ROUTE) { entry ->
                 val storyViewModel: CreateStoryViewModel = koinViewModel()
-                androidx.compose.runtime.LaunchedEffect(entry) {
+                LaunchedEffect(entry) {
                     entry.savedStateHandle.getStateFlow<String?>("newHero", null).collect { id ->
                         if (id != null) {
                             storyViewModel.dispatch(CreateStoryAction.AddHero(id))
@@ -104,7 +109,7 @@ fun DozyApp(
                 )
             }
             composable(GENERATION_ROUTE) { entry ->
-                com.dozy.mobile.feature.story.presentation.generation.GenerationScreen(
+                GenerationScreen(
                     requireNotNull(entry.arguments?.read { getString("jobId") }),
                     onRead = { navController.openSavedStory(it) },
                     requestNotifications = requestNotifications,
@@ -113,11 +118,11 @@ fun DozyApp(
                 )
             }
             composable(READER_ROUTE) { entry ->
-                com.dozy.mobile.feature.story.presentation.reader.ReaderScreen { effect ->
+                ReaderScreen { effect ->
                     when (effect) {
-                        com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.Back -> navController.popBackStack()
-                        com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.Library -> navController.readerLibrary()
-                        is com.dozy.mobile.feature.story.presentation.reader.ReaderEffect.NewAdventure ->
+                        ReaderEffect.Back -> navController.popBackStack()
+                        ReaderEffect.Library -> navController.readerLibrary()
+                        is ReaderEffect.NewAdventure ->
                             navController.openStory(
                                 null,
                                 effect.cast,

@@ -1,6 +1,7 @@
 package com.dozy.mobile.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -9,13 +10,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.resources.*
 import org.jetbrains.compose.resources.Font
+import org.jetbrains.compose.resources.FontResource
+import androidx.compose.ui.text.font.Font as ComposeFont
 
 @OptIn(ExperimentalTextApi::class)
-@androidx.compose.runtime.Composable
+@Composable
 private fun variableWeight(
-    resourceId: org.jetbrains.compose.resources.FontResource,
+    resourceId: FontResource,
     weight: Int,
-): androidx.compose.ui.text.font.Font =
+): ComposeFont =
     Font(
         resource = resourceId,
         weight = FontWeight(weight),
@@ -25,7 +28,7 @@ private fun variableWeight(
 @OptIn(ExperimentalTextApi::class)
 object DozyFontFamilies {
     val NunitoSans: FontFamily
-        @androidx.compose.runtime.Composable get() =
+        @Composable get() =
             FontFamily(
                 variableWeight(Res.font.nunito_sans, 200),
                 variableWeight(Res.font.nunito_sans, 300),
@@ -38,7 +41,7 @@ object DozyFontFamilies {
             )
 
     val PlayfairDisplay: FontFamily
-        @androidx.compose.runtime.Composable get() =
+        @Composable get() =
             FontFamily(
                 variableWeight(Res.font.playfair_display, 400),
                 variableWeight(Res.font.playfair_display, 500),
@@ -49,7 +52,7 @@ object DozyFontFamilies {
             )
 
     val JetBrainsMono: FontFamily
-        @androidx.compose.runtime.Composable get() =
+        @Composable get() =
             FontFamily(
                 variableWeight(Res.font.jetbrains_mono, 100),
                 variableWeight(Res.font.jetbrains_mono, 200),
@@ -63,7 +66,7 @@ object DozyFontFamilies {
 }
 
 val DozyTypography: Typography
-    @androidx.compose.runtime.Composable get() =
+    @Composable get() =
         Typography(
             displayLarge =
                 TextStyle(

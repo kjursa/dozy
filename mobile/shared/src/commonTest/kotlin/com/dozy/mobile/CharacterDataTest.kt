@@ -16,6 +16,8 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.TextContent
+import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -132,8 +134,8 @@ class CharacterDataTest {
             val engine =
                 MockEngine { request ->
                     assertEquals("PUT", request.method.value)
-                    assertEquals("https://example.test/characters/1", request.url.toString())
-                    val body = (request.body as io.ktor.http.content.TextContent).text
+                    assertEquals("https://example.test/api/v1/characters/1", request.url.toString())
+                    val body = (request.body as TextContent).text
                     assertEquals(dto, Json.decodeFromString<CharacterDto>(body))
                     respond("", HttpStatusCode.NoContent)
                 }
@@ -255,15 +257,15 @@ class CharacterDataTest {
                 MockEngine { request ->
                     requests++
                     assertEquals("GET", request.method.value)
-                    assertEquals("https://example.test/characters", request.url.toString())
+                    assertEquals("https://example.test/api/v1/characters", request.url.toString())
                     when (requests) {
                         1 ->
                             respond(
                                 Json.encodeToString(listOf(character().copy(avatar = avatar()).toDto())),
                                 HttpStatusCode.OK,
-                                io.ktor.http.headersOf("Content-Type", "application/json"),
+                                headersOf("Content-Type", "application/json"),
                             )
-                        2 -> respond("[]", HttpStatusCode.OK, io.ktor.http.headersOf("Content-Type", "application/json"))
+                        2 -> respond("[]", HttpStatusCode.OK, headersOf("Content-Type", "application/json"))
                         else -> respond("[]", HttpStatusCode.ServiceUnavailable)
                     }
                 }
@@ -347,7 +349,7 @@ class CharacterDataTest {
                 HttpClient(
                     MockEngine { request ->
                         assertEquals("DELETE", request.method.value)
-                        assertEquals("/characters/hero%2Fone%20two", request.url.encodedPath)
+                        assertEquals("/api/v1/characters/hero%2Fone%20two", request.url.encodedPath)
                         respond("", statuses[requests++])
                     },
                 )
@@ -447,8 +449,8 @@ class CharacterDataTest {
                     MockEngine { request ->
                         requests++
                         assertEquals("PUT", request.method.value)
-                        assertEquals("/characters/hero%2Fone%20two", request.url.encodedPath)
-                        assertEquals(dto, Json.decodeFromString<CharacterDto>((request.body as io.ktor.http.content.TextContent).text))
+                        assertEquals("/api/v1/characters/hero%2Fone%20two", request.url.encodedPath)
+                        assertEquals(dto, Json.decodeFromString<CharacterDto>((request.body as TextContent).text))
                         respond("", if (requests == 1) HttpStatusCode.Conflict else HttpStatusCode.NoContent)
                     },
                 ) { install(ContentNegotiation) { json() } }

@@ -1,8 +1,10 @@
 package com.dozy.mobile.di
 
 import androidx.work.WorkManager
+import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
+import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
@@ -13,9 +15,14 @@ import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
 import com.dozy.mobile.feature.story.data.background.*
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.StoryCompletionNotifier
 import com.dozy.mobile.resources.*
 import io.ktor.client.engine.android.Android
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import java.util.UUID
@@ -28,12 +35,13 @@ internal val androidModule =
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
         // Enable after the backend exposes the agreed API contract.
         single { ApiConfig(baseUrl = null) }
-        includes(databaseModule, httpClientModule, imageModule)
+        includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
+        single<InstallationIdProvider> { AndroidInstallationIdProvider(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }
         single<HttpEngineFactory> { HttpEngineFactory { Android.create() } }
-        single<com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator> {
-            com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator {
-                com.dozy.mobile.feature.story.domain.model.GenerationJob
+        single<GenerationKeyGenerator> {
+            GenerationKeyGenerator {
+                GenerationJob
                     .RequestKey(UUID.randomUUID().toString())
             }
         }
@@ -41,26 +49,23 @@ internal val androidModule =
             PlaceIdGenerator { Place.Id(UUID.randomUUID().toString()) }
         }
         single {
-            kotlinx.coroutines.runBlocking {
+            runBlocking {
                 suspend fun place(
                     id: String,
-                    name: org.jetbrains.compose.resources.StringResource,
-                    description: org.jetbrains.compose.resources.StringResource,
-                    inhabitants: org.jetbrains.compose.resources.StringResource?,
+                    name: StringResource,
+                    description: StringResource,
+                    inhabitants: StringResource?,
                 ) = Place(
                     Place.Id(id),
                     Place.Name(
-                        org.jetbrains.compose.resources
-                            .getString(name),
+                        getString(name),
                     ),
                     Place.Description(
-                        org.jetbrains.compose.resources
-                            .getString(description),
+                        getString(description),
                     ),
                     inhabitants?.let {
                         Place.Inhabitants(
-                            org.jetbrains.compose.resources
-                                .getString(it),
+                            getString(it),
                         )
                     },
                     Place.Origin.SYSTEM,

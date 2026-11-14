@@ -7,6 +7,7 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 ## Shared engineering principles
 
 - Prefer small methods and classes with one clear responsibility (Single Responsibility Principle).
+- Use explicit imports for Kotlin types and functions instead of fully qualified references in code. Resolve conflicting names with descriptive import aliases (`import ... as ...`); avoid wildcard imports.
 - Provide dependencies through dependency injection, preferably constructor injection. Avoid creating repositories, services, or other collaborators inside the classes that use them.
 - PRs that change application logic should include focused unit tests for the changed behavior, especially for validation, mapping, use cases, and repository logic.
 
@@ -17,6 +18,10 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 ## Language
 
 - Write code comments, documentation, and other repository-maintained text in English. Use English for commit messages, issue titles and descriptions, and PR titles and descriptions as well. Localized UI resources and user- or backend-provided content may use their intended language.
+
+## API
+
+For any task that changes files under `api/`, read and follow `api/AGENTS.md` in addition to these repository-level instructions.
 
 ## Backend
 

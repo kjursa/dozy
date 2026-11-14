@@ -89,7 +89,7 @@ class StoryLibraryTest {
                 HttpClient(
                     MockEngine { request ->
                         assertEquals(HttpMethod.Get, request.method)
-                        assertEquals("/api/stories", request.url.encodedPath)
+                        assertEquals("/service/api/v1/stories", request.url.encodedPath)
                         assertEquals("100", request.url.parameters["limit"])
                         assertEquals("cursor /+", request.url.parameters["cursor"])
                         respond(
@@ -100,7 +100,7 @@ class StoryLibraryTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                val api = KtorGenerationApi(client, ApiConfig("https://example.test/api/"))
+                val api = KtorGenerationApi(client, ApiConfig("https://example.test/service/"))
                 assertEquals(
                     "a",
                     api

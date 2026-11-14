@@ -7,7 +7,7 @@ single durable `DozyDatabase`.
 
 ## Collection request
 
-`GET /places`, no query parameters or request body. With a configured base URL,
+`GET /api/v1/places`, no query parameters or request body. With a configured base URL,
 the client sends one request on entry and one per explicit retry. Concurrent
 retries are ignored. There is no automatic retry loop. GET is safe to repeat.
 
@@ -87,7 +87,7 @@ follow SPEC section 10: trimmed required name (80 characters), required descript
 
 ## Custom-place mutation proposal
 
-`PUT /places/{id}` uses the same opaque UUID on every retry. Path identifiers are
+`PUT /api/v1/places/{id}` uses the same opaque UUID on every retry. Path identifiers are
 encoded as a single segment. The JSON request uses `SavePlaceRequestDto`:
 `name`, `description`, and optional `inhabitants`. The ID is supplied only in the path;
 `origin` and `editable` are response fields assigned by the backend.

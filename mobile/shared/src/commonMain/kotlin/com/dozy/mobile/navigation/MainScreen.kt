@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +64,7 @@ fun MainScreen(
     onRead: (String) -> Unit,
 ) {
     val tabController = rememberNavController()
-    androidx.compose.runtime.LaunchedEffect(showCharacters) {
+    LaunchedEffect(showCharacters) {
         if (showCharacters) {
             tabController.navigate(CHARACTERS_TAB) {
                 popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
@@ -73,7 +74,7 @@ fun MainScreen(
             onCharactersShown()
         }
     }
-    androidx.compose.runtime.LaunchedEffect(showStories) {
+    LaunchedEffect(showStories) {
         if (showStories) {
             tabController.navigate(STORIES_TAB) {
                 popUpTo(tabController.graph.findStartDestination().id) { saveState = true }

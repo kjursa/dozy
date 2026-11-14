@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DozyMobile"
 include(":app", ":foundation", ":shared")
+
+includeBuild("../api")

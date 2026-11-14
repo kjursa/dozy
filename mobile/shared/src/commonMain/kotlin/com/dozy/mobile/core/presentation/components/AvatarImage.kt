@@ -11,6 +11,7 @@ import coil3.compose.SubcomposeAsyncImage
 import com.dozy.mobile.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.koinInject
 
 /** Persisted fake references remain local resources; only HTTPS assets reach the network. */
 internal fun bundledAvatar(url: String?): DrawableResource? =
@@ -35,7 +36,7 @@ internal fun AvatarImage(
     } else {
         SubcomposeAsyncImage(
             model = remoteImage(url),
-            imageLoader = org.koin.compose.koinInject(),
+            imageLoader = koinInject(),
             contentDescription = description,
             modifier = modifier,
             contentScale = ContentScale.Fit,

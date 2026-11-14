@@ -19,21 +19,21 @@ class KtorCharacterApi(
     private val config: ApiConfig,
 ) : CharacterApi {
     override suspend fun delete(id: String): Boolean {
-        val url = config.baseUrl ?: return false
+        val url = config.apiBaseUrl ?: return false
         val response = client.delete("${url.trimEnd('/')}/characters") { url { appendPathSegments(id, encodeSlash = true) } }
         check(response.status.value == 204 || response.status.value == 404) { "Character deletion failed" }
         return true
     }
 
     override suspend fun list(): List<CharacterDto>? {
-        val url = config.baseUrl ?: return null
+        val url = config.apiBaseUrl ?: return null
         val response = client.get("${url.trimEnd('/')}/characters")
         check(response.status.value == 200) { "Character collection unavailable" }
         return response.body()
     }
 
     override suspend fun generateAvatar(input: AvatarRequestDto): AvatarDto? {
-        val url = config.baseUrl ?: return null
+        val url = config.apiBaseUrl ?: return null
         val response =
             client.post("${url.trimEnd('/')}/character-avatars") {
                 contentType(ContentType.Application.Json)
@@ -62,7 +62,7 @@ class KtorCharacterApi(
     }
 
     override suspend fun save(character: CharacterDto): Boolean {
-        val url = config.baseUrl ?: return false
+        val url = config.apiBaseUrl ?: return false
         val response =
             client.put("${url.trimEnd('/')}/characters") {
                 url { appendPathSegments(character.id, encodeSlash = true) }

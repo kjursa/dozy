@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
@@ -7,13 +8,17 @@ import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
+import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
+import com.dozy.mobile.feature.story.data.api.StoryPageDto
+import com.dozy.mobile.feature.story.data.api.StorySummaryDto
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
 import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.presentation.generation.notificationStoryId
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,7 +29,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)
 class GenerationPersistenceTest {
-    @org.junit.Before fun initializeSharedResources() {
+    @Before fun initializeSharedResources() {
         initializeComposeResourceProvider()
     }
 
@@ -36,12 +41,11 @@ class GenerationPersistenceTest {
             fun open() = Room.databaseBuilder<DozyDatabase>(context, "library-test.db").setDriver(AndroidSQLiteDriver()).build()
             val progress = ProgressApi()
             val api =
-                object : com.dozy.mobile.feature.story.data.api.GenerationApi by progress {
+                object : GenerationApi by progress {
                     override suspend fun stories(cursor: String?) =
-                        com.dozy.mobile.feature.story.data.api.StoryPageDto(
+                        StoryPageDto(
                             listOf(
-                                com.dozy.mobile.feature.story.data.api
-                                    .StorySummaryDto("story", "A star", "https://example.test/cover.png", 1, 100),
+                                StorySummaryDto("story", "A star", "https://example.test/cover.png", 1, 100),
                             ),
                         )
                 }
@@ -134,9 +138,9 @@ class GenerationPersistenceTest {
         runBlocking {
             val application: Application = RuntimeEnvironment.getApplication()
             val notifier = AndroidStoryCompletionNotifier(application)
-            shadowOf(application).denyPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+            shadowOf(application).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
             assertFalse(notifier.deliver(Story.Id("story")))
-            shadowOf(application).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+            shadowOf(application).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
             assertTrue(notifier.deliver(Story.Id("story")))
             val manager = application.getSystemService(NotificationManager::class.java)
             val first = shadowOf(manager).allNotifications.single()

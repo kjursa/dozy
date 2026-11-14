@@ -12,6 +12,7 @@ val ktorVersion = "3.6.0"
 val exposedVersion = "1.6.1"
 
 dependencies {
+    implementation("com.dozy.api:contracts:0.1.0")
     implementation("io.ktor:ktor-server-core:$ktorVersion")
     implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
     implementation("io.ktor:ktor-server-di:$ktorVersion")

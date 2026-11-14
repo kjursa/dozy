@@ -1,5 +1,6 @@
 package com.dozy.features.installation.api
 
+import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.plugins.ApiException
 import io.ktor.http.HttpStatusCode
@@ -10,7 +11,7 @@ fun ApplicationCall.installationId(): InstallationId {
     val value = request.headers.getAll("X-Installation-Id")?.singleOrNull()
     val parsed = value?.let { runCatching { UUID.fromString(it) }.getOrNull() }
     if (parsed == null || !parsed.toString().equals(value, ignoreCase = true)) {
-        throw ApiException(HttpStatusCode.BadRequest, "INVALID_INSTALLATION_ID")
+        throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_INSTALLATION_ID)
     }
     return InstallationId(parsed.toString())
 }

@@ -31,7 +31,7 @@ class CharacterAvatarApiTest {
                     when (requests) {
                         1 -> {
                             assertEquals(HttpMethod.Post, request.method)
-                            assertEquals("/character-avatars", request.url.encodedPath)
+                            assertEquals("/api/v1/character-avatars", request.url.encodedPath)
                             assertEquals(
                                 createInput().toAvatarDto(),
                                 Json.decodeFromString<AvatarRequestDto>((request.body as TextContent).text),
@@ -40,7 +40,7 @@ class CharacterAvatarApiTest {
                         }
                         2 -> {
                             assertEquals(HttpMethod.Get, request.method)
-                            assertEquals("/character-avatars/job-1", request.url.encodedPath)
+                            assertEquals("/api/v1/character-avatars/job-1", request.url.encodedPath)
                             respond("""{"jobId":"job-1","status":"RUNNING"}""", HttpStatusCode.OK, headers)
                         }
                         else ->

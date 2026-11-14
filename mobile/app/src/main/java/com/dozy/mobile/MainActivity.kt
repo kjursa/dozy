@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
@@ -31,12 +32,10 @@ class MainActivity : ComponentActivity() {
         notificationStory = notificationStoryId(intent.dataString)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor =
-            androidx.compose.ui.graphics
-                .Color(0xFFFAF5EB)
+            Color(0xFFFAF5EB)
                 .toArgb()
         window.navigationBarColor =
-            androidx.compose.ui.graphics
-                .Color(0xFFFAF5EB)
+            Color(0xFFFAF5EB)
                 .toArgb()
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = true

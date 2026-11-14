@@ -7,7 +7,7 @@ unavailability; there is no simulated acceptance.
 
 ## Start and replay
 
-`POST /story-generations`, JSON, `Idempotency-Key: <client UUID>`.
+`POST /api/v1/story-generations`, JSON, `Idempotency-Key: <client UUID>`.
 
 Request:
 
@@ -53,7 +53,7 @@ uses the same key, never an automatic new execution. Coroutine cancellation prop
 
 ## Status, completion, and durable results (F10/F11 contract)
 
-`GET /story-generations/{jobId}` returns 200:
+`GET /api/v1/story-generations/{jobId}` returns 200:
 
 ```json
 {"jobId":"job-1","status":"CREATING_TEXT"}
@@ -68,7 +68,7 @@ responses, 401, 404 JOB_NOT_FOUND, 429, 5xx, and transport errors mean **status
 unavailable**, never FAILED. A subsequent successful read clears unavailability.
 The server must serve consistent, monotonic stage reads for the current execution.
 
-`GET /stories/{storyId}` returns 200 with the following JSON DTO:
+`GET /api/v1/stories/{storyId}` returns 200 with the following JSON DTO:
 
 ```json
 {
@@ -96,7 +96,7 @@ A full offline image cache and the remaining reader controls belong to F11/F12.
 
 ## Failed-job retry
 
-`POST /story-generations/{jobId}/retry`, no body,
+`POST /api/v1/story-generations/{jobId}/retry`, no body,
 `Idempotency-Key: <new client UUID>` returns 202 `{jobId,status}` using the same
 logical job ID. Only FAILED jobs can start a new execution. The backend reuses the
 original immutable configuration; the client never reconstructs it from edited or
@@ -134,7 +134,7 @@ across normal process death/reboot, subject to Android scheduling and battery li
 A successful background reconciliation saves the result first, then posts a local
 notification with a stable story-ID tag and persists delivery acknowledgement.
 Replay across a crash replaces the same notification instead of adding another.
-The explicit immutable PendingIntent has unique `dozy://stories/{storyId}` data and
+The explicit immutable PendingIntent has unique `dozy://api/v1/stories/{storyId}` data and
 opens that story on cold or warm start, with Home below it. IDs are validated at the
 activity boundary. No external deep-link intent filter is exposed. Notification
 permission is requested only after the parent taps the opt-in action on progress
@@ -164,7 +164,7 @@ and cast-only new-adventure entry points remain shared with F9.
 
 ## Reader (F11)
 
-The reader reuses the exact `GET /stories/{storyId}` and `StoryDto` above; there is
+The reader reuses the exact `GET /api/v1/stories/{storyId}` and `StoryDto` above; there is
 no request body, reader-specific content endpoint, or preferences endpoint. Reading
 time is a client estimate from text at 150 words/minute (minimum one). Saved text
 and cast snapshots are authoritative and are read before any HTTP request. A fetched
@@ -184,7 +184,7 @@ the restored navigation entry as described in SPEC §13, with no server synchron
 
 ## Saved library (F12)
 
-`GET /stories?limit=100&cursor=<opaque cursor>` returns 200:
+`GET /api/v1/stories?limit=100&cursor=<opaque cursor>` returns 200:
 
 ```json
 {
@@ -196,7 +196,7 @@ the restored navigation entry as described in SPEC §13, with no server synchron
 ```
 
 There is no request body. IDs, titles and durable cover references match
-`GET /stories/{id}`. Summaries omit text and configuration. `readingMinutes` is a
+`GET /api/v1/stories/{id}`. Summaries omit text and configuration. `readingMinutes` is a
 positive integer estimated at 150 words/minute, minimum one, consistent with the
 reader. `createdAt` is the immutable story creation timestamp in UTC epoch
 milliseconds (nonnegative). Add the same `createdAt` field to the full story DTO;
@@ -240,7 +240,7 @@ own DAO/API access in the single DozyDatabase; the existing Koin feature modules
 provide these constructor-injected use cases to Home.
 
 On entry/resume, existing GET collection contracts refresh characters, places, and
-`GET /stories?limit=100&cursor=...`; Home previews the persisted collections with
+`GET /api/v1/stories?limit=100&cursor=...`; Home previews the persisted collections with
 limits/order documented in SPEC §4. These are client preview limits, not new server
 pagination parameters. Existing response DTOs, stable character/place/story IDs,
 error envelopes and cache merging rules remain authoritative. Errors retain each
@@ -248,10 +248,10 @@ section's last known data and provide section-specific retry. Bundled predefined
 places are intentional offline content, not sample user data.
 
 The displayed job follows F10's active/pending-retry priority, otherwise the latest
-persisted job. Resume uses `GET /story-generations/{jobId}` and the existing status DTO;
-READY still requires the full `GET /stories/{storyId}` result to be saved atomically.
+persisted job. Resume uses `GET /api/v1/story-generations/{jobId}` and the existing status DTO;
+READY still requires the full `GET /api/v1/stories/{storyId}` result to be saved atomically.
 An unavailable status remains unknown rather than failed. Retry explicitly uses
-`POST /story-generations/{jobId}/retry` with the existing preserved configuration and
+`POST /api/v1/story-generations/{jobId}/retry` with the existing preserved configuration and
 durable Idempotency-Key; acceptance returns to generating. Repeated taps cannot
 start parallel retries. Background reconciliation and notification delivery continue
 to belong to F10's scheduler, independent of Home.

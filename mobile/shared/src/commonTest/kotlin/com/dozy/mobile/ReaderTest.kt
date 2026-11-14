@@ -2,10 +2,15 @@ package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
+import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.story.data.*
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.domain.model.*
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.ReadStory
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.reader.*
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.HttpClient
@@ -49,7 +54,7 @@ class ReaderTest {
                 HttpClient(
                     MockEngine { request ->
                         calls++
-                        assertEquals("/stories/story", request.url.encodedPath)
+                        assertEquals("/api/v1/stories/story", request.url.encodedPath)
                         assertEquals(HttpMethod.Get, request.method)
                         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
                     },
@@ -78,20 +83,17 @@ class ReaderTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             try {
                 val vm =
-                    com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel(
+                    CreateStoryViewModel(
                         SavedStatePersistence(
                             SavedStateHandle(),
-                            com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
+                            CreateStoryUiState
                                 .serializer(),
                         ),
                         null,
-                        com.dozy.mobile.feature.place.domain.usecase
-                            .SelectPlace(FakePlaceRepository()),
-                        com.dozy.mobile.feature.character.domain.usecase
-                            .ObserveCharacters(FakeCharacterRepository()),
+                        SelectPlace(FakePlaceRepository()),
+                        ObserveCharacters(FakeCharacterRepository()),
                         testStartGeneration(),
-                        com.dozy.mobile.feature.story.domain.usecase
-                            .GenerationKeyGenerator { GenerationJob.RequestKey("key") },
+                        GenerationKeyGenerator { GenerationJob.RequestKey("key") },
                         listOf("1", "deleted"),
                     )
                 advanceUntilIdle()

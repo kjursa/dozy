@@ -1,12 +1,16 @@
 package com.dozy.mobile.feature.story.di
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.generation.GenerationViewModel
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
+import com.dozy.mobile.feature.story.presentation.reader.ReaderUiState
+import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
 import com.dozy.mobile.feature.story.presentation.reader.SavedStoryViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -18,13 +22,13 @@ val storyModule =
         viewModelOf(::SavedStoryViewModel)
         viewModel {
             val handle: SavedStateHandle = get()
-            com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel(
-                com.dozy.mobile.feature.story.domain.model.Story
+            ReaderViewModel(
+                Story
                     .Id(requireNotNull(handle.get<String>("storyId"))),
                 get(),
                 SavedStatePersistence(
                     handle,
-                    com.dozy.mobile.feature.story.presentation.reader.ReaderUiState
+                    ReaderUiState
                         .serializer(),
                 ),
             )
@@ -42,7 +46,7 @@ val storyModule =
                 handle
                     .get<String>("cast")
                     ?.let {
-                        kotlinx.serialization.json.Json
+                        Json
                             .decodeFromString<List<String>>(it)
                     }.orEmpty(),
             )

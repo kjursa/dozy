@@ -42,6 +42,7 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            api("com.dozy.api:client:0.1.0")
             implementation(libs.ui)
             implementation(libs.ui.backhandler)
             implementation(libs.compose.material3)

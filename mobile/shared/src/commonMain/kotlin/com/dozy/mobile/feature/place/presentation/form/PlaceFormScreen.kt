@@ -23,6 +23,7 @@ import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -88,7 +89,7 @@ internal fun PlaceFormScreen(
 @Composable
 private fun PlaceField(
     value: String,
-    label: org.jetbrains.compose.resources.StringResource,
+    label: StringResource,
     error: UiText?,
     enabled: Boolean,
     onChange: (String) -> Unit,

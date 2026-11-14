@@ -3,7 +3,9 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
@@ -15,16 +17,23 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterActi
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
+import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.feature.home.di.homeModule
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.di.placeModule
+import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
+import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.di.storyModule
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
+import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -57,21 +66,22 @@ class CharacterModuleTest {
             val platformModule =
                 module {
                     single { ApiConfig(baseUrl = null) }
+                    single<InstallationIdProvider> { InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" } }
                     single<CharacterDao> { dao }
                     single<PlaceDao> { FakePlaceDao() }
                     single { BundledPlaces(listOf(place("builtin:woods", "Woods", false))) }
                     single<GenerationKeyGenerator> { GenerationKeyGenerator { GenerationJob.RequestKey("injected-key") } }
-                    single<com.dozy.mobile.feature.story.data.database.GenerationDao> { FakeGenerationDao() }
+                    single<GenerationDao> { FakeGenerationDao() }
                     single<HttpClient> { client }
-                    single<com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator> {
-                        com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator {
-                            com.dozy.mobile.feature.place.domain.model.Place
+                    single<PlaceIdGenerator> {
+                        PlaceIdGenerator {
+                            Place
                                 .Id("place")
                         }
                     }
                     single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
                 }
-            val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, platformModule) }
+            val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, dozyClientModule, platformModule) }
             val owner = ViewModelStore()
             val otherOwner = ViewModelStore()
             try {
@@ -139,20 +149,20 @@ class CharacterModuleTest {
                         .name,
                 )
                 val placeForm =
-                    app.koin.get<com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel> {
+                    app.koin.get<PlaceFormViewModel> {
                         parametersOf(SavedStateHandle())
                     }
                 assertEquals(null, placeForm.uiState.value.id)
-                app.koin.get<com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel> {
+                app.koin.get<CharacterDetailsViewModel> {
                     parametersOf(SavedStateHandle(mapOf("id" to "injected-id")))
                 }
                 val storyForm =
-                    app.koin.get<com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel> {
+                    app.koin.get<CreateStoryViewModel> {
                         parametersOf(SavedStateHandle(mapOf("cast" to "[\"injected-id\"]")))
                     }
                 advanceUntilIdle()
                 assertEquals(listOf("injected-id"), storyForm.uiState.value.selectedHeroes)
-                app.koin.get<com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel> {
+                app.koin.get<ReaderViewModel> {
                     parametersOf(SavedStateHandle(mapOf("storyId" to "story")))
                 }
                 val repository = app.koin.get<CharacterRepository>()

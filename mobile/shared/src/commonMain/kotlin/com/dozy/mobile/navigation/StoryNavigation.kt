@@ -6,6 +6,7 @@ import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import kotlinx.serialization.json.Json
 
 const val MAIN_ROUTE = "main"
 const val CREATE_STORY_ROUTE = "create-story?place={place}&cast={cast}"
@@ -24,7 +25,7 @@ fun NavHostController.openStory(
             if (cast.isNotEmpty()) {
                 add(
                     "cast=${encodeRouteArgument(
-                        kotlinx.serialization.json.Json
+                        Json
                             .encodeToString(cast.map { it.value }),
                     )}",
                 )

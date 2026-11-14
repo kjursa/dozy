@@ -22,4 +22,11 @@ class ApplicationTest {
         assertEquals("application/json", response.headers["Content-Type"]?.substringBefore(';'))
         assertEquals("""{"message":"Hello world from Dozy"}""", response.bodyAsText())
     }
+    @Test
+    fun unversionedFeatureRouteIsNotExposed() = testApplication {
+        environment { config = databaseConfig(directory) }
+        application { module() }
+        assertEquals(HttpStatusCode.NotFound, client.get("/places").status)
+    }
+
 }

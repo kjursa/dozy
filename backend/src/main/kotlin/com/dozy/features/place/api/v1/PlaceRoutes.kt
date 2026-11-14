@@ -1,9 +1,14 @@
-package com.dozy.features.place.api
+package com.dozy.features.place.api.v1
 
+import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.place.PlaceField
+import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.features.installation.api.installationId
 import com.dozy.features.place.application.PlaceService
-import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.ParseResult
+import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
@@ -16,7 +21,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
-fun Route.placeRoutes(service: PlaceService) {
+fun Route.placeV1Routes(service: PlaceService) {
     route("/places") {
         get {
             val places = service.list(call.installationId())
@@ -37,25 +42,27 @@ fun Route.placeRoutes(service: PlaceService) {
 
 private fun requirePlaceId(path: String?): Place.Id {
     if (path.isNullOrBlank()) {
-        throw ApiException(HttpStatusCode.BadRequest, "INVALID_REQUEST")
+        throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
     }
     return Place.Id(path)
 }
 
 private fun SavePlace.Error.toApiException(): ApiException = when (this) {
-    SavePlace.Error.Name.Required -> fieldError("name", "REQUIRED")
-    SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG")
-    SavePlace.Error.Description.Required -> fieldError("description", "REQUIRED")
-    SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG")
-    SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG")
+    SavePlace.Error.Name.Required -> fieldError(PlaceField.NAME, ValidationReason.REQUIRED)
+    SavePlace.Error.Name.TooLong -> fieldError(PlaceField.NAME, ValidationReason.TOO_LONG)
+    SavePlace.Error.Description.Required -> fieldError(PlaceField.DESCRIPTION, ValidationReason.REQUIRED)
+    SavePlace.Error.Description.TooLong -> fieldError(PlaceField.DESCRIPTION, ValidationReason.TOO_LONG)
+    SavePlace.Error.Inhabitants.TooLong -> fieldError(PlaceField.INHABITANTS, ValidationReason.TOO_LONG)
 }
 
-private fun fieldError(field: String, reason: String) =
-    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason)
+private fun fieldError(field: PlaceField, reason: ValidationReason): ApiException {
+    check(reason in field.reasons)
+    return ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field.value, reason.value)
+}
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created
     SavePlaceResult.Updated -> HttpStatusCode.NoContent
-    SavePlaceResult.Forbidden -> throw ApiException(HttpStatusCode.Forbidden, "FORBIDDEN")
-    SavePlaceResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, "CONFLICT")
+    SavePlaceResult.Forbidden -> throw ApiException(HttpStatusCode.Forbidden, ApiErrorCode.FORBIDDEN)
+    SavePlaceResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.CONFLICT)
 }

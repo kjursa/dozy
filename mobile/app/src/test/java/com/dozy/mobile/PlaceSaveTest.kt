@@ -1,9 +1,12 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.ApiDisabledException
+import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesListError
+import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
-import com.dozy.mobile.feature.place.data.api.PlaceApi
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
 import com.dozy.mobile.feature.place.data.toEntity
@@ -27,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class PlaceSaveTest {
     @Test fun savesBeforeHttpAndRetriesDurablePendingRowsWithSameId() =
@@ -35,24 +39,25 @@ class PlaceSaveTest {
             var available = false
             val ids = mutableListOf<String>()
             val api =
-                object : PlaceApi {
-                    override suspend fun list() = PlacesDto(emptyList())
+                object : PlacesClient {
+                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): Boolean {
+                    ): ApiResult<Unit, PlacesSaveError> {
                         assertEquals(request.name, dao.find(id)?.name)
                         ids += id
-                        return available
+                        check(available)
+                        return ApiResult.Success(Unit)
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
             assertTrue(dao.find("custom")!!.pendingSync)
             available = true
             // A fresh repository must discover pending work from storage.
-            DefaultPlaceRepository(dao, api, emptyList()).refresh()
+            DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh()
             assertEquals(listOf("custom", "custom"), ids)
             assertFalse(dao.find("custom")!!.pendingSync)
             repository.refresh()
@@ -60,23 +65,43 @@ class PlaceSaveTest {
             assertEquals(1, dao.rows.value.size)
         }
 
+    @Test fun typedApiFailureKeepsTheDurableWritePending() =
+        runTest {
+            val dao = FakePlaceDao()
+            val api =
+                object : PlacesClient {
+                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+
+                    override suspend fun save(
+                        id: String,
+                        request: SavePlaceRequestDto,
+                    ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Conflict)
+                }
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
+            assertEquals(PlaceSync.PENDING, repository.save(place()))
+            assertTrue(dao.find("custom")!!.pendingSync)
+            repository.refresh()
+            assertTrue(dao.find("custom")!!.pendingSync)
+            assertEquals(listOf(place()), repository.observe().first())
+        }
+
     @Test fun storageFailureDoesNotRequestHttpAndCancellationLeavesDurablePendingRow() =
         runTest {
             val dao = FakePlaceDao()
             var calls = 0
             val api =
-                object : PlaceApi {
-                    override suspend fun list(): PlacesDto? = null
+                object : PlacesClient {
+                    override suspend fun list(): ApiResult<PlacesDto, PlacesListError> = throw ApiDisabledException()
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): Boolean {
+                    ): ApiResult<Unit, PlacesSaveError> {
                         calls++
                         throw CancellationException()
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             dao.failure = true
             try {
                 repository.save(place())
@@ -102,7 +127,7 @@ class PlaceSaveTest {
                     MockEngine { request ->
                         calls++
                         assertEquals("PUT", request.method.value)
-                        assertEquals("/places/custom%2Fid", request.url.encodedPath)
+                        assertEquals("/api/v1/places/custom%2Fid", request.url.encodedPath)
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
                         assertEquals(requestDto, Json.decodeFromString<SavePlaceRequestDto>(body))
                         assertTrue(
@@ -111,15 +136,30 @@ class PlaceSaveTest {
                                 .jsonObject.keys
                                 .all { it in setOf("name", "description", "inhabitants") },
                         )
-                        respond("", if (calls == 1) HttpStatusCode.NoContent else HttpStatusCode.ServiceUnavailable)
+                        respond(
+                            if (calls ==
+                                1
+                            ) {
+                                ""
+                            } else {
+                                """{"code":"UNAVAILABLE"}"""
+                            },
+                            if (calls ==
+                                1
+                            ) {
+                                HttpStatusCode.NoContent
+                            } else {
+                                HttpStatusCode.ServiceUnavailable
+                            },
+                        )
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                assertFalse(KtorPlaceApi(client, ApiConfig(null)).save("custom/id", requestDto))
+                assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).save("custom/id", requestDto) }
                 assertEquals(0, calls)
-                val api = KtorPlaceApi(client, ApiConfig("https://example.test/"))
-                assertTrue(api.save("custom/id", requestDto))
-                assertFalse(api.save("custom/id", requestDto))
+                val api = placesClient(client, ApiConfig("https://example.test/"))
+                apiValue(api.save("custom/id", requestDto))
+                assertEquals(PlacesSaveError.Unavailable, apiFailure(api.save("custom/id", requestDto)))
             } finally {
                 client.close()
             }
@@ -134,17 +174,19 @@ class PlaceSaveTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    object : PlaceApi {
-                        override suspend fun list() = PlacesDto(emptyList())
+                    fakePlacesClients(
+                        object : PlacesClient {
+                            override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
-                        override suspend fun save(
-                            id: String,
-                            request: SavePlaceRequestDto,
-                        ): Boolean {
-                            requests += request
-                            return false
-                        }
-                    },
+                            override suspend fun save(
+                                id: String,
+                                request: SavePlaceRequestDto,
+                            ): ApiResult<Unit, PlacesSaveError> {
+                                requests += request
+                                error("Unavailable")
+                            }
+                        },
+                    ),
                     emptyList(),
                 )
             val updated = original.copy(name = Place.Name("New garden"), inhabitants = null)
@@ -165,7 +207,11 @@ class PlaceSaveTest {
             dao.upsert(predefined.toEntity().copy(local = false))
             val before = dao.rows.value
             val repository =
-                DefaultPlaceRepository(dao, PlaceApi { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
+                DefaultPlaceRepository(
+                    dao,
+                    fakePlacesClients(fakePlacesClient { error("No HTTP allowed") }),
+                    listOf(place("builtin:woods", custom = false)),
+                )
             for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
                 try {
                     repository.save(place(id))
@@ -185,12 +231,20 @@ class PlaceSaveTest {
                     MockEngine { request ->
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
                         assertEquals(null, Json.decodeFromString<SavePlaceRequestDto>(body).inhabitants)
-                        respond("", HttpStatusCode.fromValue(statuses[calls++]))
+                        val status = statuses[calls++]
+                        val error =
+                            when (status) {
+                                403 -> """{"code":"FORBIDDEN"}"""
+                                409 -> """{"code":"CONFLICT"}"""
+                                422 -> """{"code":"VALIDATION_FAILED","field":"name","reason":"TOO_LONG"}"""
+                                else -> """{"code":"FUTURE_ERROR"}"""
+                            }
+                        respond(error, HttpStatusCode.fromValue(status))
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                val api = KtorPlaceApi(client, ApiConfig("https://example.test"))
-                statuses.forEach { assertFalse(api.save("custom", place().toSaveRequest())) }
+                val api = placesClient(client, ApiConfig("https://example.test"))
+                statuses.forEach { apiFailure(api.save("custom", place().toSaveRequest())) }
                 assertEquals(statuses.size, calls)
             } finally {
                 client.close()

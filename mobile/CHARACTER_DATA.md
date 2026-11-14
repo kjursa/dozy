@@ -36,7 +36,7 @@ construction (including the Ktor Android engine) lives in `di/AndroidModule.kt`.
 
 `KtorCharacterApi` accepts an injected `HttpClient` and nullable base URL. The app
 passes `null`, so no unsupported request is sent. Its tested provisional operation
-is idempotent `PUT /characters/{id}` with JSON containing `id`, `name`, `personality`,
+is idempotent `PUT /api/v1/characters/{id}` with JSON containing `id`, `name`, `personality`,
 `appearance`, and uppercase `type` (`CHILD`, `ANIMAL`, `FANTASY`, `OTHER`). A 2xx
 acknowledges persistence; no response DTO is assumed. This shape is a proposal,
 not an existing backend contract. Before enabling it, agree endpoint semantics,
@@ -147,11 +147,11 @@ uses the bundled `FakeAvatarGenerator` described above for local previews instea
 Neither generator automatically saves a character. A previously obtained avatar
 can still be saved locally while the network is unavailable.
 
-- `POST /character-avatars`: JSON `{ "type": "CHILD", "personality": "Curious",
+- `POST /api/v1/character-avatars`: JSON `{ "type": "CHILD", "personality": "Curious",
   "appearance": "Green hat" }`. Uses the current validated input, without photos.
   `202` returns `{ "jobId": "job-123", "status": "QUEUED", "asset": null,
   "error": null }`. Job IDs are opaque nonempty ASCII letters, digits, `_`, or `-`.
-- `GET /character-avatars/{jobId}`: `200` returns the same job envelope. Status is
+- `GET /api/v1/character-avatars/{jobId}`: `200` returns the same job envelope. Status is
   `QUEUED`, `RUNNING`, `READY`, or `FAILED`. `READY` requires
   `asset: { "id": "asset-123", "url": "https://assets.example/asset-123.png" }`.
   Asset IDs are opaque, nonempty strings; URLs must be stable HTTPS references.
@@ -167,7 +167,7 @@ can still be saved locally while the network is unavailable.
   independent job; a failed observation may leave a server job running. A future
   server idempotency extension can avoid duplicate asset costs. No job ever saves
   a character. Abandoned job results are ignored, even for noncooperative responses.
-- `PUT /characters/{id}` retains the existing local-first, idempotent save proposal
+- `PUT /api/v1/characters/{id}` retains the existing local-first, idempotent save proposal
   and adds nullable `avatar: { "id": "asset-123", "url": "https://..." }` to the
   existing DTO. New app saves require a ready avatar; historical records may omit
   it. The server must upsert the same client-generated character ID, acknowledge
@@ -192,7 +192,7 @@ navigation entry and adds the saved ID once without replacing other draft input.
 
 ## F3 collection refresh contract
 
-`GET /characters` has no request body and returns `200` with a JSON array of the
+`GET /api/v1/characters` has no request body and returns `200` with a JSON array of the
 same `CharacterDto` objects used by F2 PUT, including optional avatar references.
 IDs are stable client-generated opaque strings. Duplicate/blank IDs, blank names,
 unknown types, malformed assets, decoding errors, and non-200 responses reject the
@@ -229,13 +229,13 @@ bottom-tab owners and scroll state. No list/form input persistence is added here
 
 Details observes `Character.Id` directly through the shared repository and DAO.
 A missing/deleted ID is unavailable; a storage read failure is a distinct retryable
-state. Retry resubscribes to storage. The existing F3 `GET /characters` remains the
+state. Retry resubscribes to storage. The existing F3 `GET /api/v1/characters` remains the
 network read contract: details does not require a separate GET request. A future
-`GET /characters/{id}` may return `200` with the same `CharacterDto`, or `404` for
+`GET /api/v1/characters/{id}` may return `200` with the same `CharacterDto`, or `404` for
 an unavailable ID, with no request body; it is not used by this client. Keeping the
 complete collection read avoids introducing a second snapshot consistency policy.
 
-`DELETE /characters/{id}` uses the same stable opaque ID as PUT, encoded as one
+`DELETE /api/v1/characters/{id}` uses the same stable opaque ID as PUT, encoded as one
 path segment, with no request or response DTO. `204` acknowledges durable removal;
 `404` also acknowledges success, so retrying a deletion is idempotent. All other
 statuses (including `401`, `403`, `409`, `429`, and `5xx`) and transport failures
@@ -296,7 +296,7 @@ them. There is still no automatic upload worker. Home, list, and details observe
 the same rows and update after saving. No story record or saved cast is modified.
 Back abandons form changes; successful Save returns to the same details owner.
 
-The existing F2 `PUT /characters/{id}` and `CharacterDto` are reused unchanged:
+The existing F2 `PUT /api/v1/characters/{id}` and `CharacterDto` are reused unchanged:
 `id`, `name`, `personality`, `appearance`, uppercase `type`, and nullable
 `avatar: { id, url }`. The opaque ID is encoded as one path segment and must equal
 the body ID. A 2xx response acknowledges a durable server write, with no response

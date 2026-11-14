@@ -1,12 +1,12 @@
 package com.dozy.mobile
 
+import android.app.Application
 import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.mobile.feature.place.data.api.PlaceApi
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.toEntity
 import kotlinx.coroutines.flow.first
@@ -20,7 +20,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], application = android.app.Application::class)
+@Config(sdk = [35], application = Application::class)
 class PlaceDatabaseTest {
     private fun open(context: Context) =
         Room
@@ -93,9 +93,11 @@ class PlaceDatabaseTest {
                 val repository =
                     DefaultPlaceRepository(
                         reopened.places(),
-                        PlaceApi {
-                            error("Local reads must not request HTTP")
-                        },
+                        fakePlacesClients(
+                            fakePlacesClient {
+                                error("Local reads must not request HTTP")
+                            },
+                        ),
                         listOf(place("builtin:woods", custom = false)),
                     )
                 assertEquals(3, repository.observe().first().size)

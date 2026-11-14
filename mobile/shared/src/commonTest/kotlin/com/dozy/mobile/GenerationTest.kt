@@ -1,6 +1,8 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.story.data.*
@@ -12,6 +14,7 @@ import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.*
 import kotlin.test.*
@@ -30,11 +33,11 @@ class GenerationTest {
                 val characters = FakeCharacterRepository()
                 var failObservation = true
                 val source =
-                    object : com.dozy.mobile.feature.character.domain.repository.CharacterRepository by characters {
+                    object : CharacterRepository by characters {
                         override fun observe() =
-                            kotlinx.coroutines.flow.flow {
+                            flow {
                                 if (failObservation) error("Read unavailable")
-                                emit(emptyList<com.dozy.mobile.feature.character.domain.model.Character>())
+                                emit(emptyList<Character>())
                             }
                     }
                 val vm =

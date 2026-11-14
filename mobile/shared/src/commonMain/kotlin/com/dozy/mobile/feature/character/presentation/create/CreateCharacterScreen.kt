@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@file:OptIn(ExperimentalComposeUiApi::class)
 
 package com.dozy.mobile.feature.character.presentation.create
 
@@ -45,12 +45,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
@@ -60,11 +62,12 @@ import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 private data class HeroType(
     val value: String,
-    val label: org.jetbrains.compose.resources.StringResource,
+    val label: StringResource,
     val icon: ImageVector,
 )
 
@@ -379,7 +382,7 @@ private fun CharacterInput(
     value: String,
     onValueChange: (String) -> Unit,
     singleLine: Boolean = false,
-    minimumHeight: androidx.compose.ui.unit.Dp = 48.dp,
+    minimumHeight: Dp = 48.dp,
 ) {
     Surface(
         shape = if (singleLine) CircleShape else MaterialTheme.shapes.medium,

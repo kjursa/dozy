@@ -2,6 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/backend/gradlew" -p "$script_dir/api" --no-daemon :contracts:jvmTest :client:jvmTest
 "$script_dir/backend/gradlew" -p "$script_dir/backend" --no-daemon test
 # Android host tests include foundation/shared commonTest, including migrated presentation tests.
 "$script_dir/mobile/gradlew" -p "$script_dir/mobile" --no-daemon :app:test :foundation:testAndroidHostTest :shared:testAndroidHostTest

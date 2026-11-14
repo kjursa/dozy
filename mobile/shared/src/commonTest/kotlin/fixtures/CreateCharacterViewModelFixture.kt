@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
 import com.dozy.mobile.feature.character.domain.model.SavedCharacter
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
@@ -25,9 +26,7 @@ internal open class CreateCharacterViewModelFixture {
     protected var generate: suspend () -> Character.Avatar? = { avatar() }
     protected val repository =
         object : CharacterRepository {
-            override suspend fun delete(
-                id: com.dozy.mobile.feature.character.domain.model.Character.Id,
-            ): com.dozy.mobile.feature.character.domain.model.CharacterSync = error("Unexpected deletion")
+            override suspend fun delete(id: Character.Id): CharacterSync = error("Unexpected deletion")
 
             override fun observe() =
                 flow {
