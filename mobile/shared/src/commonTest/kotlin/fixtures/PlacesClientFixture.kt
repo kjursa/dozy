@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.ApiResult
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
@@ -13,4 +14,16 @@ internal fun placesClient(
     http,
     DozyClientConfig(config.baseUrl),
     InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" },
-).places
+).places.v1
+
+internal fun <T, E> apiValue(result: ApiResult<T, E>): T =
+    when (result) {
+        is ApiResult.Success -> result.value
+        is ApiResult.Failure -> error("Expected success, received ${result.error}")
+    }
+
+internal fun <T, E> apiFailure(result: ApiResult<T, E>): E =
+    when (result) {
+        is ApiResult.Success -> error("Expected failure")
+        is ApiResult.Failure -> result.error
+    }

@@ -1,4 +1,4 @@
-package com.dozy.features.place.api
+package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
@@ -18,7 +18,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
-fun Route.placeRoutes(service: PlaceService) {
+fun Route.placeV1Routes(service: PlaceService) {
     route("/places") {
         get {
             val places = service.list(call.installationId())

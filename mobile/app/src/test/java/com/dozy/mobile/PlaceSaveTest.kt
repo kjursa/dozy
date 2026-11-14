@@ -1,10 +1,12 @@
 package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.DozyApiException
-import com.dozy.api.client.place.PlacesClient
+import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
+import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.place.data.toSaveRequest
@@ -37,15 +39,16 @@ class PlaceSaveTest {
             val ids = mutableListOf<String>()
             val api =
                 object : PlacesClient {
-                    override suspend fun list() = emptyList<com.dozy.mobile.feature.place.data.api.PlaceDto>()
+                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ) {
+                    ): ApiResult<Unit, PlacesSaveError> {
                         assertEquals(request.name, dao.find(id)?.name)
                         ids += id
                         check(available)
+                        return ApiResult.Success(Unit)
                     }
                 }
             val repository = DefaultPlaceRepository(dao, api, emptyList())
@@ -61,20 +64,40 @@ class PlaceSaveTest {
             assertEquals(1, dao.rows.value.size)
         }
 
+    @Test fun typedApiFailureKeepsTheDurableWritePending() =
+        runTest {
+            val dao = FakePlaceDao()
+            val api =
+                object : PlacesClient {
+                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+
+                    override suspend fun save(
+                        id: String,
+                        request: SavePlaceRequestDto,
+                    ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Conflict)
+                }
+            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            assertEquals(PlaceSync.PENDING, repository.save(place()))
+            assertTrue(dao.find("custom")!!.pendingSync)
+            repository.refresh()
+            assertTrue(dao.find("custom")!!.pendingSync)
+            assertEquals(listOf(place()), repository.observe().first())
+        }
+
     @Test fun storageFailureDoesNotRequestHttpAndCancellationLeavesDurablePendingRow() =
         runTest {
             val dao = FakePlaceDao()
             var calls = 0
             val api =
                 object : PlacesClient {
-                    override suspend fun list(): List<com.dozy.mobile.feature.place.data.api.PlaceDto> =
+                    override suspend fun list(): ApiResult<PlacesDto, com.dozy.api.client.place.v1.PlacesListError> =
                         throw com.dozy.api.client
                             .ApiDisabledException()
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ) {
+                    ): ApiResult<Unit, PlacesSaveError> {
                         calls++
                         throw CancellationException()
                     }
@@ -114,15 +137,30 @@ class PlaceSaveTest {
                                 .jsonObject.keys
                                 .all { it in setOf("name", "description", "inhabitants") },
                         )
-                        respond("", if (calls == 1) HttpStatusCode.NoContent else HttpStatusCode.ServiceUnavailable)
+                        respond(
+                            if (calls ==
+                                1
+                            ) {
+                                ""
+                            } else {
+                                """{"code":"UNAVAILABLE"}"""
+                            },
+                            if (calls ==
+                                1
+                            ) {
+                                HttpStatusCode.NoContent
+                            } else {
+                                HttpStatusCode.ServiceUnavailable
+                            },
+                        )
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
                 assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).save("custom/id", requestDto) }
                 assertEquals(0, calls)
                 val api = placesClient(client, ApiConfig("https://example.test/"))
-                api.save("custom/id", requestDto)
-                assertFailsWith<DozyApiException> { api.save("custom/id", requestDto) }
+                apiValue(api.save("custom/id", requestDto))
+                assertEquals(PlacesSaveError.Unavailable, apiFailure(api.save("custom/id", requestDto)))
             } finally {
                 client.close()
             }
@@ -138,12 +176,12 @@ class PlaceSaveTest {
                 DefaultPlaceRepository(
                     dao,
                     object : PlacesClient {
-                        override suspend fun list() = emptyList<com.dozy.mobile.feature.place.data.api.PlaceDto>()
+                        override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
                         override suspend fun save(
                             id: String,
                             request: SavePlaceRequestDto,
-                        ) {
+                        ): ApiResult<Unit, PlacesSaveError> {
                             requests += request
                             error("Unavailable")
                         }
@@ -188,12 +226,20 @@ class PlaceSaveTest {
                     MockEngine { request ->
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
                         assertEquals(null, Json.decodeFromString<SavePlaceRequestDto>(body).inhabitants)
-                        respond("", HttpStatusCode.fromValue(statuses[calls++]))
+                        val status = statuses[calls++]
+                        val error =
+                            when (status) {
+                                403 -> """{"code":"FORBIDDEN"}"""
+                                409 -> """{"code":"CONFLICT"}"""
+                                422 -> """{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG"}"""
+                                else -> """{"code":"FUTURE_ERROR"}"""
+                            }
+                        respond(error, HttpStatusCode.fromValue(status))
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
                 val api = placesClient(client, ApiConfig("https://example.test"))
-                statuses.forEach { assertFailsWith<DozyApiException> { api.save("custom", place().toSaveRequest()) } }
+                statuses.forEach { apiFailure(api.save("custom", place().toSaveRequest())) }
                 assertEquals(statuses.size, calls)
             } finally {
                 client.close()

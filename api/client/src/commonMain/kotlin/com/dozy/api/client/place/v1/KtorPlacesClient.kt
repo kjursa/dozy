@@ -1,10 +1,11 @@
-package com.dozy.api.client.place
+package com.dozy.api.client.place.v1
 
-import com.dozy.api.client.DozyApiException
+import com.dozy.api.client.ApiResult
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.InvalidResponseException
+import com.dozy.api.contracts.ApiVersion
 import com.dozy.api.contracts.v1.ApiErrorResponse
-import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
@@ -18,7 +19,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 internal class KtorPlacesClient(
@@ -31,34 +31,32 @@ internal class KtorPlacesClient(
         encodeDefaults = true
     }
 
-    override suspend fun list(): List<PlaceResponse> {
-        val response = http.get(config.endpoint("places")) {
+    override suspend fun list(): ApiResult<PlacesResponse, PlacesListError> {
+        val response = http.get(config.endpoint(ApiVersion.V1, "places")) {
             expectSuccess = false
             header("X-Installation-Id", installations.get())
         }
-        response.requireStatus(200)
-        return json.decodeFromString<PlacesResponse>(response.bodyAsText()).places
+        if (response.status.value == 200) {
+            return ApiResult.Success(json.decodeFromString<PlacesResponse>(response.bodyAsText()))
+        }
+        return ApiResult.Failure(response.apiError().toListError(response.status.value))
     }
 
-    override suspend fun save(id: String, request: SavePlaceRequest) {
+    override suspend fun save(id: String, request: SavePlaceRequest): ApiResult<Unit, PlacesSaveError> {
         require(id.isNotBlank())
-        val response = http.put(config.endpoint("places")) {
+        val response = http.put(config.endpoint(ApiVersion.V1, "places")) {
             expectSuccess = false
             header("X-Installation-Id", installations.get())
             url { appendPathSegments(id, encodeSlash = true) }
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(request))
         }
-        response.requireStatus(201, 204)
+        if (response.status.value in setOf(201, 204)) return ApiResult.Success(Unit)
+        return ApiResult.Failure(response.apiError().toSaveError(response.status.value))
     }
 
-    private suspend fun HttpResponse.requireStatus(vararg accepted: Int) {
-        if (status.value in accepted) return
-        val error = try {
-            json.decodeFromString<ApiErrorResponse>(bodyAsText())
-        } catch (_: SerializationException) {
-            null
-        }
-        throw DozyApiException(status.value, error)
+    private suspend fun HttpResponse.apiError(): ApiErrorResponse {
+        if (status.value !in 400..599) throw InvalidResponseException(status.value)
+        return json.decodeFromString<ApiErrorResponse>(bodyAsText()).also { it.checkRequest(status.value) }
     }
 }

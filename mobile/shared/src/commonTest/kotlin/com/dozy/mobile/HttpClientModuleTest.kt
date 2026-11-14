@@ -45,8 +45,8 @@ class HttpClientModuleTest {
             val client = graph.koin.get<HttpClient>()
             try {
                 assertSame(client, graph.koin.get<HttpClient>())
-                assertEquals(emptyList(), placesClient(client, ApiConfig("https://example.test")).list())
-                assertEquals(emptyList(), placesClient(client, ApiConfig("https://example.test")).list())
+                assertEquals(emptyList(), apiValue(placesClient(client, ApiConfig("https://example.test")).list()).places)
+                assertEquals(emptyList(), apiValue(placesClient(client, ApiConfig("https://example.test")).list()).places)
                 assertEquals(1, engines)
             } finally {
                 graph.close()

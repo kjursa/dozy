@@ -60,7 +60,7 @@ Run backend and mobile tests from the repository root with `./test-all` (uses ea
 
 `api/` contains an independent Kotlin Multiplatform build included by both backend
 and mobile through Gradle composite builds. `api/contracts` owns the v1 Places
-request/response DTOs and shared errors; `api/client` provides `DozyClient.places`
+request/response DTOs and shared errors; `api/client` provides `DozyClient.places.v1`
 and the injectable `PlacesClient`. The client has JVM/Android-compatible and iOS
 targets and does not depend on mobile domain models, Room, Compose, or Koin.
 See [API library setup and versioning](api/README.md).

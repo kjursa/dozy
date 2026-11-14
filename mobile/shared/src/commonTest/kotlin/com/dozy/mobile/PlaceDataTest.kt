@@ -1,8 +1,10 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.api.client.place.PlacesClient
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDomain
@@ -32,11 +34,42 @@ class PlaceDataTest {
             val ordered = ObservePlaces(repository)().first()
             assertEquals(listOf("a", "z", "builtin:woods"), ordered.map { it.id.value })
             assertEquals(listOf(true, true, false), ordered.map { it.canEdit })
-            assertEquals(ordered, ObservePlaces(DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, bundled))().first())
+            assertEquals(
+                ordered,
+                ObservePlaces(
+                    DefaultPlaceRepository(
+                        dao,
+                        PlacesClient {
+                            throw com.dozy.api.client
+                                .ApiDisabledException()
+                        },
+                        bundled,
+                    ),
+                )().first(),
+            )
             dao.rows.value = emptyList()
             assertEquals(bundled, repository.observe().first())
-            assertEquals(emptyList<Any>(), DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, emptyList()).observe().first())
-            assertFalse(DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, bundled).refresh())
+            assertEquals(
+                emptyList<Any>(),
+                DefaultPlaceRepository(
+                    dao,
+                    PlacesClient {
+                        throw com.dozy.api.client
+                            .ApiDisabledException()
+                    },
+                    emptyList(),
+                ).observe().first(),
+            )
+            assertFalse(
+                DefaultPlaceRepository(
+                    dao,
+                    PlacesClient {
+                        throw com.dozy.api.client
+                            .ApiDisabledException()
+                    },
+                    bundled,
+                ).refresh(),
+            )
         }
 
     @Test fun refreshReplacesRemoteSnapshotAtomicallyAndProtectsLocalEdits() =
@@ -50,7 +83,7 @@ class PlaceDataTest {
                         PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
-            val repository = DefaultPlaceRepository(dao, PlacesClient { snapshot.places }, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClient { ApiResult.Success(snapshot) }, emptyList())
             assertTrue(repository.refresh())
             assertEquals(
                 "Local edit",
@@ -67,13 +100,36 @@ class PlaceDataTest {
             assertEquals(listOf("same"), repository.observe().first().map { it.id.value })
         }
 
+    @Test fun typedRefreshFailurePreservesCachedPlaces() =
+        runTest {
+            val dao = FakePlaceDao()
+            val existing = place().toEntity().copy(local = false, pendingSync = false)
+            dao.upsert(existing)
+            val api =
+                PlacesClient {
+                    ApiResult.Failure(
+                        PlacesListError.Unknown(
+                            500,
+                            com.dozy.api.contracts.v1
+                                .ApiErrorResponse("NEW_RULE"),
+                        ),
+                    )
+                }
+            assertFalse(DefaultPlaceRepository(dao, api, emptyList()).refresh())
+            assertEquals(listOf(existing), dao.rows.value)
+        }
+
     @Test fun malformedSnapshotDoesNotReplaceCacheAndCancellationPropagates() =
         runTest {
             val dao = FakePlaceDao()
             val existing = place().toEntity()
             dao.upsert(existing)
             val repository =
-                DefaultPlaceRepository(dao, PlacesClient { listOf(PlaceDto("x", "", "desc", "USER", true)) }, emptyList())
+                DefaultPlaceRepository(
+                    dao,
+                    PlacesClient { ApiResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) },
+                    emptyList(),
+                )
             try {
                 repository.refresh()
                 fail("Expected invalid transport")
@@ -121,7 +177,7 @@ class PlaceDataTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                val result = requireNotNull(placesClient(client, ApiConfig("https://example.test/")).list())
+                val result = apiValue(placesClient(client, ApiConfig("https://example.test/")).list()).places
                 assertEquals(2, result.size)
                 assertEquals("Bees", result.first().inhabitants)
                 assertNull(result.last().inhabitants)
@@ -138,19 +194,13 @@ class PlaceDataTest {
                 HttpClient(
                     MockEngine {
                         calls++
-                        respond("", HttpStatusCode.ServiceUnavailable)
+                        respond("""{"code":"UNAVAILABLE"}""", HttpStatusCode.ServiceUnavailable)
                     },
                 )
             try {
                 assertFailsWith<com.dozy.api.client.ApiDisabledException> { placesClient(client, ApiConfig(null)).list() }
                 assertEquals(0, calls)
-                try {
-                    placesClient(client, ApiConfig("https://example.test")).list()
-                    fail("Expected failure")
-                } catch (
-                    _: IllegalStateException,
-                ) {
-                }
+                assertEquals(PlacesListError.Unavailable, apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
                 assertEquals(1, calls)
             } finally {
                 client.close()

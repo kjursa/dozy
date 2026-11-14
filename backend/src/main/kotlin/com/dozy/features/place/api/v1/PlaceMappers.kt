@@ -1,4 +1,4 @@
-package com.dozy.features.place.api
+package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.features.place.domain.model.Place

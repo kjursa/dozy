@@ -31,39 +31,57 @@ val dozy = DozyClient(
     config = DozyClientConfig(baseUrl = "http://localhost:8080"),
     installationIdProvider = InstallationIdProvider { persistedInstallationUuid },
 )
-val places = dozy.places.list()
-dozy.places.save(
+val places = dozy.places.v1.list()
+dozy.places.v1.save(
     id = placeId,
     request = SavePlaceRequest("Garden", "Quiet garden", "Bees"),
 )
 ```
 
-Inject `PlacesClient` into consumers rather than the entire `DozyClient` when only
+Inject `client.place.v1.PlacesClient` into consumers rather than the entire `DozyClient` when only
 Places is needed. Mobile registers the root client in Koin and exposes its Places
 client to `DefaultPlaceRepository`. Android stores the UUID in installation
 preferences; the iOS boundary uses `NSUserDefaults`. These IDs are a namespace,
 not authentication credentials. Clearing application data can lose the namespace.
 
-`list()` unwraps the collection response into `List<PlaceResponse>`. `save()` returns
-`Unit` only for 201/204 acknowledgements. HTTP failures throw `DozyApiException`
-with the HTTP status and a decoded error envelope when available; transport,
-serialization, and coroutine cancellation failures propagate. A null base URL
-throws `ApiDisabledException` before any request; mobile maps this to local-only
-behavior. Responses tolerate additive unknown JSON fields. Write serialization is
-owned by the library and does not require the caller to install ContentNegotiation.
-The SDK never closes the caller's HttpClient or engine.
+Each operation returns `ApiResult<SuccessPayload, OperationError>`. V1 list returns
+`ApiResult<PlacesResponse, PlacesListError>`; save returns
+`ApiResult<Unit, PlacesSaveError>`. Handle `Success` and `Failure` exhaustively.
+Save has typed validation (field/reason), forbidden, conflict, unavailable and
+unknown errors. List has unavailable and unknown errors. `Unknown` preserves the
+HTTP status and the original error envelope for a new code, field, reason or
+unrecognized status/code combination, without requiring a new SDK release.
+
+Structural `400 INVALID_REQUEST` and `400 INVALID_INSTALLATION_ID` responses throw
+`InvalidRequestException`, outside the result. `422 INVALID_REQUEST` with a known
+field/reason is a validation failure value. Unknown validation fields/reasons
+become `Unknown`; missing required validation metadata throws
+`InvalidResponseException`. Invalid JSON or missing required response fields
+throw serialization exceptions. Unexpected success statuses also throw
+`InvalidResponseException`. Transport failures (including timeout, DNS and TLS)
+and coroutine cancellation propagate; they are never converted into ordinary API
+failures. A null base URL throws `ApiDisabledException` before sending a request.
+Mobile maps failures to local-only/pending behavior without acknowledging a write.
+
+Responses tolerate additive unknown JSON fields. Write serialization is owned by
+the library and does not require caller ContentNegotiation. The SDK never closes
+the caller's HttpClient or engine.
 
 ## Versioning
 
 HTTP versioning and library versioning are independent:
 
-- `ApiVersion.V1` targets `/api/v1`. Pass the server root as `baseUrl`, without
+- `places.v1` is permanently bound to `ApiVersion.V1` and `/api/v1`. There is no
+  global version selector in `DozyClientConfig`. Pass the server root as `baseUrl`, without
   `/api/v1`; an optional hosting path prefix is preserved. `/hello` is unversioned.
   Legacy unversioned feature routes are not retained during development.
 - The initial library version is `0.1.0`. Local composite builds substitute matching
   Maven coordinates with these projects. Publishing artifacts is outside this change.
 - Wire types live in `contracts.v1`. A future incompatible HTTP contract gets a new
-  version and type package. Preserve old versions once released clients depend on
+  version and type package. Add only changed operations to `places.v2`; a mobile
+  repository may use v1 list and v2 save. Backend routes live in `api.v1` with
+  explicit `placeV1Routes`; a future version gets its own routing boundary.
+  Preserve old versions once released clients depend on
   them. Sharing DTOs only proves the current source agrees; it does not replace
   compatibility tests or backward-compatibility review.
 
