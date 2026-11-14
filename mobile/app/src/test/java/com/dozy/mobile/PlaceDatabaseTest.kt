@@ -3,7 +3,6 @@ package com.dozy.mobile
 import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
-import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
@@ -93,7 +92,7 @@ class PlaceDatabaseTest {
                 val repository =
                     DefaultPlaceRepository(
                         reopened.places(),
-                        PlacesClient {
+                        fakePlacesClient {
                             error("Local reads must not request HTTP")
                         },
                         listOf(place("builtin:woods", custom = false)),

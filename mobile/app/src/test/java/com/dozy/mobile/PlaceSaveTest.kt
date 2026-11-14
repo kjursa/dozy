@@ -206,7 +206,7 @@ class PlaceSaveTest {
             dao.upsert(predefined.toEntity().copy(local = false))
             val before = dao.rows.value
             val repository =
-                DefaultPlaceRepository(dao, PlacesClient { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
+                DefaultPlaceRepository(dao, fakePlacesClient { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
             for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
                 try {
                     repository.save(place(id))
