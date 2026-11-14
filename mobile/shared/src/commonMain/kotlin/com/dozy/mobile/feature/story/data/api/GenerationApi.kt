@@ -85,7 +85,7 @@ class KtorGenerationApi(
     private val config: ApiConfig,
 ) : GenerationApi {
     override suspend fun stories(cursor: String?): StoryPageDto? {
-        val base = config.baseUrl ?: return null
+        val base = config.apiBaseUrl ?: return null
         val response =
             runCatchingSuspend {
                 client.get("${base.trimEnd('/')}/stories") {
@@ -98,7 +98,7 @@ class KtorGenerationApi(
     }
 
     override suspend fun status(id: String): GenerationStatusDto? {
-        val base = config.baseUrl ?: return null
+        val base = config.apiBaseUrl ?: return null
         require(validId(id))
         val response = client.get("${base.trimEnd('/')}/story-generations/$id")
         check(response.status == HttpStatusCode.OK)
@@ -113,7 +113,7 @@ class KtorGenerationApi(
     }
 
     override suspend fun story(id: String): StoryDto? {
-        val base = config.baseUrl ?: return null
+        val base = config.apiBaseUrl ?: return null
         require(validId(id))
         val response = client.get("${base.trimEnd('/')}/stories/$id")
         if (response.status == HttpStatusCode.NotFound) throw StoryNotFoundException()
@@ -128,7 +128,7 @@ class KtorGenerationApi(
         id: String,
         key: String,
     ): GenerationAcceptedDto? {
-        val base = config.baseUrl ?: return null
+        val base = config.apiBaseUrl ?: return null
         require(validId(id))
         val response =
             client.post("${base.trimEnd('/')}/story-generations/$id/retry") {
@@ -146,7 +146,7 @@ class KtorGenerationApi(
         key: String,
         request: GenerationRequestDto,
     ): GenerationAcceptedDto? {
-        val base = config.baseUrl ?: return null
+        val base = config.apiBaseUrl ?: return null
         val response =
             client.post("${base.trimEnd('/')}/story-generations") {
                 header("Idempotency-Key", key)

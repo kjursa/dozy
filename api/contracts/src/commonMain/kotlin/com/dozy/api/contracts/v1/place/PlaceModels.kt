@@ -1,4 +1,4 @@
-package com.dozy.features.place.api
+package com.dozy.api.contracts.v1.place
 
 import kotlinx.serialization.Serializable
 

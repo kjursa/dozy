@@ -34,7 +34,7 @@ See [mobile/README.md](mobile/README.md) for running and building the Android ap
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /places`, and `PUT /places/{id}`. Other endpoints in [the API reference](backend/API.md) remain proposals.
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`. Other endpoints in [the API reference](backend/API.md) remain proposals.
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 
@@ -47,11 +47,20 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 
 The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Local database files are ignored by Git when running from `backend/`.
 
-Place requests require a canonical UUID in `X-Installation-Id`. Custom places are private to that installation; predefined places are read-only. This is the initial installation-based contract, without accounts or authentication. The mobile clients do not send this shared header yet. See [API.md](backend/API.md) for bodies and errors, and [DB.md](backend/DB.md) for the SQLite implementation and future PostgreSQL design.
+Place requests require a canonical UUID in `X-Installation-Id`. Custom places are private to that installation; predefined places are read-only. This is the initial installation-based contract, without accounts or authentication. The shared Places client sends this header automatically using a persisted installation ID. See [API.md](backend/API.md) for bodies and errors, and [DB.md](backend/DB.md) for the SQLite implementation and future PostgreSQL design.
 
 ```sh
-curl http://localhost:8080/places \
+curl http://localhost:8080/api/v1/places \
   -H 'X-Installation-Id: 60c55c02-8d8b-46c2-a0cb-9a2d241eeea0'
 ```
 
 Run backend and mobile tests from the repository root with `./test-all` (uses each project's Gradle wrapper).
+
+## Shared API
+
+`api/` contains an independent Kotlin Multiplatform build included by both backend
+and mobile through Gradle composite builds. `api/contracts` owns the v1 Places
+request/response DTOs and shared errors; `api/client` provides `DozyClient.places`
+and the injectable `PlacesClient`. The client has JVM/Android-compatible and iOS
+targets and does not depend on mobile domain models, Room, Compose, or Koin.
+See [API library setup and versioning](api/README.md).

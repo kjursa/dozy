@@ -6,8 +6,8 @@ and response examples. It works locally without a build step or API calls.
 ## Status and sources
 
 This document combines implemented routes and proposals consolidated from the
-mobile contracts. The backend implements `GET /hello`, `GET /places`, and
-`PUT /places/{id}`. All other feature endpoints remain proposals. `/hello` returns
+mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
+`PUT /api/v1/places/{id}`. All other feature endpoints remain proposals. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
@@ -17,7 +17,8 @@ Sources:
 - [Place contract](../mobile/PLACE_DATA.md).
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
-- Clients: `KtorCharacterApi`, `KtorPlaceApi`, and `KtorGenerationApi` under
+- Shared Places contracts and client under `api/contracts` and `api/client`.
+- Legacy `KtorCharacterApi` and `KtorGenerationApi` under
   `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
 
@@ -27,13 +28,14 @@ For example, characters now support deletion, and full story responses include
 
 ## Shared conventions
 
-- Paths are relative to the configured API base URL; no `/v1` prefix is currently
-  hardcoded in mobile. Requests/responses use JSON unless stated otherwise.
+- Feature paths use `/api/v1`, relative to the configured server root URL.
+  `/hello` remains unversioned. Requests/responses use JSON unless stated otherwise.
 - Personal resources belong to an installation, not a user account. As confirmed
   for this stage, send `X-Installation-Id: <client-generated UUID>` on every feature
   request, with no separate secret or login endpoint. Persist the UUID locally;
-  the server registers it lazily on first use. This header is a proposed shared
-  mobile HTTP addition, not present in current clients. Missing/invalid headers
+  the server registers it lazily on first use. The shared Places client sends this
+  header automatically; legacy character/story clients will adopt the shared client
+  when their backend routes are implemented. Missing/invalid headers
   return `400 INVALID_INSTALLATION_ID`. The ID partitions data but is not strong
   authentication: a caller knowing another ID could access its namespace. No
   library recovery is defined after losing the ID. Never take ownership from JSON.
@@ -67,20 +69,20 @@ For example, characters now support deletion, and full story responses include
 
 | Method | Path | Success | Purpose |
 | --- | --- | --- | --- |
-| GET | `/characters` | 200 | Complete personal character collection |
-| PUT | `/characters/{id}` | 201 / 204 | Create or replace a character |
-| DELETE | `/characters/{id}` | 204 / 404 | Idempotent character deletion |
-| POST | `/character-avatars` | 202 | Start a standalone avatar job |
-| GET | `/character-avatars/{jobId}` | 200 | Observe an avatar job |
-| GET | `/places` | 200 | Personal and predefined places |
-| PUT | `/places/{id}` | 201 / 204 | Create or replace a custom place |
-| POST | `/story-generations` | 202 | Accept a durable story-generation job |
-| GET | `/story-generations/{jobId}` | 200 | Observe generation stages |
-| POST | `/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
-| GET | `/stories/{storyId}` | 200 | Read an immutable complete story |
-| GET | `/stories?limit=100&cursor=...` | 200 | Page through saved story summaries |
+| GET | `/api/v1/characters` | 200 | Complete personal character collection |
+| PUT | `/api/v1/characters/{id}` | 201 / 204 | Create or replace a character |
+| DELETE | `/api/v1/characters/{id}` | 204 / 404 | Idempotent character deletion |
+| POST | `/api/v1/character-avatars` | 202 | Start a standalone avatar job |
+| GET | `/api/v1/character-avatars/{jobId}` | 200 | Observe an avatar job |
+| GET | `/api/v1/places` | 200 | Personal and predefined places |
+| PUT | `/api/v1/places/{id}` | 201 / 204 | Create or replace a custom place |
+| POST | `/api/v1/story-generations` | 202 | Accept a durable story-generation job |
+| GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
+| POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
+| GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
+| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through saved story summaries |
 
-There are **12 method/path operations** above. `GET /characters/{id}` is an optional
+There are **12 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
 future extension described in mobile documents, not a current client requirement.
 Home, character details, place editing, and reader settings introduce no additional
 endpoints. There is no place/story deletion, story editing, device-token registration,
@@ -111,7 +113,7 @@ Personality and appearance: trimmed, required, at most 2000 units each. These ar
 current mobile input rules; adopt them for backend writes without truncating legacy
 reads or forcing historical story snapshots through current creation validation.
 
-### GET /characters
+### GET /api/v1/characters
 
 No body or pagination. Return `200` and a **bare JSON array** of Character objects,
 not `{ "characters": [...] }`. Include all non-deleted characters visible to the
@@ -121,7 +123,7 @@ Non-200 responses are refresh failures; mobile retains known data. Pending local
 edits and local deletion tombstones take precedence over a fetched snapshot.
 There is no separate required character-details read endpoint.
 
-### PUT /characters/{id}
+### PUT /api/v1/characters/{id}
 
 Body: complete Character object. Path and body IDs must match. Use the client ID
 for an idempotent upsert; repeating an identical PUT creates no duplicate.
@@ -135,7 +137,7 @@ appropriate. No version token is currently sent: the mobile proposal uses last
 acknowledged write wins, not optimistic version reconciliation. Never revive a
 previously deleted ID through PUT. Server error messages are not shown verbatim.
 
-### DELETE /characters/{id}
+### DELETE /api/v1/characters/{id}
 
 No body. `204` acknowledges durable removal; `404` also completes mobile deletion.
 Repeated deletion is safe. Other statuses fail the operation. Preserve an ID
@@ -144,7 +146,7 @@ saved story text, cast snapshots, covers, or in-flight job configurations.
 
 ## Character avatars
 
-### POST /character-avatars
+### POST /api/v1/character-avatars
 
 ```json
 {"type":"CHILD","personality":"Curious","appearance":"Green coat"}
@@ -162,7 +164,7 @@ current mobile avatar request**: every explicit generation creates an independen
 job, including retries after an uncertain response. Do not claim exactly-once
 provider execution or charges. Retrying/polling limits do not cancel server work.
 
-### GET /character-avatars/{jobId}
+### GET /api/v1/character-avatars/{jobId}
 
 Return `200` with the same envelope. Status: `QUEUED`, `RUNNING`, `READY`, `FAILED`.
 
@@ -203,7 +205,7 @@ Custom places use non-`builtin:` IDs. No image field is required. Normalize blan
 inhabitants to null. Current form rules: name required/max 80, description
 required/max 500, inhabitants optional/max 500, using trimmed UTF-16 lengths.
 
-### GET /places
+### GET /api/v1/places
 
 Implemented. Requires `X-Installation-Id`. The backend returns custom places first,
 then sorts each group by lowercase name and ID. A fresh database includes all
@@ -217,7 +219,7 @@ snapshot with bundled fallback entries and preserves authoritative local edits.
 `{"places":[]}` is a valid empty remote snapshot. Non-200/invalid collections retain
 known local data; there is no GET-by-ID requirement.
 
-### PUT /places/{id}
+### PUT /api/v1/places/{id}
 
 Implemented. Requires `X-Installation-Id` and `Content-Type: application/json`.
 
@@ -283,7 +285,7 @@ trim optional text and normalize blank to absent. Idea max 1000 and ending max
 are omitted, even when retained in the client draft. Reject contradictory automatic
 requests rather than silently making hidden fields affect generation.
 
-### POST /story-generations
+### POST /api/v1/story-generations
 
 Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
 `202 {"jobId":"job-1","status":"QUEUED"}` after durable acceptance.
@@ -302,7 +304,7 @@ Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
   REFERENCE_UNAVAILABLE applies to unavailable protected references (such as an
   avatar asset), not simply a missing live row for a valid submitted snapshot.
 
-### GET /story-generations/{jobId}
+### GET /api/v1/story-generations/{jobId}
 
 No body. Return 200 with a stage, not a percentage:
 
@@ -321,7 +323,7 @@ only after text, exactly one cover, and the immutable result are durably readabl
 A retry starts a new execution and may reset FAILED to QUEUED. Closing mobile does
 not cancel generation. Internal worker retries must not publish a second story.
 
-### POST /story-generations/{jobId}/retry
+### POST /api/v1/story-generations/{jobId}/retry
 
 No body. Header `Idempotency-Key: <new client UUID>`. Return 202 `{jobId,status}`
 with the **same logical job ID**. Reuse the original snapshot, never edited live data.
@@ -337,7 +339,7 @@ A logical job can have only one successful story.
 
 ## Stories
 
-### GET /stories/{storyId}
+### GET /api/v1/stories/{storyId}
 
 Return 200:
 
@@ -359,7 +361,7 @@ supply it (mobile only tolerates zero as a legacy fallback). Content and ID neve
 change on repeated reads. `404 STORY_NOT_FOUND` means missing; `503 UNAVAILABLE`
 and other failures mean unavailable. GET never initiates generation.
 
-### GET /stories?limit=100&cursor=<opaque cursor>
+### GET /api/v1/stories?limit=100&cursor=<opaque cursor>
 
 No body. First page omits cursor. Return 200:
 

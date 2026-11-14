@@ -1,8 +1,8 @@
 package com.dozy.mobile.feature.place.di
 
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
-import com.dozy.mobile.feature.place.data.api.PlaceApi
+import com.dozy.api.client.DozyClient
+import com.dozy.api.client.place.PlacesClient
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
@@ -19,7 +19,7 @@ class BundledPlaces(
 
 val placeDataModule =
     module {
-        single<PlaceApi> { KtorPlaceApi(get(), get()) }
+        single<PlacesClient> { get<DozyClient>().places }
         single<PlaceRepository> { DefaultPlaceRepository(get(), get(), get<BundledPlaces>().places) }
         factoryOf(::ObservePlaces)
         factoryOf(::RefreshPlaces)

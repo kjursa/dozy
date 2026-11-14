@@ -119,7 +119,7 @@ class GenerationDataTest {
                 HttpClient(
                     MockEngine { request ->
                         assertEquals(HttpMethod.Post, request.method)
-                        assertEquals("/story-generations", request.url.encodedPath)
+                        assertEquals("/api/v1/story-generations", request.url.encodedPath)
                         assertEquals(key.value, request.headers["Idempotency-Key"])
                         val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
                         assertEquals(setOf("cast", "mode", "length"), body.keys)

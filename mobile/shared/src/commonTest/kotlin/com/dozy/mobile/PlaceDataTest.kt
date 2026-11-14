@@ -2,8 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
-import com.dozy.mobile.feature.place.data.api.PlaceApi
+import com.dozy.api.client.place.PlacesClient
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDomain
@@ -29,15 +28,15 @@ class PlaceDataTest {
             dao.upsert(place("z", "Zoo").toEntity())
             dao.upsert(place("a", "Attic").toEntity())
             val bundled = listOf(place("builtin:woods", "Woods", false))
-            val repository = DefaultPlaceRepository(dao, PlaceApi { error("No network during observation") }, bundled)
+            val repository = DefaultPlaceRepository(dao, PlacesClient { error("No network during observation") }, bundled)
             val ordered = ObservePlaces(repository)().first()
             assertEquals(listOf("a", "z", "builtin:woods"), ordered.map { it.id.value })
             assertEquals(listOf(true, true, false), ordered.map { it.canEdit })
-            assertEquals(ordered, ObservePlaces(DefaultPlaceRepository(dao, PlaceApi { null }, bundled))().first())
+            assertEquals(ordered, ObservePlaces(DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, bundled))().first())
             dao.rows.value = emptyList()
             assertEquals(bundled, repository.observe().first())
-            assertEquals(emptyList<Any>(), DefaultPlaceRepository(dao, PlaceApi { null }, emptyList()).observe().first())
-            assertFalse(DefaultPlaceRepository(dao, PlaceApi { null }, bundled).refresh())
+            assertEquals(emptyList<Any>(), DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, emptyList()).observe().first())
+            assertFalse(DefaultPlaceRepository(dao, PlacesClient { throw com.dozy.api.client.ApiDisabledException() }, bundled).refresh())
         }
 
     @Test fun refreshReplacesRemoteSnapshotAtomicallyAndProtectsLocalEdits() =
@@ -51,7 +50,7 @@ class PlaceDataTest {
                         PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
-            val repository = DefaultPlaceRepository(dao, PlaceApi { snapshot }, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClient { snapshot.places }, emptyList())
             assertTrue(repository.refresh())
             assertEquals(
                 "Local edit",
@@ -74,7 +73,7 @@ class PlaceDataTest {
             val existing = place().toEntity()
             dao.upsert(existing)
             val repository =
-                DefaultPlaceRepository(dao, PlaceApi { PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true))) }, emptyList())
+                DefaultPlaceRepository(dao, PlacesClient { listOf(PlaceDto("x", "", "desc", "USER", true)) }, emptyList())
             try {
                 repository.refresh()
                 fail("Expected invalid transport")
@@ -82,7 +81,7 @@ class PlaceDataTest {
             }
             assertEquals(listOf(existing), dao.rows.value)
             try {
-                DefaultPlaceRepository(dao, PlaceApi { throw CancellationException() }, emptyList()).refresh()
+                DefaultPlaceRepository(dao, PlacesClient { throw CancellationException() }, emptyList()).refresh()
                 fail("Expected cancellation")
             } catch (
                 _: CancellationException,
@@ -113,7 +112,7 @@ class PlaceDataTest {
                 HttpClient(
                     MockEngine { request ->
                         assertEquals("GET", request.method.value)
-                        assertEquals("https://example.test/places", request.url.toString())
+                        assertEquals("https://example.test/api/v1/places", request.url.toString())
                         respond(
                             """{"places":[{"id":"one","name":"Garden","description":"Sunny","origin":"USER","editable":true,"inhabitants":"Bees"},{"id":"two","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false}]}""",
                             HttpStatusCode.OK,
@@ -122,11 +121,11 @@ class PlaceDataTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                val result = requireNotNull(KtorPlaceApi(client, ApiConfig("https://example.test/")).list())
-                assertEquals(2, result.places.size)
-                assertEquals("Bees", result.places.first().inhabitants)
-                assertNull(result.places.last().inhabitants)
-                assertEquals(listOf(true, false), result.places.map { it.toEntity().toDomain().canEdit })
+                val result = requireNotNull(placesClient(client, ApiConfig("https://example.test/")).list())
+                assertEquals(2, result.size)
+                assertEquals("Bees", result.first().inhabitants)
+                assertNull(result.last().inhabitants)
+                assertEquals(listOf(true, false), result.map { it.toEntity().toDomain().canEdit })
             } finally {
                 client.close()
             }
@@ -143,10 +142,10 @@ class PlaceDataTest {
                     },
                 )
             try {
-                assertNull(KtorPlaceApi(client, ApiConfig(null)).list())
+                assertFailsWith<com.dozy.api.client.ApiDisabledException> { placesClient(client, ApiConfig(null)).list() }
                 assertEquals(0, calls)
                 try {
-                    KtorPlaceApi(client, ApiConfig("https://example.test")).list()
+                    placesClient(client, ApiConfig("https://example.test")).list()
                     fail("Expected failure")
                 } catch (
                     _: IllegalStateException,

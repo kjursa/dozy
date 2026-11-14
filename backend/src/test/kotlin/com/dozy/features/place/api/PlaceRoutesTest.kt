@@ -1,11 +1,14 @@
 package com.dozy.features.place.api
 
+import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.PlaceResponse
+import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.databaseConfig
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
-import com.dozy.plugins.ApiErrorResponse
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.module
 import io.ktor.client.HttpClient
@@ -68,11 +71,11 @@ class PlaceRoutesTest {
     fun `validates installation header for reads and writes`() = testApplication {
         configurePlacesTest()
         for (invalid in listOf(null, "broken", "1-1-1-1-1", "$owner,$stranger")) {
-            val get = client.get("/places") { invalid?.let { header("X-Installation-Id", it) } }
+            val get = client.get("/api/v1/places") { invalid?.let { header("X-Installation-Id", it) } }
             assertError(get, HttpStatusCode.BadRequest, "INVALID_INSTALLATION_ID")
             assertError(client.save(installation = invalid), HttpStatusCode.BadRequest, "INVALID_INSTALLATION_ID")
         }
-        val duplicate = client.get("/places") {
+        val duplicate = client.get("/api/v1/places") {
             header("X-Installation-Id", owner)
             header("X-Installation-Id", stranger)
         }
@@ -136,7 +139,7 @@ class PlaceRoutesTest {
             dependencies.provide<PlaceRepository> { FailingRepository() }
             module()
         }
-        assertError(client.get("/places") { header("X-Installation-Id", owner) },
+        assertError(client.get("/api/v1/places") { header("X-Installation-Id", owner) },
             HttpStatusCode.ServiceUnavailable, "UNAVAILABLE")
         assertError(client.save(), HttpStatusCode.ServiceUnavailable, "UNAVAILABLE")
         assertFalse(Files.exists(directory.resolve("dozy.db")))
@@ -148,7 +151,7 @@ class PlaceRoutesTest {
     }
 
     private suspend fun HttpClient.places(installation: String = owner): List<PlaceResponse> {
-        val response = get("/places") { header("X-Installation-Id", installation) }
+        val response = get("/api/v1/places") { header("X-Installation-Id", installation) }
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("application/json", response.headers["Content-Type"]?.substringBefore(';'))
         return Json.decodeFromString<PlacesResponse>(response.bodyAsText()).places
@@ -158,7 +161,7 @@ class PlaceRoutesTest {
         installation: String? = owner,
         path: String = id,
         body: String = body(),
-    ) = put("/places/$path") {
+    ) = put("/api/v1/places/$path") {
         installation?.let { header("X-Installation-Id", it) }
         contentType(ContentType.Application.Json)
         setBody(body)

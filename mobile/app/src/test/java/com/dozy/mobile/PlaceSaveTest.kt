@@ -1,10 +1,10 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.ApiDisabledException
+import com.dozy.api.client.DozyApiException
+import com.dozy.api.client.place.PlacesClient
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
-import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
-import com.dozy.mobile.feature.place.data.api.PlaceApi
-import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.place.data.toSaveRequest
@@ -27,6 +27,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import kotlin.test.assertFailsWith
 
 class PlaceSaveTest {
     @Test fun savesBeforeHttpAndRetriesDurablePendingRowsWithSameId() =
@@ -35,16 +36,16 @@ class PlaceSaveTest {
             var available = false
             val ids = mutableListOf<String>()
             val api =
-                object : PlaceApi {
-                    override suspend fun list() = PlacesDto(emptyList())
+                object : PlacesClient {
+                    override suspend fun list() = emptyList<com.dozy.mobile.feature.place.data.api.PlaceDto>()
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): Boolean {
+                    ) {
                         assertEquals(request.name, dao.find(id)?.name)
                         ids += id
-                        return available
+                        check(available)
                     }
                 }
             val repository = DefaultPlaceRepository(dao, api, emptyList())
@@ -65,13 +66,15 @@ class PlaceSaveTest {
             val dao = FakePlaceDao()
             var calls = 0
             val api =
-                object : PlaceApi {
-                    override suspend fun list(): PlacesDto? = null
+                object : PlacesClient {
+                    override suspend fun list(): List<com.dozy.mobile.feature.place.data.api.PlaceDto> =
+                        throw com.dozy.api.client
+                            .ApiDisabledException()
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): Boolean {
+                    ) {
                         calls++
                         throw CancellationException()
                     }
@@ -102,7 +105,7 @@ class PlaceSaveTest {
                     MockEngine { request ->
                         calls++
                         assertEquals("PUT", request.method.value)
-                        assertEquals("/places/custom%2Fid", request.url.encodedPath)
+                        assertEquals("/api/v1/places/custom%2Fid", request.url.encodedPath)
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
                         assertEquals(requestDto, Json.decodeFromString<SavePlaceRequestDto>(body))
                         assertTrue(
@@ -115,11 +118,11 @@ class PlaceSaveTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                assertFalse(KtorPlaceApi(client, ApiConfig(null)).save("custom/id", requestDto))
+                assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).save("custom/id", requestDto) }
                 assertEquals(0, calls)
-                val api = KtorPlaceApi(client, ApiConfig("https://example.test/"))
-                assertTrue(api.save("custom/id", requestDto))
-                assertFalse(api.save("custom/id", requestDto))
+                val api = placesClient(client, ApiConfig("https://example.test/"))
+                api.save("custom/id", requestDto)
+                assertFailsWith<DozyApiException> { api.save("custom/id", requestDto) }
             } finally {
                 client.close()
             }
@@ -134,15 +137,15 @@ class PlaceSaveTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    object : PlaceApi {
-                        override suspend fun list() = PlacesDto(emptyList())
+                    object : PlacesClient {
+                        override suspend fun list() = emptyList<com.dozy.mobile.feature.place.data.api.PlaceDto>()
 
                         override suspend fun save(
                             id: String,
                             request: SavePlaceRequestDto,
-                        ): Boolean {
+                        ) {
                             requests += request
-                            return false
+                            error("Unavailable")
                         }
                     },
                     emptyList(),
@@ -165,7 +168,7 @@ class PlaceSaveTest {
             dao.upsert(predefined.toEntity().copy(local = false))
             val before = dao.rows.value
             val repository =
-                DefaultPlaceRepository(dao, PlaceApi { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
+                DefaultPlaceRepository(dao, PlacesClient { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
             for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
                 try {
                     repository.save(place(id))
@@ -189,8 +192,8 @@ class PlaceSaveTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                val api = KtorPlaceApi(client, ApiConfig("https://example.test"))
-                statuses.forEach { assertFalse(api.save("custom", place().toSaveRequest())) }
+                val api = placesClient(client, ApiConfig("https://example.test"))
+                statuses.forEach { assertFailsWith<DozyApiException> { api.save("custom", place().toSaveRequest()) } }
                 assertEquals(statuses.size, calls)
             } finally {
                 client.close()

@@ -1,5 +1,6 @@
 package com.dozy.plugins
 
+import com.dozy.api.contracts.v1.ApiErrorResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -8,14 +9,7 @@ import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import java.sql.SQLException
-import kotlinx.serialization.Serializable
 
-@Serializable
-data class ApiErrorResponse(
-    val code: String,
-    val field: String? = null,
-    val reason: String? = null,
-)
 
 class ApiException(
     val status: HttpStatusCode,

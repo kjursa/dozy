@@ -49,7 +49,7 @@ class ReaderTest {
                 HttpClient(
                     MockEngine { request ->
                         calls++
-                        assertEquals("/stories/story", request.url.encodedPath)
+                        assertEquals("/api/v1/stories/story", request.url.encodedPath)
                         assertEquals(HttpMethod.Get, request.method)
                         respond(body, status, headersOf(HttpHeaders.ContentType, "application/json"))
                     },

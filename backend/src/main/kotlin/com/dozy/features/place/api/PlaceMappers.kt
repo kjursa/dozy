@@ -1,5 +1,6 @@
 package com.dozy.features.place.api
 
+import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.features.place.domain.model.Place
 
 fun Place.toResponse() = PlaceResponse(
