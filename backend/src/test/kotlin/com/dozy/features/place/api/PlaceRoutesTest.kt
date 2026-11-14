@@ -5,8 +5,7 @@ import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
-import com.dozy.plugins.FieldLengthErrorResponse
-import com.dozy.plugins.FieldValidationErrorResponse
+import com.dozy.plugins.ApiErrorResponse
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.module
 import io.ktor.client.HttpClient
@@ -30,6 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.io.TempDir
 
 class PlaceRoutesTest {
@@ -172,23 +172,26 @@ class PlaceRoutesTest {
 
     private suspend fun assertError(response: HttpResponse, status: HttpStatusCode, code: String) {
         assertEquals(status, response.status)
-        assertEquals("""{"code":"$code"}""", response.bodyAsText())
+        val error = decodeError(response)
+        assertEquals(code, error.code)
+        assertEquals(null, error.field)
+        assertEquals(null, error.reason)
+        assertEquals(null, error.maxLength)
     }
 
     private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String, maxLength: Int?) {
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
-        if (maxLength == null) {
-            val error = Json.decodeFromString<FieldValidationErrorResponse>(response.bodyAsText())
-            assertEquals("INVALID_REQUEST", error.code)
-            assertEquals(field, error.field)
-            assertEquals(reason, error.reason)
-        } else {
-            val error = Json.decodeFromString<FieldLengthErrorResponse>(response.bodyAsText())
-            assertEquals("INVALID_REQUEST", error.code)
-            assertEquals(field, error.field)
-            assertEquals(reason, error.reason)
-            assertEquals(maxLength, error.maxLength)
-        }
+        val error = decodeError(response)
+        assertEquals("INVALID_REQUEST", error.code)
+        assertEquals(field, error.field)
+        assertEquals(reason, error.reason)
+        assertEquals(maxLength, error.maxLength)
+    }
+
+    private suspend fun decodeError(response: HttpResponse): ApiErrorResponse {
+        val body = response.bodyAsText()
+        assertEquals(setOf("code", "field", "reason", "maxLength"), Json.parseToJsonElement(body).jsonObject.keys)
+        return Json.decodeFromString(body)
     }
 
     private class FailingRepository : PlaceRepository {

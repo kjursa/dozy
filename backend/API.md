@@ -44,10 +44,11 @@ For example, characters now support deletion, and full story responses include
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
   unless a specific operation requires omission. Responses must preserve required
   fields even if the server serializer normally omits defaults.
-- Proposed common errors: `{"code":"INVALID_REQUEST"}`. Codes are machine-readable,
-  not display-ready messages. The current clients mostly show localized generic
-  errors. Places write validation additionally returns machine-readable field and
-  reason details; other feature payloads do not yet define field-level errors.
+- Error responses use the same machine-readable fields: `code`, `field`, `reason`,
+  and `maxLength`. Unused detail fields are `null`. `code` identifies the API error
+  category independently of HTTP status; it is not display-ready text. Mobile should
+  localize known codes/reasons and use a localized generic fallback for unknown ones.
+  Other proposed feature payloads do not yet define field-level error details.
 - `401` is reserved for future authentication (and appears in mobile proposals);
   `403` means forbidden, `429` throttled, and `503` temporarily
   unavailable. For owner-scoped ID reads, use `404` for missing or inaccessible
@@ -227,8 +228,8 @@ custom record; reject writes to the predefined namespace. Responses:
 Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
-Implemented place errors use `{"code":"..."}`. A `422 INVALID_REQUEST` caused by
-field validation also includes `field` and `reason`; `TOO_LONG` includes `maxLength`:
+Implemented place errors use the common error shape. A `422 INVALID_REQUEST` caused
+by field validation includes the field and reason; `TOO_LONG` includes `maxLength`:
 
 ```json
 {"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG","maxLength":80}
