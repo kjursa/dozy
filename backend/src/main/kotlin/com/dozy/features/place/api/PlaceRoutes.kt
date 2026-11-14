@@ -28,7 +28,7 @@ fun Route.placeRoutes(service: PlaceService) {
             val id = requirePlaceId(call.parameters["id"], request)
             val command = when (val result = SavePlace.parse(request.name, request.description, request.inhabitants)) {
                 is ParseResult.Valid -> result.value
-                is ParseResult.Invalid -> throw ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST")
+                is ParseResult.Invalid -> throw result.error.toApiException()
             }
             call.respond(service.save(installation, id, command).status())
         }
@@ -39,11 +39,19 @@ private fun requirePlaceId(path: String?, request: SavePlaceRequest): Place.Id {
     if (path.isNullOrBlank() || path != request.id || request.ownership != "CUSTOM" || !request.editable) {
         throw ApiException(HttpStatusCode.BadRequest, "INVALID_REQUEST")
     }
-    return when (val result = Place.Id.parse(path)) {
-        is ParseResult.Valid -> result.value
-        is ParseResult.Invalid -> throw ApiException(HttpStatusCode.BadRequest, "INVALID_REQUEST")
-    }
+    return Place.Id(path)
 }
+
+private fun SavePlace.Error.toApiException(): ApiException = when (this) {
+    SavePlace.Error.Name.Required -> fieldError("name", "REQUIRED")
+    is SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG", maxLength)
+    SavePlace.Error.Description.Required -> fieldError("description", "REQUIRED")
+    is SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG", maxLength)
+    is SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG", maxLength)
+}
+
+private fun fieldError(field: String, reason: String, maxLength: Int? = null) =
+    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason, maxLength)
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created

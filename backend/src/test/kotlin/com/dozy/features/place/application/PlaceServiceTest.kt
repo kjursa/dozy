@@ -44,9 +44,9 @@ class PlaceServiceTest {
     private fun place(id: String, name: String, ownership: Place.Ownership = Place.Ownership.CUSTOM) =
         Place(placeId(id), placeName(name), placeDescription("Forest"), null, ownership)
 
-    private fun placeId(value: String) = (Place.Id.parse(value) as ParseResult.Valid).value
-    private fun placeName(value: String) = (Place.Name.parse(value) as ParseResult.Valid).value
-    private fun placeDescription(value: String) = (Place.Description.parse(value) as ParseResult.Valid).value
+    private fun placeId(value: String) = Place.Id(value)
+    private fun placeName(value: String) = Place.Name(value)
+    private fun placeDescription(value: String) = Place.Description(value)
 
     private class FakeRepository(private val places: List<Place> = emptyList()) : PlaceRepository {
         var lastInstallation: InstallationId? = null

@@ -5,6 +5,8 @@ import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
+import com.dozy.plugins.FieldLengthErrorResponse
+import com.dozy.plugins.FieldValidationErrorResponse
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.module
 import io.ktor.client.HttpClient
@@ -113,9 +115,19 @@ class PlaceRoutesTest {
     @Test
     fun `invalid business input does not persist a place`() = testApplication {
         configurePlacesTest()
-        for (invalid in listOf(body(name = " "), body(name = "n".repeat(81)),
-            body(description = " "), body(description = "d".repeat(501)), body(inhabitants = "i".repeat(501)))) {
-            assertError(client.save(body = invalid), HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST")
+        val invalidInputs = listOf(
+            body(name = " ") to ("name" to "REQUIRED"),
+            body(name = "n".repeat(81)) to ("name" to "TOO_LONG"),
+            body(description = " ") to ("description" to "REQUIRED"),
+            body(description = "d".repeat(501)) to ("description" to "TOO_LONG"),
+            body(inhabitants = "i".repeat(501)) to ("inhabitants" to "TOO_LONG"),
+        )
+        for ((invalid, expected) in invalidInputs) {
+            val response = client.save(body = invalid)
+            val maxLength = if (expected.second == "TOO_LONG") {
+                if (expected.first == "name") 80 else 500
+            } else null
+            assertFieldError(response, expected.first, expected.second, maxLength)
         }
         assertEquals(3, client.places().size)
     }
@@ -161,6 +173,22 @@ class PlaceRoutesTest {
     private suspend fun assertError(response: HttpResponse, status: HttpStatusCode, code: String) {
         assertEquals(status, response.status)
         assertEquals("""{"code":"$code"}""", response.bodyAsText())
+    }
+
+    private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String, maxLength: Int?) {
+        assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
+        if (maxLength == null) {
+            val error = Json.decodeFromString<FieldValidationErrorResponse>(response.bodyAsText())
+            assertEquals("INVALID_REQUEST", error.code)
+            assertEquals(field, error.field)
+            assertEquals(reason, error.reason)
+        } else {
+            val error = Json.decodeFromString<FieldLengthErrorResponse>(response.bodyAsText())
+            assertEquals("INVALID_REQUEST", error.code)
+            assertEquals(field, error.field)
+            assertEquals(reason, error.reason)
+            assertEquals(maxLength, error.maxLength)
+        }
     }
 
     private class FailingRepository : PlaceRepository {

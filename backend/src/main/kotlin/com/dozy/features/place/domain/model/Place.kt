@@ -7,87 +7,10 @@ data class Place(
     val inhabitants: Inhabitants?,
     val ownership: Ownership,
 ) {
-    @JvmInline
-    value class Id private constructor(val value: String) {
-        sealed interface Error {
-            data object Empty : Error
-        }
-
-        companion object {
-            fun parse(raw: String): ParseResult<Id, Error> =
-                if (raw.isBlank()) ParseResult.Invalid(Error.Empty)
-                else ParseResult.Valid(Id(raw))
-
-            internal fun fromDatabase(value: String): Id = Id(value)
-        }
-
-    }
-
-    @JvmInline
-    value class Name private constructor(val value: String) {
-        sealed interface Error {
-            data object Empty : Error
-            data class TooLong(val max: Int) : Error
-        }
-
-        companion object {
-            fun parse(raw: String): ParseResult<Name, Error> {
-                val normalized = raw.trim()
-                return when {
-                    normalized.isEmpty() -> ParseResult.Invalid(Error.Empty)
-                    normalized.length > 80 -> ParseResult.Invalid(Error.TooLong(80))
-                    else -> ParseResult.Valid(Name(normalized))
-                }
-            }
-
-            internal fun fromDatabase(value: String): Name = Name(value)
-        }
-
-    }
-
-    @JvmInline
-    value class Description private constructor(val value: String) {
-        sealed interface Error {
-            data object Empty : Error
-            data class TooLong(val max: Int) : Error
-        }
-
-        companion object {
-            fun parse(raw: String): ParseResult<Description, Error> {
-                val normalized = raw.trim()
-                return when {
-                    normalized.isEmpty() -> ParseResult.Invalid(Error.Empty)
-                    normalized.length > 500 -> ParseResult.Invalid(Error.TooLong(500))
-                    else -> ParseResult.Valid(Description(normalized))
-                }
-            }
-
-            internal fun fromDatabase(value: String): Description = Description(value)
-        }
-
-    }
-
-    @JvmInline
-    value class Inhabitants private constructor(val value: String) {
-        sealed interface Error {
-            data class TooLong(val max: Int) : Error
-        }
-
-        companion object {
-            fun parse(raw: String): ParseResult<Inhabitants?, Error> {
-                val normalized = raw.trim()
-                return when {
-                    normalized.isEmpty() -> ParseResult.Valid(null)
-                    normalized.length > 500 -> ParseResult.Invalid(Error.TooLong(500))
-                    else -> ParseResult.Valid(Inhabitants(normalized))
-                }
-            }
-
-            internal fun fromDatabase(value: String): Inhabitants = Inhabitants(value)
-        }
-
-    }
-
+    @JvmInline value class Id(val value: String)
+    @JvmInline value class Name(val value: String)
+    @JvmInline value class Description(val value: String)
+    @JvmInline value class Inhabitants(val value: String)
     enum class Ownership { CUSTOM, PREDEFINED }
 }
 
@@ -102,25 +25,38 @@ class SavePlace private constructor(
     val inhabitants: Place.Inhabitants?,
 ) {
     sealed interface Error {
-        data class Name(val error: Place.Name.Error) : Error
-        data class Description(val error: Place.Description.Error) : Error
-        data class Inhabitants(val error: Place.Inhabitants.Error) : Error
+        sealed interface Name : Error {
+            data object Required : Name
+            data class TooLong(val maxLength: Int) : Name
+        }
+        sealed interface Description : Error {
+            data object Required : Description
+            data class TooLong(val maxLength: Int) : Description
+        }
+        sealed interface Inhabitants : Error {
+            data class TooLong(val maxLength: Int) : Inhabitants
+        }
     }
 
     companion object {
         fun parse(name: String, description: String, inhabitants: String?): ParseResult<SavePlace, Error> {
-            val parsedName = when (val result = Place.Name.parse(name)) {
-                is ParseResult.Valid -> result.value
-                is ParseResult.Invalid -> return ParseResult.Invalid(Error.Name(result.error))
+            val normalizedName = name.trim()
+            val parsedName = when {
+                normalizedName.isEmpty() -> return ParseResult.Invalid(Error.Name.Required)
+                normalizedName.length > 80 -> return ParseResult.Invalid(Error.Name.TooLong(80))
+                else -> Place.Name(normalizedName)
             }
-            val parsedDescription = when (val result = Place.Description.parse(description)) {
-                is ParseResult.Valid -> result.value
-                is ParseResult.Invalid -> return ParseResult.Invalid(Error.Description(result.error))
+            val normalizedDescription = description.trim()
+            val parsedDescription = when {
+                normalizedDescription.isEmpty() -> return ParseResult.Invalid(Error.Description.Required)
+                normalizedDescription.length > 500 -> return ParseResult.Invalid(Error.Description.TooLong(500))
+                else -> Place.Description(normalizedDescription)
             }
-            val parsedInhabitants = when (val result = inhabitants?.let(Place.Inhabitants::parse)
-                ?: ParseResult.Valid(null)) {
-                is ParseResult.Valid -> result.value
-                is ParseResult.Invalid -> return ParseResult.Invalid(Error.Inhabitants(result.error))
+            val normalizedInhabitants = inhabitants?.trim()?.takeIf { it.isNotEmpty() }
+            val parsedInhabitants = when {
+                normalizedInhabitants == null -> null
+                normalizedInhabitants.length > 500 -> return ParseResult.Invalid(Error.Inhabitants.TooLong(500))
+                else -> Place.Inhabitants(normalizedInhabitants)
             }
             return ParseResult.Valid(SavePlace(parsedName, parsedDescription, parsedInhabitants))
         }

@@ -112,6 +112,7 @@ class SqlitePlaceRepositoryTest {
     @Test
     fun `opens version one JDBC database without replacing saved data`() = runBlocking {
         val path = directory.resolve("nested/dozy.db")
+        val legacyName = "G".repeat(100)
         Files.createDirectories(path.parent)
         DriverManager.getConnection("jdbc:sqlite:$path").use { connection ->
             connection.createStatement().use { statement ->
@@ -121,16 +122,17 @@ class SqlitePlaceRepositoryTest {
                 statement.execute("INSERT INTO installations(id) VALUES ('owner')")
             }
             connection.prepareStatement(
-                "INSERT INTO places(id, installation_id, name, description, ownership) VALUES (?, 'owner', 'Old garden', 'Saved before Exposed', 'CUSTOM')",
+                "INSERT INTO places(id, installation_id, name, description, ownership) VALUES (?, 'owner', ?, 'Saved before Exposed', 'CUSTOM')",
             ).use { statement ->
                 statement.setString(1, id.value)
+                statement.setString(2, legacyName)
                 statement.executeUpdate()
             }
         }
         Flyway.configure().dataSource("jdbc:sqlite:$path", null, null)
             .baselineVersion("1").load().baseline()
         val repository = repository()
-        assertEquals("Old garden", repository.list(owner).single { it.id == id }.name.value)
+        assertEquals(legacyName, repository.list(owner).single { it.id == id }.name.value)
         assertEquals(SavePlaceResult.Updated, repository.save(owner, id, input))
         assertEquals(4, repository.list(owner).size)
     }
@@ -154,7 +156,7 @@ class SqlitePlaceRepositoryTest {
     private fun database() = SqliteDatabase(DatabaseConfig(directory.resolve("nested/dozy.db").toString(), 5000))
         .also(databases::add)
     private fun repository() = SqlitePlaceRepository(database())
-    private fun placeId(value: String) = (Place.Id.parse(value) as ParseResult.Valid).value
+    private fun placeId(value: String) = Place.Id(value)
     private fun savePlace(name: String, description: String, inhabitants: String?) =
         (SavePlace.parse(name, description, inhabitants) as ParseResult.Valid).value
 }

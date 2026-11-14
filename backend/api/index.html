@@ -176,8 +176,11 @@
   &quot;editable&quot;: true
 }</code></pre></details><h3>Contract rules</h3><ul><li>ownership must be CUSTOM and editable true; server permissions remain authoritative.</li><li>Trim input: name required/max 80; description required/max 500; inhabitants optional/max 500 UTF-16 units.</li><li>Existing story snapshots remain unchanged after edits.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">201</span> Created</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status ok">204</span> Updated</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status error">400</span> INVALID_REQUEST</summary><pre><code>{
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> INVALID_REQUEST</summary><pre><code>{
-  &quot;code&quot;: &quot;INVALID_REQUEST&quot;
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> INVALID_REQUEST</summary><p>Field validation errors identify the field and reason.</p><pre><code>{
+  &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
+  &quot;field&quot;: &quot;name&quot;,
+  &quot;reason&quot;: &quot;TOO_LONG&quot;,
+  &quot;maxLength&quot;: 80
 }</code></pre></details><details class="response"><summary><span class="status error">403</span> FORBIDDEN</summary><pre><code>{
   &quot;code&quot;: &quot;FORBIDDEN&quot;
 }</code></pre></details><details class="response"><summary><span class="status error">409</span> CONFLICT</summary><p>ID already belongs to another installation.</p><pre><code>{

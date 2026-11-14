@@ -46,7 +46,8 @@ For example, characters now support deletion, and full story responses include
   fields even if the server serializer normally omits defaults.
 - Proposed common errors: `{"code":"INVALID_REQUEST"}`. Codes are machine-readable,
   not display-ready messages. The current clients mostly show localized generic
-  errors. Field-level server error payloads are not yet defined.
+  errors. Places write validation additionally returns machine-readable field and
+  reason details; other feature payloads do not yet define field-level errors.
 - `401` is reserved for future authentication (and appears in mobile proposals);
   `403` means forbidden, `429` throttled, and `503` temporarily
   unavailable. For owner-scoped ID reads, use `404` for missing or inaccessible
@@ -226,13 +227,22 @@ custom record; reject writes to the predefined namespace. Responses:
 Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
-Implemented place errors use `{"code":"..."}`:
+Implemented place errors use `{"code":"..."}`. A `422 INVALID_REQUEST` caused by
+field validation also includes `field` and `reason`; `TOO_LONG` includes `maxLength`:
+
+```json
+{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG","maxLength":80}
+```
+
+`REQUIRED` means the trimmed value is empty. `TOO_LONG` reports the maximum trimmed
+UTF-16 length. Write limits apply to PUT requests; existing stored values remain
+readable even if they exceed a later write limit.
 
 | Status | Code | Cause |
 | --- | --- | --- |
 | 400 | `INVALID_INSTALLATION_ID` | Missing, duplicated, or non-canonical UUID header |
 | 400 | `INVALID_REQUEST` | Malformed/missing JSON fields, path/body ID mismatch, incorrect ownership/editable flags |
-| 422 | `INVALID_REQUEST` | Invalid trimmed name, description, or inhabitants |
+| 422 | `INVALID_REQUEST` | Invalid trimmed name, description, or inhabitants; response identifies the field and reason |
 | 403 | `FORBIDDEN` | Attempt to write any `builtin:` ID, including unknown ones |
 | 409 | `CONFLICT` | Custom ID already belongs to another installation |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
