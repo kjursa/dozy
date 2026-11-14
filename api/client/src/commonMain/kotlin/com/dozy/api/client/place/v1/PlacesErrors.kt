@@ -1,6 +1,8 @@
 package com.dozy.api.client.place.v1
 
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.place.PlaceField
 
 sealed interface PlacesListError {
     data object Unavailable : PlacesListError
@@ -8,10 +10,7 @@ sealed interface PlacesListError {
 }
 
 sealed interface PlacesSaveError {
-    data class Validation(val field: Field, val reason: Reason) : PlacesSaveError {
-        enum class Field { NAME, DESCRIPTION, INHABITANTS }
-        enum class Reason { REQUIRED, TOO_LONG }
-    }
+    data class Validation(val field: PlaceField, val reason: ValidationReason) : PlacesSaveError
     data object Forbidden : PlacesSaveError
     data object Conflict : PlacesSaveError
     data object Unavailable : PlacesSaveError

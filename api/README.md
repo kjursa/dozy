@@ -55,6 +55,12 @@ of the HTTP status. Status is used for success validation and retained in diagno
 exceptions/unknown errors. The backend emits 400 for invalid request structure and
 422 with `VALIDATION_FAILED` for invalid user-entered values.
 
+`PlaceField` and `ValidationReason` likewise define validation wire values.
+`PlaceField.reasons` declares the allowed combinations. The backend emits these
+contract values; the client parses them with `fromValue` and returns them directly
+in typed validation failures, without maintaining duplicate field/reason enums.
+Envelope fields remain strings to preserve unknown future values.
+
 Each operation returns `ApiResult<SuccessPayload, OperationError>`. V1 list returns
 `ApiResult<PlacesResponse, PlacesListError>`; save returns
 `ApiResult<Unit, PlacesSaveError>`. Handle `Success` and `Failure` exhaustively.

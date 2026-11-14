@@ -1,6 +1,8 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.place.PlaceField
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.features.installation.api.installationId
@@ -46,15 +48,17 @@ private fun requirePlaceId(path: String?): Place.Id {
 }
 
 private fun SavePlace.Error.toApiException(): ApiException = when (this) {
-    SavePlace.Error.Name.Required -> fieldError("name", "REQUIRED")
-    SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG")
-    SavePlace.Error.Description.Required -> fieldError("description", "REQUIRED")
-    SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG")
-    SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG")
+    SavePlace.Error.Name.Required -> fieldError(PlaceField.NAME, ValidationReason.REQUIRED)
+    SavePlace.Error.Name.TooLong -> fieldError(PlaceField.NAME, ValidationReason.TOO_LONG)
+    SavePlace.Error.Description.Required -> fieldError(PlaceField.DESCRIPTION, ValidationReason.REQUIRED)
+    SavePlace.Error.Description.TooLong -> fieldError(PlaceField.DESCRIPTION, ValidationReason.TOO_LONG)
+    SavePlace.Error.Inhabitants.TooLong -> fieldError(PlaceField.INHABITANTS, ValidationReason.TOO_LONG)
 }
 
-private fun fieldError(field: String, reason: String) =
-    ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field, reason)
+private fun fieldError(field: PlaceField, reason: ValidationReason): ApiException {
+    check(reason in field.reasons)
+    return ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field.value, reason.value)
+}
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created

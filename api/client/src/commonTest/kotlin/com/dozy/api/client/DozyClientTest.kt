@@ -3,6 +3,8 @@ package com.dozy.api.client
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.place.PlaceField
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -68,11 +70,11 @@ class DozyClientTest {
             Triple(400, """{"code":"FORBIDDEN"}""", PlacesSaveError.Forbidden),
             Triple(503, """{"code":"UNAVAILABLE"}""", PlacesSaveError.Unavailable),
             Triple(400, """{"code":"VALIDATION_FAILED","field":"name","reason":"REQUIRED"}""",
-                PlacesSaveError.Validation(PlacesSaveError.Validation.Field.NAME, PlacesSaveError.Validation.Reason.REQUIRED)),
+                PlacesSaveError.Validation(PlaceField.NAME, ValidationReason.REQUIRED)),
             Triple(422, """{"code":"VALIDATION_FAILED","field":"description","reason":"TOO_LONG"}""",
-                PlacesSaveError.Validation(PlacesSaveError.Validation.Field.DESCRIPTION, PlacesSaveError.Validation.Reason.TOO_LONG)),
+                PlacesSaveError.Validation(PlaceField.DESCRIPTION, ValidationReason.TOO_LONG)),
             Triple(422, """{"code":"VALIDATION_FAILED","field":"inhabitants","reason":"TOO_LONG"}""",
-                PlacesSaveError.Validation(PlacesSaveError.Validation.Field.INHABITANTS, PlacesSaveError.Validation.Reason.TOO_LONG)),
+                PlacesSaveError.Validation(PlaceField.INHABITANTS, ValidationReason.TOO_LONG)),
         )
         for ((status, body, expected) in errors) {
             val http = HttpClient(MockEngine { respond(body, HttpStatusCode.fromValue(status)) }) { expectSuccess = true }
