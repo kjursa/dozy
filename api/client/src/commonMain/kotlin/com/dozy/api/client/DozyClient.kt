@@ -1,5 +1,6 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.place.DefaultPlacesClients
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.KtorPlacesClient
 import com.dozy.api.contracts.ApiVersion
@@ -10,7 +11,7 @@ class DozyClient(
     config: DozyClientConfig,
     installationIdProvider: InstallationIdProvider,
 ) {
-    val places: PlacesClients = PlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
+    val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
 }
 
 data class DozyClientConfig(

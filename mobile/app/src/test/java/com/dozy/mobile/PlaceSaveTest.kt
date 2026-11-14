@@ -2,7 +2,6 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
-import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
@@ -53,12 +52,12 @@ class PlaceSaveTest {
                         return ApiResult.Success(Unit)
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
             assertTrue(dao.find("custom")!!.pendingSync)
             available = true
             // A fresh repository must discover pending work from storage.
-            DefaultPlaceRepository(dao, PlacesClients(api), emptyList()).refresh()
+            DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh()
             assertEquals(listOf("custom", "custom"), ids)
             assertFalse(dao.find("custom")!!.pendingSync)
             repository.refresh()
@@ -78,7 +77,7 @@ class PlaceSaveTest {
                         request: SavePlaceRequestDto,
                     ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Conflict)
                 }
-            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
             assertTrue(dao.find("custom")!!.pendingSync)
             repository.refresh()
@@ -102,7 +101,7 @@ class PlaceSaveTest {
                         throw CancellationException()
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             dao.failure = true
             try {
                 repository.save(place())
@@ -175,7 +174,7 @@ class PlaceSaveTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    PlacesClients(
+                    fakePlacesClients(
                         object : PlacesClient {
                             override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
@@ -210,7 +209,7 @@ class PlaceSaveTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    PlacesClients(fakePlacesClient { error("No HTTP allowed") }),
+                    fakePlacesClients(fakePlacesClient { error("No HTTP allowed") }),
                     listOf(place("builtin:woods", custom = false)),
                 )
             for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {

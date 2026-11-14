@@ -4,6 +4,7 @@ import com.dozy.api.client.ApiResult
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
@@ -41,4 +42,9 @@ internal fun fakePlacesClient(list: suspend () -> ApiResult<PlacesResponse, Plac
             id: String,
             request: SavePlaceRequest,
         ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Unavailable)
+    }
+
+internal fun fakePlacesClients(client: PlacesClient): PlacesClients =
+    object : PlacesClients {
+        override val v1 = client
     }
