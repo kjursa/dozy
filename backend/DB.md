@@ -22,16 +22,12 @@ to domain models. Flyway and Exposed share the configured SQLite data source.
 Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
 
 Add future changes as `V2__description.sql`, `V3__description.sql`, and so on;
-do not edit an applied migration. There is no automatic baseline for unmanaged
-non-empty databases. For a database created by the pre-Flyway version of this PR,
-verify it has the V1 schema, then explicitly baseline it at version 1 before
-starting this backend. For example, with the Flyway CLI:
+do not edit an applied migration after deployment. During the current development
+phase, the V1 schema is reset in place: places use `origin` with `SYSTEM`/`USER`
+values, replacing the previous `ownership` column. No upgrade migration is
+provided. Delete an existing development SQLite file and restart to recreate it
+if Flyway reports a checksum mismatch or the schema is incompatible.
 
-```sh
-flyway -url=jdbc:sqlite:/absolute/path/dozy.db -baselineVersion=1 baseline
-```
-
-This preserves existing data and lets Flyway apply subsequent migrations.
 SQLite migration startup should run in one process at a time; Flyway does not
 provide concurrent migration locking for SQLite.
 
@@ -146,17 +142,17 @@ CREATE INDEX characters_avatar_idx ON characters (avatar_asset_id);
 CREATE TABLE places (
     id text PRIMARY KEY CHECK (btrim(id) <> ''),
     installation_id uuid REFERENCES installations(id),
-    ownership text NOT NULL CHECK (ownership IN ('CUSTOM', 'PREDEFINED')),
+    origin text NOT NULL CHECK (origin IN ('USER', 'SYSTEM')),
     name text NOT NULL CHECK (btrim(name) <> ''),
     description text NOT NULL CHECK (btrim(description) <> ''),
     inhabitants text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CHECK (
-        (ownership = 'PREDEFINED' AND installation_id IS NULL
+        (origin = 'SYSTEM' AND installation_id IS NULL
             AND starts_with(id, 'builtin:'))
         OR
-        (ownership = 'CUSTOM' AND installation_id IS NOT NULL
+        (origin = 'USER' AND installation_id IS NOT NULL
             AND NOT starts_with(id, 'builtin:'))
     ),
     CHECK (inhabitants IS NULL OR btrim(inhabitants) <> '')

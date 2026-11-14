@@ -9,5 +9,5 @@ data class PlacesUiState(
     val error: UiText? = null,
     val navigating: Boolean = false,
 ) {
-    val hasCustom: Boolean get() = places.any { it.ownership == Place.Ownership.CUSTOM }
+    val hasCustom: Boolean get() = places.any { it.origin == Place.Origin.USER }
 }

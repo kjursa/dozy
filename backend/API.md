@@ -192,12 +192,12 @@ must regenerate them with the real service before uploading those references.
   "name":"Whispering woods",
   "description":"A peaceful forest with glowing paths.",
   "inhabitants":null,
-  "ownership":"PREDEFINED",
+  "origin":"SYSTEM",
   "editable":false
 }
 ```
 
-`ownership`: `CUSTOM` or `PREDEFINED`. `editable` is computed from permissions;
+`origin`: `USER` or `SYSTEM`. `editable` is computed from permissions;
 clients cannot grant it by submitting true. Predefined places must not be editable.
 Custom places use non-`builtin:` IDs. No image field is required. Normalize blank
 inhabitants to null. Current form rules: name required/max 80, description
@@ -221,7 +221,8 @@ known local data; there is no GET-by-ID requirement.
 
 Implemented. Requires `X-Installation-Id` and `Content-Type: application/json`.
 
-Body: full Place with matching ID, `ownership: "CUSTOM"`, `editable: true`.
+Body: `name`, `description`, and optional `inhabitants`. The ID comes only from
+the path; the backend assigns `origin: "USER"` and computes `editable`.
 Omitted/null inhabitants clears the previous value. Only the owner may upsert a
 custom record; reject writes to the predefined namespace. Responses:
 `201` creation, `204` update, no body; mobile accepts any 2xx.
@@ -242,7 +243,7 @@ readable even if they exceed a later write limit.
 | Status | Code | Cause |
 | --- | --- | --- |
 | 400 | `INVALID_INSTALLATION_ID` | Missing, duplicated, or non-canonical UUID header |
-| 400 | `INVALID_REQUEST` | Malformed/missing JSON fields, path/body ID mismatch, incorrect ownership/editable flags |
+| 400 | `INVALID_REQUEST` | Malformed/missing JSON fields or a blank path ID |
 | 422 | `INVALID_REQUEST` | Invalid trimmed name, description, or inhabitants; response identifies the field and reason |
 | 403 | `FORBIDDEN` | Attempt to write any `builtin:` ID, including unknown ones |
 | 409 | `CONFLICT` | Custom ID already belongs to another installation |
@@ -262,7 +263,7 @@ multi-device reconciliation is not defined; no version precondition is submitted
   "cast":[{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
-  "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","inhabitants":null,"ownership":"PREDEFINED","editable":false},
+  "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","inhabitants":null,"origin":"SYSTEM","editable":false},
   "idea":"Help a lost star",
   "ending":"Everyone returns home"
 }

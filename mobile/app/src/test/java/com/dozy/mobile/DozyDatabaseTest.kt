@@ -37,7 +37,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class DozyDatabaseTest {
-    @Test fun extractionReopensTheInstalledVersionEightDatabaseAtTheSamePath() =
+    @Test fun androidBuilderReopensTheCurrentDatabaseAtTheSamePath() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()
             context.deleteDatabase("dozy.db")
@@ -53,20 +53,6 @@ class DozyDatabaseTest {
             } finally {
                 original.close()
             }
-            val path = context.getDatabasePath("dozy.db")
-            val identity =
-                android.database.sqlite.SQLiteDatabase
-                    .openDatabase(
-                        path.path,
-                        null,
-                        android.database.sqlite.SQLiteDatabase.OPEN_READONLY,
-                    ).use {
-                        assertEquals(8, it.version)
-                        it.rawQuery("SELECT identity_hash FROM room_master_table WHERE id = 42", null).use { cursor ->
-                            assertTrue(cursor.moveToFirst())
-                            cursor.getString(0)
-                        }
-                    }
             // The production shared Android boundary must find that same file and data.
             val extracted = androidDatabaseBuilder(context).setDriver(AndroidSQLiteDriver()).build()
             try {
@@ -80,7 +66,6 @@ class DozyDatabaseTest {
                 )
                 assertEquals(place, extracted.places().find(place.id))
                 assertEquals(generation, extracted.generations().find("existing-key"))
-                assertEquals("2978184b9f87fa22118d5550770355e6", identity)
             } finally {
                 extracted.close()
                 context.deleteDatabase("dozy.db")

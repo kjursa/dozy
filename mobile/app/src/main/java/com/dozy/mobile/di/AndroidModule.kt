@@ -63,7 +63,7 @@ internal val androidModule =
                                 .getString(it),
                         )
                     },
-                    Place.Ownership.PREDEFINED,
+                    Place.Origin.SYSTEM,
                     false,
                 )
                 BundledPlaces(

@@ -14,7 +14,7 @@ internal fun place(
     Place.Name(name),
     Place.Description("A little wooden gate"),
     null,
-    if (custom) Place.Ownership.CUSTOM else Place.Ownership.PREDEFINED,
+    if (custom) Place.Origin.USER else Place.Origin.SYSTEM,
     editable,
 )
 

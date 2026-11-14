@@ -4,10 +4,10 @@ import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.KtorPlaceApi
 import com.dozy.mobile.feature.place.data.api.PlaceApi
-import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
-import com.dozy.mobile.feature.place.data.toDto
+import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
 import com.dozy.mobile.feature.place.data.toEntity
+import com.dozy.mobile.feature.place.data.toSaveRequest
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import io.ktor.client.HttpClient
@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,9 +38,12 @@ class PlaceSaveTest {
                 object : PlaceApi {
                     override suspend fun list() = PlacesDto(emptyList())
 
-                    override suspend fun save(place: PlaceDto): Boolean {
-                        assertEquals(place.name, dao.find(place.id)?.name)
-                        ids += place.id
+                    override suspend fun save(
+                        id: String,
+                        request: SavePlaceRequestDto,
+                    ): Boolean {
+                        assertEquals(request.name, dao.find(id)?.name)
+                        ids += id
                         return available
                     }
                 }
@@ -64,7 +68,10 @@ class PlaceSaveTest {
                 object : PlaceApi {
                     override suspend fun list(): PlacesDto? = null
 
-                    override suspend fun save(place: PlaceDto): Boolean {
+                    override suspend fun save(
+                        id: String,
+                        request: SavePlaceRequestDto,
+                    ): Boolean {
                         calls++
                         throw CancellationException()
                     }
@@ -89,7 +96,7 @@ class PlaceSaveTest {
     @Test fun putUsesStableEncodedIdAndRoundTripsFieldsAndDisabledApiMakesNoRequests() =
         runTest {
             var calls = 0
-            val dto = place("custom/id").toDto().copy(inhabitants = "Bees")
+            val requestDto = place("custom/id").toSaveRequest().copy(inhabitants = "Bees")
             val client =
                 HttpClient(
                     MockEngine { request ->
@@ -97,16 +104,22 @@ class PlaceSaveTest {
                         assertEquals("PUT", request.method.value)
                         assertEquals("/places/custom%2Fid", request.url.encodedPath)
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
-                        assertEquals(dto, Json.decodeFromString<PlaceDto>(body))
+                        assertEquals(requestDto, Json.decodeFromString<SavePlaceRequestDto>(body))
+                        assertTrue(
+                            Json
+                                .parseToJsonElement(body)
+                                .jsonObject.keys
+                                .all { it in setOf("name", "description", "inhabitants") },
+                        )
                         respond("", if (calls == 1) HttpStatusCode.NoContent else HttpStatusCode.ServiceUnavailable)
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                assertFalse(KtorPlaceApi(client, ApiConfig(null)).save(dto))
+                assertFalse(KtorPlaceApi(client, ApiConfig(null)).save("custom/id", requestDto))
                 assertEquals(0, calls)
                 val api = KtorPlaceApi(client, ApiConfig("https://example.test/"))
-                assertTrue(api.save(dto))
-                assertFalse(api.save(dto))
+                assertTrue(api.save("custom/id", requestDto))
+                assertFalse(api.save("custom/id", requestDto))
             } finally {
                 client.close()
             }
@@ -117,15 +130,18 @@ class PlaceSaveTest {
             val dao = FakePlaceDao()
             val original = place().copy(inhabitants = Place.Inhabitants("Bees"))
             dao.upsert(original.toEntity().copy(pendingSync = false))
-            val requests = mutableListOf<PlaceDto>()
+            val requests = mutableListOf<SavePlaceRequestDto>()
             val repository =
                 DefaultPlaceRepository(
                     dao,
                     object : PlaceApi {
                         override suspend fun list() = PlacesDto(emptyList())
 
-                        override suspend fun save(place: PlaceDto): Boolean {
-                            requests += place
+                        override suspend fun save(
+                            id: String,
+                            request: SavePlaceRequestDto,
+                        ): Boolean {
+                            requests += request
                             return false
                         }
                     },
@@ -135,7 +151,7 @@ class PlaceSaveTest {
             assertEquals(PlaceSync.PENDING, repository.save(updated))
             assertEquals(listOf(updated), repository.observe().first())
             repository.refresh()
-            assertEquals(listOf(updated.toDto(), updated.toDto()), requests)
+            assertEquals(listOf(updated.toSaveRequest(), updated.toSaveRequest()), requests)
             assertEquals(1, dao.rows.value.size)
             assertTrue(dao.find("custom")!!.pendingSync)
         }
@@ -168,13 +184,13 @@ class PlaceSaveTest {
                 HttpClient(
                     MockEngine { request ->
                         val body = (request.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()
-                        assertEquals(null, Json.decodeFromString<PlaceDto>(body).inhabitants)
+                        assertEquals(null, Json.decodeFromString<SavePlaceRequestDto>(body).inhabitants)
                         respond("", HttpStatusCode.fromValue(statuses[calls++]))
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
                 val api = KtorPlaceApi(client, ApiConfig("https://example.test"))
-                statuses.forEach { assertFalse(api.save(place().toDto())) }
+                statuses.forEach { assertFalse(api.save("custom", place().toSaveRequest())) }
                 assertEquals(statuses.size, calls)
             } finally {
                 client.close()

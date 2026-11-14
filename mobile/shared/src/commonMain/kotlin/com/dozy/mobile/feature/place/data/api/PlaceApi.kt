@@ -7,7 +7,7 @@ fun interface PlaceApi {
     suspend fun list(): PlacesDto?
 
     /** False means disabled or unacknowledged; the durable row remains pending. */
-    suspend fun save(place: PlaceDto): Boolean = false
+    suspend fun save(id: String, request: SavePlaceRequestDto): Boolean = false
 }
 
 @Serializable
@@ -20,7 +20,14 @@ data class PlaceDto(
     val id: String,
     val name: String,
     val description: String,
-    val ownership: String,
+    val origin: String,
     val editable: Boolean,
+    val inhabitants: String? = null,
+)
+
+@Serializable
+data class SavePlaceRequestDto(
+    val name: String,
+    val description: String,
     val inhabitants: String? = null,
 )

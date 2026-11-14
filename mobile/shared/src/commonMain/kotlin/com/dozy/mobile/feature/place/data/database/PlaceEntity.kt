@@ -10,7 +10,7 @@ data class PlaceEntity(
     val name: String,
     val description: String,
     val inhabitants: String?,
-    val ownership: String,
+    val origin: String,
     val editable: Boolean,
     val local: Boolean,
     @ColumnInfo(defaultValue = "1") val pendingSync: Boolean = local,

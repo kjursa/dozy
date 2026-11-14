@@ -10,7 +10,7 @@ internal object Places : Table("places") {
     val name = text("name")
     val description = text("description")
     val inhabitants = text("inhabitants").nullable()
-    val ownership = enumerationByName<Place.Ownership>("ownership", 16)
+    val origin = enumerationByName<Place.Origin>("origin", 16)
     val updatedAt = text("updated_at")
     override val primaryKey = PrimaryKey(id)
 }

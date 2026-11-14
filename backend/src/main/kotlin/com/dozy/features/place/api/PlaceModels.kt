@@ -4,11 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class SavePlaceRequest(
-    val id: String,
     val name: String,
     val description: String,
-    val ownership: String,
-    val editable: Boolean,
     val inhabitants: String? = null,
 )
 
@@ -17,7 +14,7 @@ data class PlaceResponse(
     val id: String,
     val name: String,
     val description: String,
-    val ownership: String,
+    val origin: String,
     val editable: Boolean,
     val inhabitants: String? = null,
 )

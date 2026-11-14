@@ -9,9 +9,7 @@ import com.dozy.features.place.domain.model.ParseResult
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.infrastructure.database.SqliteDatabase
-import java.nio.file.Files
 import java.nio.file.Path
-import java.sql.DriverManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -24,7 +22,6 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.junit.jupiter.api.AfterEach
-import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.io.TempDir
 
 class SqlitePlaceRepositoryTest {
@@ -52,7 +49,7 @@ class SqlitePlaceRepositoryTest {
         repository.save(owner, id, input)
         val replacement = savePlace("Island", "Sea", null)
         repeat(2) { assertEquals(SavePlaceResult.Updated, repository.save(owner, id, replacement)) }
-        val custom = repository.list(owner).filter { it.ownership == Place.Ownership.CUSTOM }
+        val custom = repository.list(owner).filter { it.origin == Place.Origin.USER }
         assertEquals(1, custom.size)
         assertEquals("Island", custom.single().name.value)
         assertNull(custom.single().inhabitants)
@@ -78,7 +75,7 @@ class SqlitePlaceRepositoryTest {
     }
 
     @Test
-    fun `concurrent claims cannot transfer ownership`() = runBlocking {
+    fun `concurrent claims cannot transfer origin`() = runBlocking {
         val repositories = listOf(repository(), repository())
         val results = listOf(owner, stranger).mapIndexed { index, installation ->
             async { repositories[index].save(installation, id, input) }
@@ -107,34 +104,6 @@ class SqlitePlaceRepositoryTest {
     @Test
     fun `propagates coroutine cancellation`() = runBlocking<Unit> {
         assertFailsWith<CancellationException> { database().write { throw CancellationException("Cancelled") } }
-    }
-
-    @Test
-    fun `opens version one JDBC database without replacing saved data`() = runBlocking {
-        val path = directory.resolve("nested/dozy.db")
-        val legacyName = "G".repeat(100)
-        Files.createDirectories(path.parent)
-        DriverManager.getConnection("jdbc:sqlite:$path").use { connection ->
-            connection.createStatement().use { statement ->
-                val script = checkNotNull(javaClass.getResource("/db/migration/V1__places.sql")).readText()
-                script.split(';').map(String::trim).filter(String::isNotEmpty).forEach(statement::execute)
-                statement.execute("PRAGMA user_version = 1")
-                statement.execute("INSERT INTO installations(id) VALUES ('owner')")
-            }
-            connection.prepareStatement(
-                "INSERT INTO places(id, installation_id, name, description, ownership) VALUES (?, 'owner', ?, 'Saved before Exposed', 'CUSTOM')",
-            ).use { statement ->
-                statement.setString(1, id.value)
-                statement.setString(2, legacyName)
-                statement.executeUpdate()
-            }
-        }
-        Flyway.configure().dataSource("jdbc:sqlite:$path", null, null)
-            .baselineVersion("1").load().baseline()
-        val repository = repository()
-        assertEquals(legacyName, repository.list(owner).single { it.id == id }.name.value)
-        assertEquals(SavePlaceResult.Updated, repository.save(owner, id, input))
-        assertEquals(4, repository.list(owner).size)
     }
 
     @Test
