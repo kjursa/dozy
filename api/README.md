@@ -12,7 +12,7 @@ launch or E2E suite is included.
   envelopes, and API version paths. Depends on Kotlin serialization, not Ktor,
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
-  `PlacesClient`, with its contracts dependency exposed to consumers. Engines,
+  `PlacesClients` version container, with its contracts dependency exposed to consumers. Engines,
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
@@ -38,9 +38,10 @@ dozy.places.v1.save(
 )
 ```
 
-Inject `client.place.v1.PlacesClient` into consumers rather than the entire `DozyClient` when only
-Places is needed. Mobile registers the root client in Koin and exposes its Places
-client to `DefaultPlaceRepository`. Android stores the UUID in installation
+Inject `client.place.PlacesClients` into consumers rather than the entire `DozyClient` when only
+Places is needed. The container exposes singular version interfaces (`places.v1.list()`,
+`places.v1.save(...)`) and accepts them through its constructor, including test fakes. Mobile registers the root client in Koin and exposes its Places
+container to `DefaultPlaceRepository`. Android stores the UUID in installation
 preferences; the iOS boundary uses `NSUserDefaults`. These IDs are a namespace,
 not authentication credentials. Clearing application data can lose the namespace.
 

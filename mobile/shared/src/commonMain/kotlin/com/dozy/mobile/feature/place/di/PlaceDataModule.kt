@@ -1,7 +1,7 @@
 package com.dozy.mobile.feature.place.di
 
 import com.dozy.api.client.DozyClient
-import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.PlacesClients
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
@@ -19,7 +19,7 @@ class BundledPlaces(
 
 val placeDataModule =
     module {
-        single<PlacesClient> { get<DozyClient>().places.v1 }
+        single<PlacesClients> { get<DozyClient>().places }
         single<PlaceRepository> { DefaultPlaceRepository(get(), get(), get<BundledPlaces>().places) }
         factoryOf(::ObservePlaces)
         factoryOf(::RefreshPlaces)

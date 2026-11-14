@@ -1,12 +1,12 @@
 package com.dozy.mobile.navigation
 
-import kotlinx.serialization.json.Json
 import androidx.navigation.NavHostController
 import androidx.savedstate.read
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import kotlinx.serialization.json.Json
 
 const val MAIN_ROUTE = "main"
 const val CREATE_STORY_ROUTE = "create-story?place={place}&cast={cast}"

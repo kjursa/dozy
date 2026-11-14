@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
@@ -52,12 +53,12 @@ class PlaceSaveTest {
                         return ApiResult.Success(Unit)
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
             assertTrue(dao.find("custom")!!.pendingSync)
             available = true
             // A fresh repository must discover pending work from storage.
-            DefaultPlaceRepository(dao, api, emptyList()).refresh()
+            DefaultPlaceRepository(dao, PlacesClients(api), emptyList()).refresh()
             assertEquals(listOf("custom", "custom"), ids)
             assertFalse(dao.find("custom")!!.pendingSync)
             repository.refresh()
@@ -77,7 +78,7 @@ class PlaceSaveTest {
                         request: SavePlaceRequestDto,
                     ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Conflict)
                 }
-            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
             assertTrue(dao.find("custom")!!.pendingSync)
             repository.refresh()
@@ -101,7 +102,7 @@ class PlaceSaveTest {
                         throw CancellationException()
                     }
                 }
-            val repository = DefaultPlaceRepository(dao, api, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClients(api), emptyList())
             dao.failure = true
             try {
                 repository.save(place())
@@ -174,17 +175,19 @@ class PlaceSaveTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    object : PlacesClient {
-                        override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+                    PlacesClients(
+                        object : PlacesClient {
+                            override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
 
-                        override suspend fun save(
-                            id: String,
-                            request: SavePlaceRequestDto,
-                        ): ApiResult<Unit, PlacesSaveError> {
-                            requests += request
-                            error("Unavailable")
-                        }
-                    },
+                            override suspend fun save(
+                                id: String,
+                                request: SavePlaceRequestDto,
+                            ): ApiResult<Unit, PlacesSaveError> {
+                                requests += request
+                                error("Unavailable")
+                            }
+                        },
+                    ),
                     emptyList(),
                 )
             val updated = original.copy(name = Place.Name("New garden"), inhabitants = null)
@@ -205,7 +208,11 @@ class PlaceSaveTest {
             dao.upsert(predefined.toEntity().copy(local = false))
             val before = dao.rows.value
             val repository =
-                DefaultPlaceRepository(dao, fakePlacesClient { error("No HTTP allowed") }, listOf(place("builtin:woods", custom = false)))
+                DefaultPlaceRepository(
+                    dao,
+                    PlacesClients(fakePlacesClient { error("No HTTP allowed") }),
+                    listOf(place("builtin:woods", custom = false)),
+                )
             for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
                 try {
                     repository.save(place(id))

@@ -1,6 +1,7 @@
 package com.dozy.api.client
 
-import com.dozy.api.client.place.PlacesClient
+import com.dozy.api.client.place.PlacesClients
+import com.dozy.api.client.place.v1.KtorPlacesClient
 import com.dozy.api.contracts.ApiVersion
 import io.ktor.client.HttpClient
 
@@ -9,7 +10,7 @@ class DozyClient(
     config: DozyClientConfig,
     installationIdProvider: InstallationIdProvider,
 ) {
-    val places = PlacesClient(httpClient, config, installationIdProvider)
+    val places: PlacesClients = PlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
 }
 
 data class DozyClientConfig(

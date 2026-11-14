@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.mobile.core.config.ApiConfig
@@ -32,7 +33,8 @@ class PlaceDataTest {
             dao.upsert(place("z", "Zoo").toEntity())
             dao.upsert(place("a", "Attic").toEntity())
             val bundled = listOf(place("builtin:woods", "Woods", false))
-            val repository = DefaultPlaceRepository(dao, fakePlacesClient { error("No network during observation") }, bundled)
+            val repository =
+                DefaultPlaceRepository(dao, PlacesClients(fakePlacesClient { error("No network during observation") }), bundled)
             val ordered = ObservePlaces(repository)().first()
             assertEquals(listOf("a", "z", "builtin:woods"), ordered.map { it.id.value })
             assertEquals(listOf(true, true, false), ordered.map { it.canEdit })
@@ -41,9 +43,11 @@ class PlaceDataTest {
                 ObservePlaces(
                     DefaultPlaceRepository(
                         dao,
-                        fakePlacesClient {
-                            throw ApiDisabledException()
-                        },
+                        PlacesClients(
+                            fakePlacesClient {
+                                throw ApiDisabledException()
+                            },
+                        ),
                         bundled,
                     ),
                 )().first(),
@@ -54,18 +58,22 @@ class PlaceDataTest {
                 emptyList<Any>(),
                 DefaultPlaceRepository(
                     dao,
-                    fakePlacesClient {
-                        throw ApiDisabledException()
-                    },
+                    PlacesClients(
+                        fakePlacesClient {
+                            throw ApiDisabledException()
+                        },
+                    ),
                     emptyList(),
                 ).observe().first(),
             )
             assertFalse(
                 DefaultPlaceRepository(
                     dao,
-                    fakePlacesClient {
-                        throw ApiDisabledException()
-                    },
+                    PlacesClients(
+                        fakePlacesClient {
+                            throw ApiDisabledException()
+                        },
+                    ),
                     bundled,
                 ).refresh(),
             )
@@ -82,7 +90,7 @@ class PlaceDataTest {
                         PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
-            val repository = DefaultPlaceRepository(dao, fakePlacesClient { ApiResult.Success(snapshot) }, emptyList())
+            val repository = DefaultPlaceRepository(dao, PlacesClients(fakePlacesClient { ApiResult.Success(snapshot) }), emptyList())
             assertTrue(repository.refresh())
             assertEquals(
                 "Local edit",
@@ -113,7 +121,7 @@ class PlaceDataTest {
                         ),
                     )
                 }
-            assertFalse(DefaultPlaceRepository(dao, api, emptyList()).refresh())
+            assertFalse(DefaultPlaceRepository(dao, PlacesClients(api), emptyList()).refresh())
             assertEquals(listOf(existing), dao.rows.value)
         }
 
@@ -125,7 +133,7 @@ class PlaceDataTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    fakePlacesClient { ApiResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) },
+                    PlacesClients(fakePlacesClient { ApiResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) }),
                     emptyList(),
                 )
             try {
@@ -135,7 +143,7 @@ class PlaceDataTest {
             }
             assertEquals(listOf(existing), dao.rows.value)
             try {
-                DefaultPlaceRepository(dao, fakePlacesClient { throw CancellationException() }, emptyList()).refresh()
+                DefaultPlaceRepository(dao, PlacesClients(fakePlacesClient { throw CancellationException() }), emptyList()).refresh()
                 fail("Expected cancellation")
             } catch (
                 _: CancellationException,

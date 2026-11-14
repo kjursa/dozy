@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import com.dozy.api.client.place.PlacesClients
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
@@ -93,9 +94,11 @@ class PlaceDatabaseTest {
                 val repository =
                     DefaultPlaceRepository(
                         reopened.places(),
-                        fakePlacesClient {
-                            error("Local reads must not request HTTP")
-                        },
+                        PlacesClients(
+                            fakePlacesClient {
+                                error("Local reads must not request HTTP")
+                            },
+                        ),
                         listOf(place("builtin:woods", custom = false)),
                     )
                 assertEquals(3, repository.observe().first().size)

@@ -19,6 +19,10 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 
 - Write code comments, documentation, and other repository-maintained text in English. Use English for commit messages, issue titles and descriptions, and PR titles and descriptions as well. Localized UI resources and user- or backend-provided content may use their intended language.
 
+## API
+
+For any task that changes files under `api/`, read and follow `api/AGENTS.md` in addition to these repository-level instructions.
+
 ## Backend
 
 For any task that changes files under `backend/`, read and follow `backend/AGENTS.md` in addition to these repository-level instructions.
