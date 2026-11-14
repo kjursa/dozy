@@ -14,8 +14,8 @@ class PlaceValueTest {
     @Test
     fun `save command reports name errors precisely while name value accepts older longer data`() {
         assertEquals(SavePlace.Error.Name.Required, saveError("  ", "Forest", null))
-        assertEquals(SavePlace.Error.Name.TooLong(80), saveError("n".repeat(81), "Forest", null))
-        assertEquals(SavePlace.Error.Name.TooLong(80), saveError("😀".repeat(41), "Forest", null))
+        assertEquals(SavePlace.Error.Name.TooLong, saveError("n".repeat(81), "Forest", null))
+        assertEquals(SavePlace.Error.Name.TooLong, saveError("😀".repeat(41), "Forest", null))
         assertIs<ParseResult.Valid<SavePlace>>(SavePlace.parse("😀".repeat(40), "Forest", null))
         assertEquals("n".repeat(100), Place.Name("n".repeat(100)).value)
     }
@@ -24,14 +24,14 @@ class PlaceValueTest {
     fun `save command reports description errors precisely`() {
         assertEquals("Forest", validSavePlace("Woods", " Forest ", null).description.value)
         assertEquals(SavePlace.Error.Description.Required, saveError("Woods", "\n", null))
-        assertEquals(SavePlace.Error.Description.TooLong(500), saveError("Woods", "d".repeat(501), null))
+        assertEquals(SavePlace.Error.Description.TooLong, saveError("Woods", "d".repeat(501), null))
     }
 
     @Test
     fun `save command normalizes optional inhabitants and reports excess length`() {
         assertEquals(null, validSavePlace("Woods", "Forest", "  ").inhabitants)
         assertEquals("Owls", validSavePlace("Woods", "Forest", " Owls ").inhabitants?.value)
-        assertEquals(SavePlace.Error.Inhabitants.TooLong(500), saveError("Woods", "Forest", "i".repeat(501)))
+        assertEquals(SavePlace.Error.Inhabitants.TooLong, saveError("Woods", "Forest", "i".repeat(501)))
     }
 
     @Test
@@ -42,9 +42,9 @@ class PlaceValueTest {
         assertEquals("Woods", command.name.value)
         assertEquals("Quiet forest", command.description.value)
         assertEquals(null, command.inhabitants)
-        assertEquals(SavePlace.Error.Name.TooLong(80), saveError("n".repeat(81), "Forest", null))
+        assertEquals(SavePlace.Error.Name.TooLong, saveError("n".repeat(81), "Forest", null))
         assertEquals(SavePlace.Error.Description.Required, saveError("Woods", " ", null))
-        assertEquals(SavePlace.Error.Inhabitants.TooLong(500),
+        assertEquals(SavePlace.Error.Inhabitants.TooLong,
             saveError("Woods", "Forest", "i".repeat(501)))
     }
 

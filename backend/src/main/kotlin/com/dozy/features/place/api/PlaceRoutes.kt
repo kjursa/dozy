@@ -44,14 +44,14 @@ private fun requirePlaceId(path: String?, request: SavePlaceRequest): Place.Id {
 
 private fun SavePlace.Error.toApiException(): ApiException = when (this) {
     SavePlace.Error.Name.Required -> fieldError("name", "REQUIRED")
-    is SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG", maxLength)
+    SavePlace.Error.Name.TooLong -> fieldError("name", "TOO_LONG")
     SavePlace.Error.Description.Required -> fieldError("description", "REQUIRED")
-    is SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG", maxLength)
-    is SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG", maxLength)
+    SavePlace.Error.Description.TooLong -> fieldError("description", "TOO_LONG")
+    SavePlace.Error.Inhabitants.TooLong -> fieldError("inhabitants", "TOO_LONG")
 }
 
-private fun fieldError(field: String, reason: String, maxLength: Int? = null) =
-    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason, maxLength)
+private fun fieldError(field: String, reason: String) =
+    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason)
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created

@@ -27,14 +27,14 @@ class SavePlace private constructor(
     sealed interface Error {
         sealed interface Name : Error {
             data object Required : Name
-            data class TooLong(val maxLength: Int) : Name
+            data object TooLong : Name
         }
         sealed interface Description : Error {
             data object Required : Description
-            data class TooLong(val maxLength: Int) : Description
+            data object TooLong : Description
         }
         sealed interface Inhabitants : Error {
-            data class TooLong(val maxLength: Int) : Inhabitants
+            data object TooLong : Inhabitants
         }
     }
 
@@ -43,19 +43,19 @@ class SavePlace private constructor(
             val normalizedName = name.trim()
             val parsedName = when {
                 normalizedName.isEmpty() -> return ParseResult.Invalid(Error.Name.Required)
-                normalizedName.length > 80 -> return ParseResult.Invalid(Error.Name.TooLong(80))
+                normalizedName.length > 80 -> return ParseResult.Invalid(Error.Name.TooLong)
                 else -> Place.Name(normalizedName)
             }
             val normalizedDescription = description.trim()
             val parsedDescription = when {
                 normalizedDescription.isEmpty() -> return ParseResult.Invalid(Error.Description.Required)
-                normalizedDescription.length > 500 -> return ParseResult.Invalid(Error.Description.TooLong(500))
+                normalizedDescription.length > 500 -> return ParseResult.Invalid(Error.Description.TooLong)
                 else -> Place.Description(normalizedDescription)
             }
             val normalizedInhabitants = inhabitants?.trim()?.takeIf { it.isNotEmpty() }
             val parsedInhabitants = when {
                 normalizedInhabitants == null -> null
-                normalizedInhabitants.length > 500 -> return ParseResult.Invalid(Error.Inhabitants.TooLong(500))
+                normalizedInhabitants.length > 500 -> return ParseResult.Invalid(Error.Inhabitants.TooLong)
                 else -> Place.Inhabitants(normalizedInhabitants)
             }
             return ParseResult.Valid(SavePlace(parsedName, parsedDescription, parsedInhabitants))

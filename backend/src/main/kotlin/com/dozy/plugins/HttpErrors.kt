@@ -15,7 +15,6 @@ data class ApiErrorResponse(
     val code: String,
     val field: String? = null,
     val reason: String? = null,
-    val maxLength: Int? = null,
 )
 
 class ApiException(
@@ -23,7 +22,6 @@ class ApiException(
     val code: String,
     val field: String? = null,
     val reason: String? = null,
-    val maxLength: Int? = null,
 ) : RuntimeException()
 
 fun Application.configureErrors() {
@@ -31,7 +29,7 @@ fun Application.configureErrors() {
         exception<ApiException> { call, failure ->
             call.respond(
                 failure.status,
-                ApiErrorResponse(failure.code, failure.field, failure.reason, failure.maxLength),
+                ApiErrorResponse(failure.code, failure.field, failure.reason),
             )
         }
         exception<BadRequestException> { call, _ ->

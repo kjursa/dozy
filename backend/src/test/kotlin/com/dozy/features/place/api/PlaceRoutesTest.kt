@@ -124,10 +124,7 @@ class PlaceRoutesTest {
         )
         for ((invalid, expected) in invalidInputs) {
             val response = client.save(body = invalid)
-            val maxLength = if (expected.second == "TOO_LONG") {
-                if (expected.first == "name") 80 else 500
-            } else null
-            assertFieldError(response, expected.first, expected.second, maxLength)
+            assertFieldError(response, expected.first, expected.second)
         }
         assertEquals(3, client.places().size)
     }
@@ -176,21 +173,19 @@ class PlaceRoutesTest {
         assertEquals(code, error.code)
         assertEquals(null, error.field)
         assertEquals(null, error.reason)
-        assertEquals(null, error.maxLength)
     }
 
-    private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String, maxLength: Int?) {
+    private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String) {
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
         val error = decodeError(response)
         assertEquals("INVALID_REQUEST", error.code)
         assertEquals(field, error.field)
         assertEquals(reason, error.reason)
-        assertEquals(maxLength, error.maxLength)
     }
 
     private suspend fun decodeError(response: HttpResponse): ApiErrorResponse {
         val body = response.bodyAsText()
-        assertEquals(setOf("code", "field", "reason", "maxLength"), Json.parseToJsonElement(body).jsonObject.keys)
+        assertEquals(setOf("code", "field", "reason"), Json.parseToJsonElement(body).jsonObject.keys)
         return Json.decodeFromString(body)
     }
 

@@ -44,8 +44,8 @@ For example, characters now support deletion, and full story responses include
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
   unless a specific operation requires omission. Responses must preserve required
   fields even if the server serializer normally omits defaults.
-- Error responses use the same machine-readable fields: `code`, `field`, `reason`,
-  and `maxLength`. Unused detail fields are `null`. `code` identifies the API error
+- Error responses use the same machine-readable fields: `code`, `field`, and `reason`.
+  Unused detail fields are `null`. `code` identifies the API error
   category independently of HTTP status; it is not display-ready text. Mobile should
   localize known codes/reasons and use a localized generic fallback for unknown ones.
   Other proposed feature payloads do not yet define field-level error details.
@@ -229,14 +229,14 @@ Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
 Implemented place errors use the common error shape. A `422 INVALID_REQUEST` caused
-by field validation includes the field and reason; `TOO_LONG` includes `maxLength`:
+by field validation includes the field and reason:
 
 ```json
-{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG","maxLength":80}
+{"code":"INVALID_REQUEST","field":"name","reason":"TOO_LONG"}
 ```
 
-`REQUIRED` means the trimmed value is empty. `TOO_LONG` reports the maximum trimmed
-UTF-16 length. Write limits apply to PUT requests; existing stored values remain
+`REQUIRED` means the trimmed value is empty. `TOO_LONG` means the trimmed value
+exceeds its write limit. Lengths use UTF-16 units. Write limits apply to PUT requests; existing stored values remain
 readable even if they exceed a later write limit.
 
 | Status | Code | Cause |
