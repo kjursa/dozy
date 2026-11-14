@@ -46,6 +46,10 @@ container to `DefaultPlaceRepository`. Android stores the UUID in installation
 preferences; the iOS boundary uses `NSUserDefaults`. These IDs are a namespace,
 not authentication credentials. Clearing application data can lose the namespace.
 
+`contracts.v1.ApiErrorCode` is the shared source of known wire codes for backend
+and client. Error envelopes retain a string code; `fromValue` returns null for
+unrecognized values so future codes can still become `Unknown`.
+
 Each operation returns `ApiResult<SuccessPayload, OperationError>`. V1 list returns
 `ApiResult<PlacesResponse, PlacesListError>`; save returns
 `ApiResult<Unit, PlacesSaveError>`. Handle `Success` and `Failure` exhaustively.

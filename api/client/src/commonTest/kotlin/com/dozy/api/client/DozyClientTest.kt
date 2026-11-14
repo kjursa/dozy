@@ -86,6 +86,7 @@ class DozyClientTest {
     fun `preserves new codes fields reasons and unexpected status combinations as Unknown`() = runTest {
         val replies = listOf(
             409 to """{"code":"NEW_RULE"}""",
+            403 to """{"code":"FORBID"}""",
             400 to """{"code":"NEW_RULE"}""",
             500 to """{"code":"CONFLICT"}""",
             422 to """{"code":"INVALID_REQUEST","field":"newField","reason":"REQUIRED"}""",

@@ -1,5 +1,6 @@
 package com.dozy.plugins
 
+import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -10,10 +11,9 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import java.sql.SQLException
 
-
 class ApiException(
     val status: HttpStatusCode,
-    val code: String,
+    val code: ApiErrorCode,
     val field: String? = null,
     val reason: String? = null,
 ) : RuntimeException()
@@ -23,17 +23,17 @@ fun Application.configureErrors() {
         exception<ApiException> { call, failure ->
             call.respond(
                 failure.status,
-                ApiErrorResponse(failure.code, failure.field, failure.reason),
+                ApiErrorResponse(failure.code.value, failure.field, failure.reason),
             )
         }
         exception<BadRequestException> { call, _ ->
-            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse("INVALID_REQUEST"))
+            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
         }
         exception<ContentTransformationException> { call, _ ->
-            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse("INVALID_REQUEST"))
+            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
         }
         exception<SQLException> { call, _ ->
-            call.respond(HttpStatusCode.ServiceUnavailable, ApiErrorResponse("UNAVAILABLE"))
+            call.respond(HttpStatusCode.ServiceUnavailable, ApiErrorResponse(ApiErrorCode.UNAVAILABLE.value))
         }
     }
 }

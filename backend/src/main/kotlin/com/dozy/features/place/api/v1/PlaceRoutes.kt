@@ -1,5 +1,6 @@
 package com.dozy.features.place.api.v1
 
+import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.features.installation.api.installationId
@@ -39,7 +40,7 @@ fun Route.placeV1Routes(service: PlaceService) {
 
 private fun requirePlaceId(path: String?): Place.Id {
     if (path.isNullOrBlank()) {
-        throw ApiException(HttpStatusCode.BadRequest, "INVALID_REQUEST")
+        throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
     }
     return Place.Id(path)
 }
@@ -53,11 +54,11 @@ private fun SavePlace.Error.toApiException(): ApiException = when (this) {
 }
 
 private fun fieldError(field: String, reason: String) =
-    ApiException(HttpStatusCode.UnprocessableEntity, "INVALID_REQUEST", field, reason)
+    ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.INVALID_REQUEST, field, reason)
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created
     SavePlaceResult.Updated -> HttpStatusCode.NoContent
-    SavePlaceResult.Forbidden -> throw ApiException(HttpStatusCode.Forbidden, "FORBIDDEN")
-    SavePlaceResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, "CONFLICT")
+    SavePlaceResult.Forbidden -> throw ApiException(HttpStatusCode.Forbidden, ApiErrorCode.FORBIDDEN)
+    SavePlaceResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.CONFLICT)
 }
