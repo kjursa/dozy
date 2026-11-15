@@ -1,5 +1,8 @@
 package com.dozy.di
 
+import com.dozy.features.character.application.CharacterService
+import com.dozy.features.character.data.repository.SqliteCharacterRepository
+import com.dozy.features.character.domain.repository.CharacterRepository
 import com.dozy.config.AppConfig
 import com.dozy.config.DatabaseConfig
 import com.dozy.features.place.application.PlaceService
@@ -15,6 +18,8 @@ fun Application.configureDependencies() {
         provide<AppConfig> { AppConfig.from(configuration) }
         provide<DatabaseConfig> { resolve<AppConfig>().database }
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
+        provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }
+        provide<CharacterService> { CharacterService(resolve()) }
         provide<PlaceRepository> { SqlitePlaceRepository(resolve()) }
         provide<PlaceService> { PlaceService(resolve()) }
     }

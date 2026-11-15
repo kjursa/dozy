@@ -1,5 +1,9 @@
 package com.dozy.features.place.api
 
+import com.dozy.features.character.domain.model.Character
+import com.dozy.features.character.domain.model.SaveCharacter
+import com.dozy.features.character.domain.model.SaveCharacterResult
+import com.dozy.features.character.domain.repository.CharacterRepository
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesResponse
@@ -137,6 +141,7 @@ class PlaceRoutesTest {
         environment { config = databaseConfig(directory) }
         application {
             dependencies.provide<PlaceRepository> { FailingRepository() }
+            dependencies.provide<CharacterRepository> { FailingCharacterRepository() }
             module()
         }
         assertError(client.get("/api/v1/places") { header("X-Installation-Id", owner) },
@@ -190,6 +195,13 @@ class PlaceRoutesTest {
         val body = response.bodyAsText()
         assertEquals(setOf("code", "field", "reason"), Json.parseToJsonElement(body).jsonObject.keys)
         return Json.decodeFromString(body)
+    }
+
+    private class FailingCharacterRepository : CharacterRepository {
+        override suspend fun list(installation: InstallationId): List<Character> = throw SQLException("Private database path")
+        override suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter): SaveCharacterResult =
+            throw SQLException("Private database path")
+        override suspend fun delete(installation: InstallationId, id: Character.Id): Boolean = throw SQLException("Private database path")
     }
 
     private class FailingRepository : PlaceRepository {

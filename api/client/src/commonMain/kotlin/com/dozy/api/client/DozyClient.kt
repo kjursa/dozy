@@ -1,5 +1,8 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.character.CharactersClients
+import com.dozy.api.client.character.DefaultCharactersClients
+import com.dozy.api.client.character.v1.KtorCharactersClient
 import com.dozy.api.client.place.DefaultPlacesClients
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.KtorPlacesClient
@@ -11,6 +14,7 @@ class DozyClient(
     config: DozyClientConfig,
     installationIdProvider: InstallationIdProvider,
 ) {
+    val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(httpClient, config, installationIdProvider))
     val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
 }
 

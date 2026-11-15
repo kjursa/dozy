@@ -1,8 +1,9 @@
 package com.dozy.mobile.feature.character.data
 
-import com.dozy.mobile.feature.character.data.api.AvatarDto
+import com.dozy.api.contracts.v1.character.AvatarDto
+import com.dozy.api.contracts.v1.character.CharacterDto
+import com.dozy.api.contracts.v1.character.SaveCharacterRequest
 import com.dozy.mobile.feature.character.data.api.AvatarRequestDto
-import com.dozy.mobile.feature.character.data.api.CharacterDto
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
@@ -58,7 +59,7 @@ fun AvatarDto.toDomain(): Character.Avatar {
 }
 
 fun CharacterDto.toDomain(): Character {
-    require(id.isNotBlank() && name.isNotBlank()) { "Malformed character" }
+    require(id.isNotBlank()) { "Malformed character" }
     return Character(
         Character.Id(id),
         Character.Details(
@@ -70,3 +71,12 @@ fun CharacterDto.toDomain(): Character {
         avatar?.toDomain(),
     )
 }
+
+fun Character.toSaveRequest() =
+    SaveCharacterRequest(
+        details.name.value,
+        details.personality.value,
+        details.appearance.value,
+        requireNotNull(details.type).name,
+        avatar?.let { AvatarDto(it.id.value, it.url.value) },
+    )

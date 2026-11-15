@@ -12,16 +12,15 @@ launch or E2E suite is included.
   envelopes, and API version paths. Depends on Kotlin serialization, not Ktor,
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
-  `PlacesClients` version container, with its contracts dependency exposed to consumers. Engines,
+  `PlacesClients` and `CharactersClients` version containers, with its contracts dependency exposed to consumers. Engines,
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
-Places is the first extracted feature because it is the only currently implemented
-backend feature. Character/story clients and DTOs remain in mobile for now, using
-the same v1 path convention. Move them into these modules as their backend APIs
-are implemented. Do not introduce mobile domain types into the contract modules.
-Mobile's Place DTO typealiases refer to the shared definitions; they do not copy
-or maintain a second wire schema. The backend imports the same definitions directly.
+Places and Characters are implemented in the shared contracts/client and backend.
+Story DTOs remain in mobile until their backend API is implemented. Character DTOs
+and avatar references are shared; avatar job request/poll DTOs remain at the mobile
+generator boundary until API2. Remote avatar generation arrives in API2; this task
+provides only the asset metadata registry and reference checks.
 
 ## Usage
 
@@ -84,6 +83,24 @@ Responses tolerate additive unknown JSON fields. Write serialization is owned by
 the library and does not require caller ContentNegotiation. The SDK never closes
 the caller's HttpClient or engine.
 
+## Characters
+
+Inject `client.character.CharactersClients` and call `characters.v1.list()`,
+`save(id, SaveCharacterRequest(...))`, or `delete(id)`. List returns
+`ApiResult<List<CharacterDto>, CharactersListError>` with the existing bare-array
+wire shape. Save/delete return `ApiResult<Unit, CharactersSaveError>` and
+`ApiResult<Unit, CharactersDeleteError>`; acknowledgements are explicit success
+values. Save accepts only 201/204, delete accepts 204 and the known
+`CHARACTER_NOT_FOUND` error code. Unknown 404 codes remain `Unknown`.
+
+The write request has name, personality, appearance, type and an optional avatar;
+ID is supplied only in the path. All operations send `X-Installation-Id`.
+`CharacterField.reasons` defines allowed validation combinations, including
+SINGLE_LINE and INVALID_VALUE. Save also classifies CONFLICT and
+REFERENCE_UNAVAILABLE. Structural errors and malformed/transport responses follow
+the exception policy above. See [character integration](../mobile/CHARACTER_DATA.md)
+and [backend API](../backend/API.md) for limits, ownership and deletion semantics.
+
 ## Versioning
 
 HTTP versioning and library versioning are independent:
@@ -107,7 +124,7 @@ HTTP versioning and library versioning are independent:
 From the repository root:
 
 ```sh
-./backend/gradlew -p api :contracts:jvmTest :client:jvmTest
+./backend/gradlew -p api --no-daemon :contracts:jvmTest :client:jvmTest
 ./test-all
 ```
 

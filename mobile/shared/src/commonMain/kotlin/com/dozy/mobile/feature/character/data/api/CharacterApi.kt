@@ -1,14 +1,8 @@
 package com.dozy.mobile.feature.character.data.api
 
+import com.dozy.api.contracts.v1.character.AvatarDto
+
+/** Avatar generation boundary retained until API2. CRUD uses CharactersClients. */
 fun interface CharacterApi {
-    /** Null means the API is disabled. An empty list is an authoritative snapshot. */
-    suspend fun list(): List<CharacterDto>? = null
-
-    /** False means local-only; 404 is an acknowledged idempotent deletion. */
-    suspend fun delete(id: String): Boolean = false
-
-    suspend fun generateAvatar(input: AvatarRequestDto): AvatarDto? = null
-
-    /** True only when the server acknowledges persistence. False means local-only. */
-    suspend fun save(character: CharacterDto): Boolean
+    suspend fun generateAvatar(input: AvatarRequestDto): AvatarDto?
 }

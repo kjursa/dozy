@@ -1,7 +1,7 @@
 package com.dozy.mobile.feature.story.data.api
 
+import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.mobile.core.config.ApiConfig
-import com.dozy.mobile.feature.character.data.api.CharacterDto
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 import io.ktor.client.HttpClient

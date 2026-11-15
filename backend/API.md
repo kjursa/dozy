@@ -7,8 +7,9 @@ and response examples. It works locally without a build step or API calls.
 
 This document combines implemented routes and proposals consolidated from the
 mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
-`PUT /api/v1/places/{id}`. All other feature endpoints remain proposals. `/hello` returns
-`200 {"message":"Hello world from Dozy"}`. Places use a local SQLite database;
+`PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
+Avatar generation arrives in API2; other feature endpoints remain proposals. `/hello` returns
+`200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
 Sources:
@@ -17,7 +18,7 @@ Sources:
 - [Place contract](../mobile/PLACE_DATA.md).
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
-- Shared Places contracts and client under `api/contracts` and `api/client`.
+- Shared Places and Characters contracts and clients under `api/contracts` and `api/client`.
 - Legacy `KtorCharacterApi` and `KtorGenerationApi` under
   `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
@@ -33,14 +34,13 @@ For example, characters now support deletion, and full story responses include
 - Personal resources belong to an installation, not a user account. As confirmed
   for this stage, send `X-Installation-Id: <client-generated UUID>` on every feature
   request, with no separate secret or login endpoint. Persist the UUID locally;
-  the server registers it lazily on first use. The shared Places client sends this
-  header automatically; legacy character/story clients will adopt the shared client
-  when their backend routes are implemented. Missing/invalid headers
+  the server registers it lazily on first use. The shared Places and Characters clients send this
+  header automatically; the story client will adopt it when its backend is implemented. Missing/invalid headers
   return `400 INVALID_INSTALLATION_ID`. The ID partitions data but is not strong
   authentication: a caller knowing another ID could access its namespace. No
   library recovery is defined after losing the ID. Never take ownership from JSON.
-- Character/place IDs are opaque strings, not SQL UUID assumptions. Custom mobile
-  IDs are UUID strings; predefined places use `builtin:` IDs. Encode path IDs as
+- Character IDs are canonical UUIDv7 strings (case normalized at the boundary).
+  Custom place IDs are opaque strings; predefined places use `builtin:` IDs. Encode path IDs as
   one path segment. Story/job IDs match `[A-Za-z0-9_-]{1,128}`. Avatar job IDs use
   the same alphabet; a 128-character cap is a proposed server convention.
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
@@ -125,26 +125,39 @@ There is no separate required character-details read endpoint.
 
 ### PUT /api/v1/characters/{id}
 
-Body: complete Character object. Path and body IDs must match. Use the client ID
-for an idempotent upsert; repeating an identical PUT creates no duplicate.
-Proposed success: `201` for creation, `204` for replacement, no body. Mobile accepts
-any 2xx. Name/description edits may retain an earlier valid avatar: do not require
-its generation input to match the updated descriptions.
+Implemented. Body: `SaveCharacterRequest` with `name`, `personality`, `appearance`,
+`type`, and optional nullable `avatar`. The UUIDv7 ID appears only in the path;
+an ID in the body is a structural error. A minimal request is:
 
-Reject invalid input with `400`/`422`, unauthorized writes with `401`/`403`, ownership
-or deleted-ID conflicts with `409`, and unavailable resources with `404` where
-appropriate. No version token is currently sent: the mobile proposal uses last
-acknowledged write wins, not optimistic version reconciliation. Never revive a
-previously deleted ID through PUT. Server error messages are not shown verbatim.
+```json
+{"name":"Luna","personality":"Kind","appearance":"Green coat","type":"CHILD"}
+```
+
+PUT fully replaces editable fields; omitted/null avatar clears it. Repeated PUTs
+reuse the same resource. Return 201 creation or 204 replacement, both empty.
+Names are trimmed, required, single-line and at most 50 UTF-16 units. Personality
+and appearance are trimmed, required and at most 2000 each. Reads preserve
+historical values. Unknown types are field validation failures.
+
+Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
+`VALIDATION_FAILED` with `CharacterField` / `ValidationReason` metadata for business
+input; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
+READY asset's ID and URL; 409 `CONFLICT` for another installation's or permanently
+deleted ID. The name reasons are REQUIRED, TOO_LONG and SINGLE_LINE; personality
+and appearance support REQUIRED / TOO_LONG; type supports INVALID_VALUE.
 
 ### DELETE /api/v1/characters/{id}
 
-No body. `204` acknowledges durable removal; `404` also completes mobile deletion.
-Repeated deletion is safe. Other statuses fail the operation. Preserve an ID
-reservation/tombstone so later PUT cannot reuse the ID. Deletion must not change
-saved story text, cast snapshots, covers, or in-flight job configurations.
+Implemented. No body. Return empty 204 for an owned live or already-deleted ID;
+return 404 `CHARACTER_NOT_FOUND` for a missing/inaccessible ID. The shared client
+acknowledges that known code, not arbitrary 404s. A permanent tombstone prevents
+any subsequent PUT from claiming/reviving the ID, including by its former owner.
+Deletion does not alter saved story snapshots. Missing/invalid installation IDs
+return 400 `INVALID_INSTALLATION_ID` on every operation.
 
 ## Character avatars
+
+Proposed for API2. No generation endpoint/provider is implemented in API1.
 
 ### POST /api/v1/character-avatars
 
@@ -399,7 +412,7 @@ future scope. There is no backend reader-preference or reading-position API.
 ## Decisions and compatibility gaps before enabling production API
 
 1. Installation-only ownership and a bare UUID header are confirmed for this stage.
-   Implement UUID persistence/shared HTTP headers in mobile before enabling the API.
+   UUID persistence/shared headers are implemented for Places and Characters.
    Strong authentication, future account linking and library recovery remain separate
    scope; the UUID must not be presented as authenticated private storage.
 2. Generated avatars remain in scope, as confirmed. Keep POST/poll/explicit save;

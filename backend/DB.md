@@ -2,7 +2,7 @@
 
 ## Current SQLite implementation
 
-The initial backend stores installations and places in a local SQLite file.
+The initial backend stores installations, places, characters and asset metadata in a local SQLite file.
 `application.yaml` supplies the path and lock timeout through typed `AppConfig` /
 `DatabaseConfig`; use `DOZY_DATABASE_PATH` and `DOZY_DATABASE_BUSY_TIMEOUT_MS` to
 override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
@@ -21,7 +21,7 @@ entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
 to domain models. Flyway and Exposed share the configured SQLite data source.
 Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
 
-Add future changes as `V2__description.sql`, `V3__description.sql`, and so on;
+Add future changes as `V3__description.sql`, `V4__description.sql`, and so on;
 do not edit an applied migration after deployment. During the current development
 phase, the V1 schema is reset in place: places use `origin` with `SYSTEM`/`USER`
 values, replacing the previous `ownership` column. No upgrade migration is
@@ -47,6 +47,24 @@ status logging remains enabled.
 API code depends on `PlaceService` and the domain `PlaceRepository` contract.
 SQLite queries and repository implementation remain in the data layer, so a
 future PostgreSQL implementation can replace them through DI.
+
+### Characters and asset registry (API1)
+
+`V2__characters_and_assets.sql` adds `characters` and `assets`, owned by the
+existing `installations` namespace. Character IDs are globally reserved TEXT
+primary keys: an installation cannot claim another owner's ID. Records contain
+name, personality, appearance, type, nullable avatar ID/URL and a deleted flag.
+DELETE marks a permanent tombstone; collection reads exclude deleted rows. There
+is no cleanup/reuse or cascade into story snapshots. Full PUT replacements check
+ownership and deletion before upserting, within the same IMMEDIATE transaction.
+
+`assets` is the minimal shared metadata registry: ID, installation ID, URL and
+PENDING/READY/FAILED status. A non-null character avatar must exactly match an
+owned READY asset ID and URL. The avatar ID has a foreign key; application checks
+ownership/readiness and paired ID/URL values atomically. No provider, generation
+endpoint or production asset seeding is included. API2 will populate this registry;
+only test fixtures seed ready metadata today. Null avatars remain valid for
+historical records. Read mapping never applies current write length limits.
 
 ## Proposed PostgreSQL database
 
