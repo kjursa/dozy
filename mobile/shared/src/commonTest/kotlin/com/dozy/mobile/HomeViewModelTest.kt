@@ -10,9 +10,9 @@ import com.dozy.mobile.feature.home.presentation.HomeSection
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
 import com.dozy.mobile.feature.place.domain.usecase.RefreshPlaces
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
 import com.dozy.mobile.feature.story.data.api.StorySummaryDto
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.data.toDomain
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
@@ -48,7 +48,7 @@ class HomeViewModelTest {
     private val characters = FakeCharacterRepository()
     private val places = FakePlaceRepository()
     private val api = ProgressApi()
-    private val repository = DefaultGenerationRepository(FakeGenerationDao(), api)
+    private val repository = testGenerationRepository(FakeGenerationDao(), api)
     private val jobId = GenerationJob.Id("job")
 
     @BeforeTest fun setUp() {

@@ -9,6 +9,9 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
+val apiBaseUrl = providers.gradleProperty("dozy.apiBaseUrl").orNull
+val apiBaseUrlLiteral = apiBaseUrl?.let { "\"${it.replace("\\", "\\\\").replace("\"", "\\\"")}\"" } ?: "null"
+
 android {
     namespace = "com.dozy.mobile"
     compileSdk = 36
@@ -19,6 +22,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "DOZY_API_BASE_URL", apiBaseUrlLiteral)
     }
 
     signingConfigs {
@@ -42,6 +46,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

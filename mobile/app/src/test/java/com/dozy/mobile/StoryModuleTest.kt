@@ -1,7 +1,9 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
@@ -31,6 +33,7 @@ class StoryModuleTest {
             val platform =
                 module {
                     single { ApiConfig(null) }
+                    single<InstallationIdProvider> { InstallationIdProvider { "installation" } }
                     single { client }
                     single<GenerationDao> { FakeGenerationDao() }
                     single<CharacterRepository> { FakeCharacterRepository() }
@@ -39,7 +42,7 @@ class StoryModuleTest {
                     factory { SelectPlace(get()) }
                     single<GenerationKeyGenerator> { GenerationKeyGenerator { GenerationJob.RequestKey("injected") } }
                 }
-            val app = koinApplication { modules(storyModule, platform) }
+            val app = koinApplication { modules(dozyClientModule, storyModule, platform) }
             try {
                 val vm =
                     app.koin.get<CreateStoryViewModel> {

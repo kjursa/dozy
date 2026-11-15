@@ -6,9 +6,9 @@ import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.domain.model.StorySummary
 import kotlin.math.ceil
 
-fun StorySummaryDto.toDomain(): StorySummary {
+fun StorySummaryDto.toDomain(allowDevelopmentHttp: Boolean = false): StorySummary {
     require(id.matches(Regex("[A-Za-z0-9_-]{1,128}")))
-    require(title.isNotBlank() && coverUrl.startsWith("https://") && coverUrl.length > 8)
+    require(title.isNotBlank() && validStoryCoverUrl(coverUrl) && (allowDevelopmentHttp || coverUrl.startsWith("https://")) && coverUrl.length > 8)
     require(readingMinutes > 0 && createdAt >= 0)
     return StorySummary(Story.Id(id), title, coverUrl, StorySummary.ReadingMinutes(readingMinutes), StorySummary.CreatedAt(createdAt))
 }

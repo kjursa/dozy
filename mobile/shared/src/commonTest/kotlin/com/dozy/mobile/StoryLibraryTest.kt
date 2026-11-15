@@ -39,7 +39,7 @@ class StoryLibraryTest {
                     }
                 }
             val dao = FakeGenerationDao()
-            val repo = DefaultGenerationRepository(dao, api)
+            val repo = testGenerationRepository(dao, api)
             assertTrue(ObserveStoryLibrary(repo)().first().isEmpty())
             repo.start(GenerationJob.RequestKey("key"), progress.configuration)
             progress.remote = GenerationStatusDto("job", "READY", "story")
@@ -60,7 +60,7 @@ class StoryLibraryTest {
             assertEquals("Once upon a time", repo.readStory(Story.Id("story"))?.text)
             fail = true
             assertEquals(RefreshStories.Result.Failure, RefreshStories(repo)())
-            assertEquals(summaries, DefaultGenerationRepository(dao, api).summaries().first())
+            assertEquals(summaries, testGenerationRepository(dao, api).summaries().first())
         }
 
     @Test fun summaryValidationAndTextReadingTimeMatchReaderEstimate() {
@@ -131,9 +131,9 @@ class StoryLibraryTest {
                     ) { install(ContentNegotiation) { json() } }
                 try {
                     val dao = FakeGenerationDao()
-                    val local = DefaultGenerationRepository(dao, ProgressApi())
+                    val local = testGenerationRepository(dao, ProgressApi())
                     local.readStory(Story.Id("story"))
-                    val repo = DefaultGenerationRepository(dao, KtorGenerationApi(client, ApiConfig("https://example.test")))
+                    val repo = testGenerationRepository(dao, KtorGenerationApi(client, ApiConfig("https://example.test")))
                     assertEquals(RefreshStories.Result.Failure, RefreshStories(repo)())
                     assertEquals(
                         "story",
@@ -152,7 +152,7 @@ class StoryLibraryTest {
                     override suspend fun stories(cursor: String?): StoryPageDto = throw CancellationException("cancel")
                 }
             try {
-                RefreshStories(DefaultGenerationRepository(FakeGenerationDao(), api))()
+                RefreshStories(testGenerationRepository(FakeGenerationDao(), api))()
                 fail("Cancellation must propagate")
             } catch (_: CancellationException) {
             }

@@ -1,8 +1,8 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
 import com.dozy.mobile.feature.story.data.notification.UnsupportedStoryCompletionNotifier
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
@@ -20,7 +20,7 @@ class UnsupportedNotificationTest {
             val notifier = UnsupportedStoryCompletionNotifier()
             assertFalse(notifier.deliver(Story.Id("story")))
             val api = ProgressApi()
-            val repository = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val repository = testGenerationRepository(FakeGenerationDao(), api)
             repository.start(GenerationJob.RequestKey("key"), api.configuration)
             api.remote = GenerationStatusDto("job", "READY", "story")
             val reconcile =

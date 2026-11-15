@@ -1,0 +1,57 @@
+package com.dozy.mobile.feature.story.data
+
+import com.dozy.api.client.ApiResult
+import com.dozy.api.client.story.StoriesClients
+import com.dozy.api.client.story.v1.StoriesClient
+import com.dozy.api.client.story.v1.StoryReadError
+import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.api.client.storygeneration.v1.GenerationStartError
+import com.dozy.api.client.storygeneration.v1.GenerationStatusError
+import com.dozy.api.client.storygeneration.v1.StoryGenerationsClient
+import com.dozy.mobile.feature.story.data.api.GenerationAcceptedDto
+import com.dozy.mobile.feature.story.data.api.GenerationApi
+import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
+import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
+import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
+import com.dozy.mobile.feature.story.data.api.StoryDto
+import com.dozy.mobile.feature.story.data.api.StoryNotFoundException
+import com.dozy.mobile.feature.story.data.database.GenerationDao
+
+internal fun testGenerationRepository(
+    dao: GenerationDao,
+    api: GenerationApi,
+) = DefaultGenerationRepository(
+    dao,
+    object : StoryGenerationsClients {
+        override val v1 =
+            object : StoryGenerationsClient {
+                override suspend fun start(
+                    idempotencyKey: String,
+                    request: GenerationRequestDto,
+                ): ApiResult<GenerationAcceptedDto, GenerationStartError> =
+                    api.start(idempotencyKey, request)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(GenerationStartError.Unavailable)
+
+                override suspend fun status(jobId: String): ApiResult<GenerationStatusDto, GenerationStatusError> =
+                    api.status(jobId)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(GenerationStatusError.Unavailable)
+            }
+    },
+    object : StoriesClients {
+        override val v1 =
+            object : StoriesClient {
+                override suspend fun read(storyId: String): ApiResult<StoryDto, StoryReadError> =
+                    try {
+                        api.story(storyId)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(StoryReadError.Unavailable)
+                    } catch (_: StoryNotFoundException) {
+                        ApiResult.Failure(StoryReadError.NotFound)
+                    }
+            }
+    },
+    object : LegacyStoryApi {
+        override suspend fun stories(cursor: String?) = api.stories(cursor)
+
+        override suspend fun retry(
+            id: String,
+            key: String,
+        ) = api.retry(id, key)
+    },
+)

@@ -29,7 +29,7 @@ class GenerationDataTest {
             var calls = 0
             val start =
                 StartGeneration(
-                    DefaultGenerationRepository(
+                    testGenerationRepository(
                         FakeGenerationDao(),
                         object : GenerationApi {
                             override suspend fun status(id: String): GenerationStatusDto? = null
@@ -91,10 +91,10 @@ class GenerationDataTest {
                 }
             val characters = FakeCharacterRepository()
             val places = FakePlaceRepository()
-            val first = StartGeneration(DefaultGenerationRepository(dao, api), characters, places)
+            val first = StartGeneration(testGenerationRepository(dao, api), characters, places)
             assertEquals(StartGeneration.Result.Failure, first(input(), key))
             characters.characters.value = emptyList()
-            val retry = StartGeneration(DefaultGenerationRepository(dao, api), characters, places)
+            val retry = StartGeneration(testGenerationRepository(dao, api), characters, places)
             assertTrue(retry(input(), key) is StartGeneration.Result.Accepted)
             assertEquals(requests.first(), requests.last())
             assertEquals(
@@ -161,7 +161,7 @@ class GenerationDataTest {
                 try {
                     val start =
                         StartGeneration(
-                            DefaultGenerationRepository(FakeGenerationDao(), KtorGenerationApi(http, ApiConfig("https://example.test"))),
+                            testGenerationRepository(FakeGenerationDao(), KtorGenerationApi(http, ApiConfig("https://example.test"))),
                             FakeCharacterRepository(),
                             FakePlaceRepository(),
                         )
@@ -172,7 +172,7 @@ class GenerationDataTest {
             }
             val cancelled =
                 StartGeneration(
-                    DefaultGenerationRepository(
+                    testGenerationRepository(
                         FakeGenerationDao(),
                         object : GenerationApi {
                             override suspend fun status(id: String): GenerationStatusDto? = null

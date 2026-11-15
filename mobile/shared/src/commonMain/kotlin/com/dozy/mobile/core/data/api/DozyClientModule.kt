@@ -7,6 +7,8 @@ import org.koin.dsl.module
 
 val dozyClientModule =
     module {
+        single { get<DozyClient>().storyGenerations }
+        single { get<DozyClient>().stories }
         single {
             DozyClient(get(), DozyClientConfig(get<ApiConfig>().baseUrl), get())
         }

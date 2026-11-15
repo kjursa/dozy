@@ -1,0 +1,34 @@
+package com.dozy.features.story.data
+
+import com.dozy.config.GenerationConfig
+import com.dozy.features.story.domain.model.ContentRejectedException
+import com.dozy.features.story.domain.model.CoverGenerator
+import com.dozy.features.story.domain.model.GeneratedText
+import com.dozy.features.story.domain.model.StoryConfiguration
+import com.dozy.features.story.domain.model.TextGenerator
+import kotlinx.coroutines.delay
+
+class FakeTextGenerator(private val config: GenerationConfig) : TextGenerator {
+    override suspend fun generate(configuration: StoryConfiguration): GeneratedText {
+        delay(config.delayMillis)
+        when (config.textMode) {
+            GenerationConfig.TextMode.FAILURE -> error("Configured text failure")
+            GenerationConfig.TextMode.CONTENT_REJECTED -> throw ContentRejectedException()
+            GenerationConfig.TextMode.SUCCESS -> Unit
+        }
+        val heroes = configuration.cast.joinToString(" and ") { it.name }
+        val setting = configuration.place?.name ?: "the quiet moonlit garden"
+        val paragraph = "$heroes explored $setting together. They listened to the gentle breeze and helped a sleepy friend find the path home. Each small act of kindness made the evening warmer. Beneath the stars they shared a peaceful smile, knowing tomorrow would bring another wonderful adventure."
+        val target = if (configuration.length == StoryConfiguration.Length.SHORT) 600 else 1500
+        val paragraphs = List((target / paragraph.split(' ').size).coerceAtLeast(1)) { paragraph }
+        val details = listOfNotNull(configuration.idea, configuration.ending).joinToString(" ")
+        return GeneratedText("$heroes and the peaceful adventure", paragraphs.joinToString("\n\n") + "\n\n" + details)
+    }
+}
+class FakeCoverGenerator(private val config: GenerationConfig) : CoverGenerator {
+    override suspend fun generate(configuration: StoryConfiguration): ByteArray {
+        delay(config.delayMillis)
+        check(config.coverMode == GenerationConfig.CoverMode.SUCCESS) { "Configured cover failure" }
+        return requireNotNull(javaClass.getResourceAsStream("/fixtures/story-cover.png")).use { it.readBytes() }
+    }
+}

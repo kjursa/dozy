@@ -156,3 +156,19 @@ Android injects the common Kotlin UUIDv7 character ID generator. Bundled develop
 avatars remain local-only. Remote avatar generation arrives in API2; this backend
 currently validates references against asset metadata without generating assets.
 See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantics.
+
+## Local fake story generation
+
+API3 integrates story submission, durable progress, completion and immutable reading
+through the shared SDK. Run the fake backend with matching `DOZY_ASSET_BASE_URL`
+and app API base URL; see the [root setup](../README.md). For an Android emulator,
+use `http://10.0.2.2:8080` and `DOZY_ASSET_ALLOW_HTTP=true` on the backend. API defaults
+remain disabled until configured. The existing Android WorkManager scheduler and
+local completion notifications observe the same persisted jobs. Remote library
+pagination and explicit failed-job retry remain reserved for API4/API5; completed
+local stories and fresh reader GETs work now. See [the story contract](STORY_GENERATION_API.md).
+
+Build the Android debug app against that backend with
+`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
+Without this property, remote APIs remain disabled. Debug builds allow cleartext
+for local development; release builds retain Android's HTTPS-only default.

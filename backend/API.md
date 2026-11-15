@@ -8,7 +8,7 @@ and response examples. It works locally without a build step or API calls.
 This document combines implemented routes and proposals consolidated from the
 mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
 `PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
-Avatar generation arrives in API2; other feature endpoints remain proposals. `/hello` returns
+Story start/status/read and protected PNG asset reads are implemented. Avatar generation arrives in API2; library listing and explicit retry remain proposals for API4/API5. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
@@ -19,7 +19,7 @@ Sources:
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
 - Shared Places and Characters contracts and clients under `api/contracts` and `api/client`.
-- Legacy `KtorCharacterApi` and `KtorGenerationApi` under
+- Legacy `KtorCharacterApi` and `KtorLegacyStoryApi` under
   `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
 
@@ -35,13 +35,13 @@ For example, characters now support deletion, and full story responses include
   for this stage, send `X-Installation-Id: <client-generated UUID>` on every feature
   request, with no separate secret or login endpoint. Persist the UUID locally;
   the server registers it lazily on first use. The shared Places and Characters clients send this
-  header automatically; the story client will adopt it when its backend is implemented. Missing/invalid headers
+  header automatically; the story clients use it as well. Missing/invalid headers
   return `400 INVALID_INSTALLATION_ID`. The ID partitions data but is not strong
   authentication: a caller knowing another ID could access its namespace. No
   library recovery is defined after losing the ID. Never take ownership from JSON.
 - Character IDs are canonical UUIDv7 strings (case normalized at the boundary).
   Custom place IDs are opaque strings; predefined places use `builtin:` IDs. Encode path IDs as
-  one path segment. Story/job IDs match `[A-Za-z0-9_-]{1,128}`. Avatar job IDs use
+  one path segment. New story/job/asset IDs are backend-generated UUIDv7 strings. Avatar job IDs use
   the same alphabet; a 128-character cap is a proposed server convention.
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
   unless a specific operation requires omission. Responses must preserve required
@@ -62,7 +62,7 @@ For example, characters now support deletion, and full story responses include
   code units), rather than counting PostgreSQL characters or bytes. Existing
   records and embedded historical snapshots must remain readable after rule changes.
 - HTTPS asset references must remain usable for the lifetime of saved content.
-  Current mobile image loading does not send API credentials. Do not return
+  Mobile cover loading sends the installation header only for assets on its configured backend origin. Do not return
   short-lived signed URLs without extending the mobile contract first.
 
 ## Endpoint inventory
@@ -80,9 +80,10 @@ For example, characters now support deletion, and full story responses include
 | GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
 | POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
 | GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
-| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through saved story summaries |
+| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through saved story summaries (API4 proposal) |
+| GET | `/api/v1/assets/{assetId}` | 200 | Read an owned durable PNG cover |
 
-There are **12 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
+There are **13 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
 future extension described in mobile documents, not a current client requirement.
 Home, character details, place editing, and reader settings introduce no additional
 endpoints. There is no place/story deletion, story editing, device-token registration,
@@ -427,3 +428,43 @@ future scope. There is no backend reader-preference or reading-position API.
 6. Payments, free quotas and story/avatar balances were discussed but are not yet
    mobile endpoint contracts. They are intentionally excluded from this schema/API.
 7. Existing fake-avatar records need a migration/regeneration path before real sync.
+
+## Implemented API3 story behavior
+
+The shared `contracts.v1.story` models define the shipped wire shapes. Start is
+`POST /api/v1/story-generations` with UUIDv4 `Idempotency-Key`, returning durable
+202 `{jobId,status}`. Status is `GET /api/v1/story-generations/{jobId}`, returning
+200 `{jobId,status,storyId?,errorCode?}`; inaccessible/missing IDs return
+404 `JOB_NOT_FOUND`. Reading `GET /api/v1/stories/{storyId}` returns the complete
+immutable result or 404 `STORY_NOT_FOUND`. Reads never generate content.
+
+Snapshots accept unsynchronized cast and bundled/custom places without live rows.
+Cast must be nonempty and source IDs unique. Historical snapshot text is preserved
+without current creation length caps. Unknown enums/malformed structures return
+400 `INVALID_REQUEST`. Protected avatar references must match owned READY assets,
+including their URL, or return 422 `REFERENCE_UNAVAILABLE`. Snapshot origin and
+editable flags confer no permissions. MANUAL optional idea/ending are trimmed and
+limited to 1000/500 UTF-16 units. AUTOMATIC forbids submitting place/idea/ending,
+even as null. Validation returns 422 `VALIDATION_FAILED`: cast supports REQUIRED
+and INVALID_VALUE; idea/ending support TOO_LONG.
+
+Bindings include installation, operation, UUIDv4 key, original canonical request
+and UUIDv7 logical job. JSON object keys are sorted recursively; array order and
+null versus omission remain significant. Replay returns the same job's current
+status before checking the active limit or live references. Changed content under
+the key returns 409 `IDEMPOTENCY_CONFLICT`. Another key while a job is active returns
+409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per installation.
+
+Stages are QUEUED → CREATING_TEXT → CREATING_COVER → READY, or FAILED. READY exposes
+storyId only after text, cover and story are committed together. FAILED carries
+`CONTENT_REJECTED` or `GENERATION_FAILED` in errorCode; no other stage carries it.
+Text/title/ID/configuration/createdAt/cover are immutable. createdAt is nonnegative
+UTC epoch milliseconds. The same cover URL serves the library thumbnail and reader.
+`GET /api/v1/assets/{assetId}` returns local `image/png` bytes, requires the installation
+header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
+asset URLs default to HTTPS; the explicit development HTTP settings are documented
+in the root README. There is no third-party image request or real AI provider.
+
+The older explicit retry and paginated listing sections describe future API5/API4,
+not implemented story SDK operations. Existing mobile actions retain local cached
+data on those remote failures until those APIs ship.

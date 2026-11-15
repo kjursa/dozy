@@ -32,7 +32,7 @@ class ReaderRestorationTest {
                             return dto
                         }
                     }
-                val read = ReadStory(DefaultGenerationRepository(FakeGenerationDao(), api))
+                val read = ReadStory(testGenerationRepository(FakeGenerationDao(), api))
                 val handle = SavedStateHandle()
                 val persistence = SavedStatePersistence(handle, ReaderUiState.serializer())
                 val vm = ReaderViewModel(id, read, persistence)
