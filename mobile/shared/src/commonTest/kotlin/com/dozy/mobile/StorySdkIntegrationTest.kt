@@ -16,26 +16,48 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.get
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 
 class StorySdkIntegrationTest {
     private val unavailableLegacy =
         object : LegacyStoryApi {
-            override suspend fun stories(cursor: String?): StoryPageDto? = null
 
             override suspend fun retry(
                 id: String,
                 key: String,
             ): GenerationAcceptedDto? = null
         }
+
+    @Test fun `shared listing traverses pages with identity and accepts configured local covers without generation`() = runTest {
+        val cursors = mutableListOf<String?>()
+        val http = HttpClient(MockEngine { request ->
+            assertEquals(HttpMethod.Get, request.method)
+            assertEquals("installation", request.headers["X-Installation-Id"])
+            assertEquals("/api/v1/stories", request.url.encodedPath)
+            assertEquals("100", request.url.parameters["limit"])
+            val cursor = request.url.parameters["cursor"]
+            cursors += cursor
+            val id = if (cursor == null) "a" else "b"
+            val next = if (cursor == null) "\"opaque /+\"" else "null"
+            respond("""{"stories":[{"id":"$id","title":"Title","coverUrl":"http://localhost:8080/api/v1/assets/$id","readingMinutes":1,"createdAt":123}],"nextCursor":$next}""")
+        })
+        try {
+            val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"), InstallationIdProvider { "installation" })
+            val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories, unavailableLegacy)
+            assertTrue(repo.refreshStories())
+            assertEquals(listOf(null, "opaque /+"), cursors)
+            assertEquals(listOf("a", "b"), repo.summaries().first().map { it.id.value })
+        } finally { http.close() }
+    }
 
     @Test fun `SDK polling persists result before ready and recreated repository reads immutable cache`() =
         runTest {

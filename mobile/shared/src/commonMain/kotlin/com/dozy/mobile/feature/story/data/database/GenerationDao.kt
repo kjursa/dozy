@@ -1,6 +1,12 @@
 package com.dozy.mobile.feature.story.data.database
 
-import androidx.room3.*
+import androidx.room3.ColumnInfo
+import androidx.room3.Dao
+import androidx.room3.Entity
+import androidx.room3.PrimaryKey
+import androidx.room3.Query
+import androidx.room3.Transaction
+import androidx.room3.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "story_generations")
@@ -25,6 +31,18 @@ interface GenerationDao {
 
     @Query("SELECT * FROM story_generations ORDER BY createdOrder")
     fun observe(): Flow<List<GenerationEntity>>
+
+    @Query("DELETE FROM story_generations WHERE requestKey LIKE 'library:%'")
+    suspend fun clearLibrary()
+
+    @Upsert
+    suspend fun upsertAll(entities: List<GenerationEntity>)
+
+    @Transaction
+    suspend fun replaceLibrary(entities: List<GenerationEntity>) {
+        clearLibrary()
+        upsertAll(entities)
+    }
 
     @Upsert
     suspend fun upsert(entity: GenerationEntity)

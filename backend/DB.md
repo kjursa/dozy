@@ -21,7 +21,7 @@ entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
 to domain models. Flyway and Exposed share the configured SQLite data source.
 Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
 
-Add future changes as `V4__description.sql`, `V5__description.sql`, and so on;
+Add future changes as `V5__description.sql`, `V6__description.sql`, and so on;
 do not edit an applied migration after deployment. During the current development
 phase, the V1 schema is reset in place: places use `origin` with `SYSTEM`/`USER`
 values, replacing the previous `ownership` column. No upgrade migration is
@@ -462,3 +462,7 @@ The schema uses composite foreign keys and partial unique indexes supported by
 [PostgreSQL constraints](https://www.postgresql.org/docs/current/ddl-constraints.html).
 Cross-row invariants described above require transactions/application checks;
 PostgreSQL CHECK constraints cannot enforce arbitrary cross-table conditions.
+
+## Stable library snapshots (API4)
+
+`V4__library_snapshots.sql` stores installation-owned `library_snapshots` with the request limit and ordered summary JSON. The first page collects immutable stories in one SQLite transaction, ordered by createdAt descending and lexical ID ascending. `library_cursors` stores opaque random tokens bound to snapshot and position; subsequent pages validate owner and limit before reading. Issued tokens and summaries survive restart. New publication cannot change a traversal. Snapshots and cursors are retained without expiry for this development phase.

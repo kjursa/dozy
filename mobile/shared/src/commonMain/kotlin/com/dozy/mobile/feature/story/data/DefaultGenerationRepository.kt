@@ -1,9 +1,11 @@
 package com.dozy.mobile.feature.story.data
 
+import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.story.StoriesClients
 import com.dozy.api.client.story.v1.StoryReadError
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.api.contracts.v1.story.ListStoriesRequest
 import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
 import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
 import com.dozy.mobile.feature.story.data.api.StoryDto
@@ -42,7 +44,7 @@ class DefaultGenerationRepository(
         dao.observe().map { rows ->
             rows
                 .mapNotNull { row ->
-                    row.summary?.let { Json.decodeFromString<StorySummaryDto>(it).toDomain() }
+                    row.summary?.let { Json.decodeFromString<StorySummaryDto>(it).toDomain(allowDevelopmentHttp = true) }
                         ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto().toDomain(allowDevelopmentHttp = true) }
                 }.groupBy { it.id }
                 .values
@@ -56,23 +58,29 @@ class DefaultGenerationRepository(
             val cursors = mutableSetOf<String>()
             var cursor: String? = null
             do {
-                val page = legacy.stories(cursor) ?: return@withLock false
-                page.stories.forEach { it.toDomain() }
+                val response =
+                    try {
+                        reader.v1.list(ListStoriesRequest(cursor = cursor))
+                    } catch (_: ApiDisabledException) {
+                        return@withLock false
+                    }
+                val page =
+                    when (response) {
+                        is ApiResult.Success -> response.value
+                        is ApiResult.Failure -> error("Library unavailable")
+                    }
+                require(page.stories.isNotEmpty() || page.nextCursor == null)
+                page.stories.forEach { it.toDomain(allowDevelopmentHttp = true) }
                 collected += page.stories
                 cursor = page.nextCursor
                 if (cursor != null) require(cursor.isNotBlank() && cursors.add(cursor))
             } while (cursor != null)
-            // Validate every page before merging. An empty page or failed refresh never removes saved results.
-            require(collected.distinctBy { it.id }.size == collected.size)
-            collected.forEach { summary ->
-                dao.upsert(
-                    GenerationEntity(
-                        requestKey = "library:${summary.id}",
-                        configuration = "",
-                        summary = Json.encodeToString(summary),
-                    ),
-                )
-            }
+            require(collected.distinctBy { it.id.lowercase() }.size == collected.size)
+            dao.replaceLibrary(
+                collected.map { summary ->
+                    GenerationEntity(requestKey = "library:${summary.id}", configuration = "", summary = Json.encodeToString(summary))
+                },
+            )
             true
         }
 

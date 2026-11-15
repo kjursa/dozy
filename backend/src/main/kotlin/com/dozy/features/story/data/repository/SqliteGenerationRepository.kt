@@ -1,16 +1,19 @@
 @file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
 package com.dozy.features.story.data.repository
 
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.config.GenerationConfig
+import com.dozy.features.asset.data.database.AssetContents
 import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.features.installation.domain.model.InstallationId
-import com.dozy.features.asset.data.database.AssetContents
+import com.dozy.features.story.data.database.LibraryCursors
+import com.dozy.features.story.data.database.LibrarySnapshots
 import com.dozy.features.story.data.database.Stories
 import com.dozy.features.story.data.database.StoryJobs
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
-import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.features.story.domain.model.Execution
 import com.dozy.features.story.domain.model.Failure
 import com.dozy.features.story.domain.model.GeneratedText
@@ -18,7 +21,10 @@ import com.dozy.features.story.domain.model.Job
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.Stage
 import com.dozy.features.story.domain.model.StartGeneration
+import com.dozy.features.story.domain.model.StoryPage
+import com.dozy.features.story.domain.model.StorySummary
 import com.dozy.features.story.domain.model.Submission
+import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
 import kotlin.uuid.Uuid
@@ -33,6 +39,39 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
 class SqliteGenerationRepository(private val database: SqliteDatabase, private val config: GenerationConfig) : GenerationRepository {
+    override suspend fun list(installation: InstallationId, limit: Int, cursor: String?): StoryPage? = database.write {
+        require(limit in 1..100)
+        val snapshotId: String
+        val position: Int
+        val summaries: List<StorySummaryDto>
+        if (cursor == null) {
+            registerInstallation(installation)
+            snapshotId = Uuid.generateV7().toString()
+            position = 0
+            summaries = Stories.selectAll().where { Stories.installation eq installation.value }.map {
+                StorySummaryDto(it[Stories.id], it[Stories.title], it[Stories.coverUrl], readingMinutes(it[Stories.text]), it[Stories.createdAt])
+            }.sortedWith(compareByDescending<StorySummaryDto> { it.createdAt }.thenBy { it.id })
+            LibrarySnapshots.insert {
+                it[id] = snapshotId
+                it[LibrarySnapshots.installation] = installation.value
+                it[LibrarySnapshots.limit] = limit
+                it[LibrarySnapshots.summaries] = Json.encodeToString(summaries)
+            }
+        } else {
+            val savedCursor = LibraryCursors.selectAll().where { LibraryCursors.token eq cursor }.singleOrNull() ?: return@write null
+            snapshotId = savedCursor[LibraryCursors.snapshot]
+            position = savedCursor[LibraryCursors.position]
+            val saved = LibrarySnapshots.selectAll().where { (LibrarySnapshots.id eq snapshotId) and (LibrarySnapshots.installation eq installation.value) and (LibrarySnapshots.limit eq limit) }.singleOrNull() ?: return@write null
+            summaries = Json.decodeFromString(saved[LibrarySnapshots.summaries])
+        }
+        val end = minOf(position + limit, summaries.size)
+        val next = if (end < summaries.size) {
+            LibraryCursors.selectAll().where { (LibraryCursors.snapshot eq snapshotId) and (LibraryCursors.position eq end) }.singleOrNull()?.get(LibraryCursors.token)
+                ?: Uuid.random().toString().also { token -> LibraryCursors.insert { it[LibraryCursors.token] = token; it[snapshot] = snapshotId; it[LibraryCursors.position] = end } }
+        } else null
+        StoryPage(summaries.subList(position, end).map { StorySummary(it.id, it.title, it.coverUrl, it.readingMinutes, it.createdAt) }, next)
+    }
+
     override suspend fun start(installation: InstallationId, key: String, canonicalRequest: String, command: StartGeneration): Submission = database.write {
         val existing = StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.key eq key) }.singleOrNull()
         if (existing != null) {

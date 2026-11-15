@@ -1,5 +1,6 @@
 package com.dozy.mobile.feature.story.data.api
 
+import com.dozy.api.contracts.v1.story.ListStoriesRequest
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.DozyClient
@@ -17,7 +18,12 @@ class KtorGenerationApi(
     private val sdk = DozyClient(http, DozyClientConfig(config.baseUrl), InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" })
     private val legacy = KtorLegacyStoryApi(http, config)
 
-    override suspend fun stories(cursor: String?) = legacy.stories(cursor)
+    override suspend fun stories(cursor: String?) = try {
+        when (val result = sdk.stories.v1.list(ListStoriesRequest(cursor = cursor))) {
+            is ApiResult.Success -> result.value
+            is ApiResult.Failure -> null
+        }
+    } catch (_: ApiDisabledException) { null }
 
     override suspend fun retry(
         id: String,
