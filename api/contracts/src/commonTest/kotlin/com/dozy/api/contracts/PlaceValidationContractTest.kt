@@ -1,8 +1,7 @@
 package com.dozy.api.contracts
 
 import com.dozy.api.contracts.v1.ApiErrorResponse
-import com.dozy.api.contracts.v1.ValidationReason
-import com.dozy.api.contracts.v1.place.PlaceField
+import com.dozy.api.contracts.v1.place.PlaceErrorCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -10,35 +9,22 @@ import kotlinx.serialization.json.Json
 
 class PlaceValidationContractTest {
     @Test
-    fun `field and reason wire values remain stable`() {
-        val fields = mapOf(PlaceField.NAME to "name", PlaceField.DESCRIPTION to "description", PlaceField.INHABITANTS to "inhabitants")
-        fields.forEach { (field, value) ->
-            assertEquals(value, field.value)
-            assertEquals(field, PlaceField.fromValue(value))
-        }
-        val reasons = mapOf(ValidationReason.REQUIRED to "REQUIRED", ValidationReason.TOO_LONG to "TOO_LONG")
-        reasons.forEach { (reason, value) ->
-            assertEquals(value, reason.value)
-            assertEquals(reason, ValidationReason.fromValue(value))
-        }
-    }
-
-    @Test
-    fun `contract defines optional and required field error combinations`() {
-        val required = setOf(ValidationReason.REQUIRED, ValidationReason.TOO_LONG)
-        assertEquals(required, PlaceField.NAME.reasons)
-        assertEquals(required, PlaceField.DESCRIPTION.reasons)
-        assertEquals(setOf(ValidationReason.TOO_LONG), PlaceField.INHABITANTS.reasons)
-    }
-
-    @Test
-    fun `future validation metadata remains decodable as strings`() {
-        val error = Json.decodeFromString<ApiErrorResponse>(
-            """{"code":"VALIDATION_FAILED","field":"newField","reason":"NEW_REASON"}""",
+    fun `flat place error codes are stable and unique`() {
+        val values = listOf(
+            "validation.name.required", "validation.name.too_long",
+            "validation.description.required", "validation.description.too_long",
+            "validation.inhabitants.too_long", "place.not_editable", "place.conflict",
         )
-        assertEquals("newField", error.field)
-        assertEquals("NEW_REASON", error.reason)
-        assertNull(PlaceField.fromValue(requireNotNull(error.field)))
-        assertNull(ValidationReason.fromValue(requireNotNull(error.reason)))
+        assertEquals(values, PlaceErrorCode.entries.map { it.value })
+        values.forEach { assertEquals(it, PlaceErrorCode.fromValue(it)?.value) }
+        assertEquals(values.size, values.toSet().size)
+    }
+
+    @Test
+    fun `future code stays decodable without field or reason metadata`() {
+        val error = Json.decodeFromString<ApiErrorResponse>("""{"code":"validation.new_field.new_rule"}""")
+        assertNull(PlaceErrorCode.fromValue(error.code))
+        assertNull(error.field)
+        assertNull(error.reason)
     }
 }

@@ -1,6 +1,5 @@
 package com.dozy.mobile.feature.place.data
 
-import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.mobile.feature.place.data.database.PlaceDao
@@ -37,12 +36,7 @@ class DefaultPlaceRepository(
     override suspend fun refresh(): Boolean =
         mutations.withLock {
             dao.pending().forEach { synchronize(it) }
-            val response =
-                try {
-                    places.v1.list()
-                } catch (_: ApiDisabledException) {
-                    return@withLock false
-                }
+            val response = places.v1.list()
             val snapshot =
                 when (response) {
                     is ApiResult.Success -> response.value.places
@@ -66,13 +60,7 @@ class DefaultPlaceRepository(
         }
 
     private suspend fun synchronize(row: PlaceEntity): PlaceSync {
-        val acknowledged =
-            runCatchingSuspend {
-                places.v1.save(
-                    row.id,
-                    row.toDomain().toSaveRequest(),
-                ) is ApiResult.Success
-            }.getOrDefault(false)
+        val acknowledged = places.v1.save(row.id, row.toDomain().toSaveRequest()) is ApiResult.Success
         if (!acknowledged) return PlaceSync.PENDING
         val updated = runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }
         return if (updated.isSuccess) PlaceSync.SYNCED else PlaceSync.PENDING

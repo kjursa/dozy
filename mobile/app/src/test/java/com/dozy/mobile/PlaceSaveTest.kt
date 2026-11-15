@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
+import com.dozy.api.client.ClientError
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.client.place.v1.PlacesSaveError
@@ -30,7 +31,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import kotlin.test.assertFailsWith
 
 class PlaceSaveTest {
     @Test fun savesBeforeHttpAndRetriesDurablePendingRowsWithSameId() =
@@ -45,11 +45,10 @@ class PlaceSaveTest {
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, PlacesSaveError> {
+                    ): ApiResult<Unit, ClientError<PlacesSaveError>> {
                         assertEquals(request.name, dao.find(id)?.name)
                         ids += id
-                        check(available)
-                        return ApiResult.Success(Unit)
+                        return if (available) ApiResult.Success(Unit) else ApiResult.Failure(ClientError.ServerError(503))
                     }
                 }
             val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
@@ -75,7 +74,7 @@ class PlaceSaveTest {
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, PlacesSaveError> = ApiResult.Failure(PlacesSaveError.Conflict)
+                    ): ApiResult<Unit, ClientError<PlacesSaveError>> = ApiResult.Failure(ClientError.ApiError(PlacesSaveError.Conflict))
                 }
             val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
@@ -91,12 +90,12 @@ class PlaceSaveTest {
             var calls = 0
             val api =
                 object : PlacesClient {
-                    override suspend fun list(): ApiResult<PlacesDto, PlacesListError> = throw ApiDisabledException()
+                    override suspend fun list(): ApiResult<PlacesDto, ClientError<PlacesListError>> = throw ApiDisabledException()
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, PlacesSaveError> {
+                    ): ApiResult<Unit, ClientError<PlacesSaveError>> {
                         calls++
                         throw CancellationException()
                     }
@@ -155,11 +154,13 @@ class PlaceSaveTest {
                     },
                 ) { install(ContentNegotiation) { json() } }
             try {
-                assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).save("custom/id", requestDto) }
+                assertTrue(
+                    apiFailure(placesClient(client, ApiConfig(null)).save("custom/id", requestDto)) is ClientError.CommunicationError,
+                )
                 assertEquals(0, calls)
                 val api = placesClient(client, ApiConfig("https://example.test/"))
                 apiValue(api.save("custom/id", requestDto))
-                assertEquals(PlacesSaveError.Unavailable, apiFailure(api.save("custom/id", requestDto)))
+                assertEquals(ClientError.ServerError(503), apiFailure(api.save("custom/id", requestDto)))
             } finally {
                 client.close()
             }
@@ -181,9 +182,9 @@ class PlaceSaveTest {
                             override suspend fun save(
                                 id: String,
                                 request: SavePlaceRequestDto,
-                            ): ApiResult<Unit, PlacesSaveError> {
+                            ): ApiResult<Unit, ClientError<PlacesSaveError>> {
                                 requests += request
-                                error("Unavailable")
+                                return ApiResult.Failure(ClientError.ServerError(503))
                             }
                         },
                     ),
@@ -234,9 +235,9 @@ class PlaceSaveTest {
                         val status = statuses[calls++]
                         val error =
                             when (status) {
-                                403 -> """{"code":"FORBIDDEN"}"""
-                                409 -> """{"code":"CONFLICT"}"""
-                                422 -> """{"code":"VALIDATION_FAILED","field":"name","reason":"TOO_LONG"}"""
+                                403 -> """{"code":"place.not_editable"}"""
+                                409 -> """{"code":"place.conflict"}"""
+                                422 -> """{"code":"validation.name.too_long"}"""
                                 else -> """{"code":"FUTURE_ERROR"}"""
                             }
                         respond(error, HttpStatusCode.fromValue(status))

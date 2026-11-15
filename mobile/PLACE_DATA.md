@@ -48,8 +48,10 @@ cache mutation.
 Any non-200 status is a failed refresh, including 401/403 (authorization), 404
 (endpoint unavailable), 429 (rate limited), and 5xx (server unavailable). The
 client displays a resource-backed error and retains available places. Error
-bodies are not displayed or interpreted as user-facing text. A future backend
-may define structured error DTOs before authentication or mutation is enabled.
+bodies are not displayed or interpreted as user-facing text. The shared SDK returns `ClientError.ApiError` for business failures (including
+unknown codes), `ServerError(status)` for 5xx, and `CommunicationError(exception)`
+for request/response/transport problems. Places validation uses flat contract-owned
+codes such as `validation.name.too_long`.
 Network/decoding/storage failures have the same retry behavior. Coroutine
 cancellation propagates. A null base URL makes no requests and explicitly returns
 an offline result rather than claiming a remote refresh succeeded.

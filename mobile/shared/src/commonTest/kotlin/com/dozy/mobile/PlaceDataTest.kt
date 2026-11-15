@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
+import com.dozy.api.client.ClientError
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.mobile.core.config.ApiConfig
@@ -20,10 +21,17 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
+import kotlinx.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlin.test.*
 
 class PlaceDataTest {
     @Test fun localReadsMergeFallbacksWithoutHttpAndOrderCustomFirst() =
@@ -44,7 +52,7 @@ class PlaceDataTest {
                         dao,
                         fakePlacesClients(
                             fakePlacesClient {
-                                throw ApiDisabledException()
+                                ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
                             },
                         ),
                         bundled,
@@ -59,7 +67,7 @@ class PlaceDataTest {
                     dao,
                     fakePlacesClients(
                         fakePlacesClient {
-                            throw ApiDisabledException()
+                            ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
                         },
                     ),
                     emptyList(),
@@ -70,7 +78,7 @@ class PlaceDataTest {
                     dao,
                     fakePlacesClients(
                         fakePlacesClient {
-                            throw ApiDisabledException()
+                            ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
                         },
                     ),
                     bundled,
@@ -111,17 +119,16 @@ class PlaceDataTest {
             val dao = FakePlaceDao()
             val existing = place().toEntity().copy(local = false, pendingSync = false)
             dao.upsert(existing)
-            val api =
-                fakePlacesClient {
-                    ApiResult.Failure(
-                        PlacesListError.Unknown(
-                            500,
-                            ApiErrorResponse("NEW_RULE"),
-                        ),
-                    )
-                }
-            assertFalse(DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh())
-            assertEquals(listOf(existing), dao.rows.value)
+            val failures: List<ClientError<PlacesListError>> = listOf(
+                ClientError.ApiError(PlacesListError.Unknown(409, ApiErrorResponse("NEW_RULE"))),
+                ClientError.ServerError(503),
+                ClientError.CommunicationError(IOException("Offline")),
+            )
+            for (failure in failures) {
+                val api = fakePlacesClient { ApiResult.Failure(failure) }
+                assertFalse(DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh())
+                assertEquals(listOf(existing), dao.rows.value)
+            }
         }
 
     @Test fun malformedSnapshotDoesNotReplaceCacheAndCancellationPropagates() =
@@ -203,9 +210,9 @@ class PlaceDataTest {
                     },
                 )
             try {
-                assertFailsWith<ApiDisabledException> { placesClient(client, ApiConfig(null)).list() }
+                assertTrue(apiFailure(placesClient(client, ApiConfig(null)).list()) is ClientError.CommunicationError)
                 assertEquals(0, calls)
-                assertEquals(PlacesListError.Unavailable, apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
+                assertEquals(ClientError.ServerError(503), apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
                 assertEquals(1, calls)
             } finally {
                 client.close()

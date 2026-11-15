@@ -168,16 +168,16 @@
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> VALIDATION_FAILED</summary><p>Field validation errors identify the field and reason.</p><pre><code>{
-  &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
-  &quot;field&quot;: &quot;name&quot;,
-  &quot;reason&quot;: &quot;TOO_LONG&quot;
-}</code></pre></details><details class="response"><summary><span class="status error">403</span> FORBIDDEN</summary><pre><code>{
-  &quot;code&quot;: &quot;FORBIDDEN&quot;,
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> validation.name.too_long</summary><p>Flat PlaceErrorCode values identify required/too-long fields; no field/reason mapping is needed.</p><pre><code>{
+  &quot;code&quot;: &quot;validation.name.too_long&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
-}</code></pre></details><details class="response"><summary><span class="status error">409</span> CONFLICT</summary><p>ID already belongs to another installation.</p><pre><code>{
-  &quot;code&quot;: &quot;CONFLICT&quot;,
+}</code></pre></details><details class="response"><summary><span class="status error">403</span> place.not_editable</summary><pre><code>{
+  &quot;code&quot;: &quot;place.not_editable&quot;,
+  &quot;field&quot;: null,
+  &quot;reason&quot;: null
+}</code></pre></details><details class="response"><summary><span class="status error">409</span> place.conflict</summary><p>ID already belongs to another installation.</p><pre><code>{
+  &quot;code&quot;: &quot;place.conflict&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
 }</code></pre></details><details class="response"><summary><span class="status error">400</span> INVALID_INSTALLATION_ID</summary><p>Missing or malformed X-Installation-Id; implemented header contract.</p><pre><code>{

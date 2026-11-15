@@ -13,17 +13,20 @@ import java.sql.SQLException
 
 class ApiException(
     val status: HttpStatusCode,
-    val code: ApiErrorCode,
+    val code: String,
     val field: String? = null,
     val reason: String? = null,
-) : RuntimeException()
+) : RuntimeException() {
+    constructor(status: HttpStatusCode, code: ApiErrorCode, field: String? = null, reason: String? = null) :
+        this(status, code.value, field, reason)
+}
 
 fun Application.configureErrors() {
     install(StatusPages) {
         exception<ApiException> { call, failure ->
             call.respond(
                 failure.status,
-                ApiErrorResponse(failure.code.value, failure.field, failure.reason),
+                ApiErrorResponse(failure.code, failure.field, failure.reason),
             )
         }
         exception<BadRequestException> { call, _ ->

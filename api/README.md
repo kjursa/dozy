@@ -57,35 +57,35 @@ not authentication credentials. Clearing application data can lose the namespace
 and client. Error envelopes retain a string code; `fromValue` returns null for
 unrecognized values so future codes can still become `Unknown`.
 
-For HTTP error responses, `body.code` determines the error meaning independently
-of the HTTP status. Status is used for success validation and retained in diagnostic
-exceptions/unknown errors. The backend emits 400 for invalid request structure and
-422 with `VALIDATION_FAILED` for invalid user-entered values.
+### Places error handling
 
-`PlaceField` and `ValidationReason` likewise define validation wire values.
-`PlaceField.reasons` declares the allowed combinations. The backend emits these
-contract values; the client parses them with `fromValue` and returns them directly
-in typed validation failures, without maintaining duplicate field/reason enums.
-Envelope fields remain strings to preserve unknown future values.
+Places returns `ApiResult<Payload, ClientError<OperationError>>`: list uses
+`PlacesListError`, save uses `PlacesSaveError`. Handle the three failure categories:
 
-Each operation returns `ApiResult<SuccessPayload, OperationError>`. V1 list returns
-`ApiResult<PlacesResponse, PlacesListError>`; save returns
-`ApiResult<Unit, PlacesSaveError>`. Handle `Success` and `Failure` exhaustively.
-Save has typed validation (field/reason), forbidden, conflict, unavailable and
-unknown errors. List has unavailable and unknown errors. `Unknown` preserves the
-HTTP status and the original error envelope for a new code, field, reason or
-unrecognized operation error code, without requiring a new SDK release.
+- `ApiError(error)`: a decoded HTTP 4xx business failure. Save recognizes flat
+  contract-owned `PlaceErrorCode` values for required/too-long fields, forbidden
+  and conflict. An unfamiliar code remains the operation's `Unknown(status, envelope)`.
+- `ServerError(status)`: every HTTP 5xx, before reading or decoding its body,
+  including HTML or an empty proxy response.
+- `CommunicationError(exception)`: transport/timeout/TLS failures, invalid request
+  or installation identity, malformed JSON/missing response fields, unexpected
+  response status, or disabled API configuration. The exception is diagnostic,
+  never user-facing text. A failure does not prove a write was not committed.
 
-Structural `INVALID_REQUEST` and `INVALID_INSTALLATION_ID` response codes throw
-`InvalidRequestException`, outside the result. `VALIDATION_FAILED` with a known
-field/reason is a validation failure value. Unknown validation fields/reasons
-become `Unknown`; missing required validation metadata throws
-`InvalidResponseException`. Invalid JSON or missing required response fields
-throw serialization exceptions. Unexpected success statuses also throw
-`InvalidResponseException`. Transport failures (including timeout, DNS and TLS)
-and coroutine cancellation propagate; they are never converted into ordinary API
-failures. A null base URL throws `ApiDisabledException` before sending a request.
-Mobile maps failures to local-only/pending behavior without acknowledging a write.
+The backend uses 422 for validation, 403 for forbidden and 409 for conflict. The
+body code determines the business detail; the client does not parse field/reason
+combinations. Example: `{"code":"validation.name.too_long"}`. Envelope field/reason
+properties remain nullable for other features. Cancellation propagates, as do local
+programming errors such as a blank save ID; consumers do not need try/catch for
+expected communication failures. Mobile retains cached/pending data on failure.
+
+### Other feature errors
+
+Characters, avatars and stories retain `ApiResult<Payload, OperationError>` and
+contract-owned field/reason validation metadata. They classify decoded errors by
+body code regardless of status. Invalid requests, invalid responses, disabled API
+configuration, transport failures and cancellation remain exceptions for these
+features. Their error migration is outside this Places change.
 
 Responses tolerate additive unknown JSON fields. Write serialization is owned by
 the library and does not require caller ContentNegotiation. The SDK never closes
