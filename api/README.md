@@ -16,7 +16,7 @@ launch or E2E suite is included.
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
-Places, Characters, story submission/status and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; no listing or explicit retry methods are exposed by these SDK containers. Avatar jobs are implemented by API2.
+Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing remains outside these SDK containers. Avatar jobs are implemented by API2.
 
 Avatar DTOs,
 states and failure codes live in `contracts.v1.characteravatar` and reuse the

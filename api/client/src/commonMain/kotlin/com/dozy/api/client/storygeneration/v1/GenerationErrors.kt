@@ -17,3 +17,12 @@ sealed interface GenerationStatusError {
     data object Unavailable : GenerationStatusError
     data class Unknown(val status: Int, val error: ApiErrorResponse) : GenerationStatusError
 }
+
+sealed interface GenerationRetryError {
+    data object JobNotFound : GenerationRetryError
+    data object JobNotFailed : GenerationRetryError
+    data object ActiveJobExists : GenerationRetryError
+    data object IdempotencyConflict : GenerationRetryError
+    data object Unavailable : GenerationRetryError
+    data class Unknown(val status: Int, val error: ApiErrorResponse) : GenerationRetryError
+}

@@ -12,7 +12,7 @@ data class GenerationConfig(
     val allowHttp: Boolean = false,
     val leaseMillis: Long = 30000,
 ) {
-    enum class TextMode { SUCCESS, FAILURE, CONTENT_REJECTED }
+    enum class TextMode { SUCCESS, FAILURE, CONTENT_REJECTED, FAIL_ONCE }
     enum class CoverMode { SUCCESS, FAILURE }
     init {
         require(delayMillis >= 0 && concurrency in 1..32 && leaseMillis >= 300)

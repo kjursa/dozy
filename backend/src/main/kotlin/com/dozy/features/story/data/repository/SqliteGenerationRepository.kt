@@ -6,6 +6,8 @@ import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.asset.data.database.AssetContents
+import com.dozy.features.story.data.database.StoryExecutions
+import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.data.database.Stories
 import com.dozy.features.story.data.database.StoryJobs
 import com.dozy.features.story.data.toDomain
@@ -39,6 +41,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             return@write if (existing[StoryJobs.operation] == "START_STORY_V1" && existing[StoryJobs.canonical] == canonicalRequest) Submission.Accepted(existing.job())
             else Submission.IdempotencyConflict
         }
+        if (StoryExecutions.selectAll().where { (StoryExecutions.installation eq installation.value) and (StoryExecutions.key eq key) }.any()) return@write Submission.IdempotencyConflict
         if (StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.stage inList active) }.any()) return@write Submission.ActiveJobExists
         for (hero in command.configuration.cast) {
             val avatar = hero.avatar ?: continue
@@ -48,6 +51,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
         }
         registerInstallation(installation)
         val id = Uuid.generateV7().toString()
+        val executionId = Uuid.generateV7().toString()
         StoryJobs.insert {
             it[StoryJobs.id] = id
             it[StoryJobs.installation] = installation.value
@@ -60,9 +64,55 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             it[assetId] = Uuid.generateV7().toString()
             it[createdAt] = System.currentTimeMillis()
             it[leaseUntil] = 0
+            it[StoryJobs.executionId] = executionId
+            it[ordinal] = 1
             it[executionCount] = 0
         }
+        StoryExecutions.insert {
+            it[StoryExecutions.id] = executionId
+            it[StoryExecutions.installation] = installation.value
+            it[jobId] = id
+            it[StoryExecutions.key] = key
+            it[operation] = "START_STORY_V1"
+            it[ordinal] = 1
+            it[stage] = Stage.QUEUED.name
+        }
         Submission.Accepted(Job(id, Stage.QUEUED))
+    }
+    override suspend fun retry(installation: InstallationId, id: String, key: String): RetrySubmission = database.write {
+        val binding = StoryExecutions.selectAll().where { (StoryExecutions.installation eq installation.value) and (StoryExecutions.key eq key) }.singleOrNull()
+        if (binding != null) {
+            return@write if (binding[StoryExecutions.operation] == "RETRY_STORY_V1" && binding[StoryExecutions.jobId] == id) {
+                RetrySubmission.Accepted(Job(id, Stage.valueOf(binding[StoryExecutions.stage])))
+            } else RetrySubmission.IdempotencyConflict
+        }
+        val row = StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.id eq id) }.singleOrNull()
+            ?: return@write RetrySubmission.JobNotFound
+        if (row[StoryJobs.stage] != Stage.FAILED.name) return@write RetrySubmission.JobNotFailed
+        if (StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.stage inList active) }.any()) return@write RetrySubmission.ActiveJobExists
+        val executionId = Uuid.generateV7().toString()
+        val ordinal = row[StoryJobs.ordinal] + 1
+        StoryExecutions.insert {
+            it[StoryExecutions.id] = executionId
+            it[StoryExecutions.installation] = installation.value
+            it[jobId] = id
+            it[StoryExecutions.key] = key
+            it[operation] = "RETRY_STORY_V1"
+            it[StoryExecutions.ordinal] = ordinal
+            it[stage] = Stage.QUEUED.name
+        }
+        StoryJobs.update({ StoryJobs.id eq id }) {
+            it[StoryJobs.executionId] = executionId
+            it[StoryJobs.ordinal] = ordinal
+            it[stage] = Stage.QUEUED.name
+            it[title] = null; it[text] = null; it[error] = null
+            it[leaseToken] = null; it[leaseUntil] = 0
+        }
+        RetrySubmission.Accepted(Job(id, Stage.QUEUED))
+    }
+    private fun recordStage(id: String) {
+        val row = StoryJobs.selectAll().where { StoryJobs.id eq id }.single()
+        StoryExecutions.update({ StoryExecutions.id eq row[StoryJobs.executionId] }) { it[stage] = row[StoryJobs.stage] }
     }
     override suspend fun status(installation: InstallationId, id: String): Job? = database.write {
         StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.id eq id) }.singleOrNull()?.job()
@@ -83,22 +133,25 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             it[leaseUntil] = now + config.leaseMillis
             it[executionCount] = row[StoryJobs.executionCount] + 1
         }
-        Execution(Job(row[StoryJobs.id], stage), token, Json.decodeFromString<GenerationRequestDto>(row[StoryJobs.configuration]).toDomain(), row[StoryJobs.title], row[StoryJobs.text])
+        recordStage(row[StoryJobs.id])
+        Execution(Job(row[StoryJobs.id], stage), token, Json.decodeFromString<GenerationRequestDto>(row[StoryJobs.configuration]).toDomain(), row[StoryJobs.title], row[StoryJobs.text], row[StoryJobs.ordinal], row[StoryJobs.executionId])
     }
     override suspend fun renew(execution: Execution): Boolean = database.write {
-        StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage inList active) }) {
+        StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.executionId eq execution.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage inList active) }) {
             it[leaseUntil] = System.currentTimeMillis() + config.leaseMillis
         } == 1
     }
     override suspend fun saveText(execution: Execution, text: GeneratedText): Boolean = database.write {
-        StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage eq Stage.CREATING_TEXT.name) }) {
+        val changed = StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.executionId eq execution.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage eq Stage.CREATING_TEXT.name) }) {
             it[title] = text.title
             it[StoryJobs.text] = text.text
             it[stage] = Stage.CREATING_COVER.name
         } == 1
+        recordStage(execution.job.id)
+        changed
     }
     override suspend fun publish(execution: Execution, cover: ByteArray): Boolean = database.write {
-        val row = StoryJobs.selectAll().where { (StoryJobs.id eq execution.job.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage eq Stage.CREATING_COVER.name) }.singleOrNull() ?: return@write false
+        val row = StoryJobs.selectAll().where { (StoryJobs.id eq execution.job.id) and (StoryJobs.executionId eq execution.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage eq Stage.CREATING_COVER.name) }.singleOrNull() ?: return@write false
         val url = "${config.assetBaseUrl.trimEnd('/')}/api/v1/assets/${row[StoryJobs.assetId]}"
         Assets.insert {
             it[id] = row[StoryJobs.assetId]
@@ -118,12 +171,14 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             it[createdAt] = System.currentTimeMillis()
         }
         StoryJobs.update({ StoryJobs.id eq execution.job.id }) { it[stage] = Stage.READY.name; it[leaseToken] = null; it[leaseUntil] = 0 }
+        recordStage(execution.job.id)
         true
     }
     override suspend fun fail(execution: Execution, failure: Failure) { database.write {
-        StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage inList active) }) {
+        StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.executionId eq execution.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage inList active) }) {
             it[stage] = Stage.FAILED.name; it[error] = failure.name; it[leaseToken] = null; it[leaseUntil] = 0
         }
+        recordStage(execution.job.id)
     } }
     private fun ResultRow.job(): Job {
         val stage = Stage.valueOf(this[StoryJobs.stage])

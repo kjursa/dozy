@@ -8,7 +8,7 @@ and response examples. It works locally without a build step or API calls.
 This document combines implemented routes and proposals consolidated from the
 mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
 `PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
-Story start/status/read, protected PNG cover reads and fake avatar generation are implemented. Library listing and explicit retry remain proposals for API4/API5. `/hello` returns
+Story start/status/retry/read, protected PNG asset reads and fake avatar generation are implemented. Library listing remains a proposal for API4. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
@@ -337,7 +337,7 @@ not cancel generation. Internal worker retries must not publish a second story.
 
 ### POST /api/v1/story-generations/{jobId}/retry
 
-No body. Header `Idempotency-Key: <new client UUID>`. Return 202 `{jobId,status}`
+No body. Header `Idempotency-Key: <new client UUIDv4>`. Return 202 `{jobId,status}`
 with the **same logical job ID**. Reuse the original snapshot, never edited live data.
 
 Only a FAILED job may start a new execution. Bind each retry key atomically to one
@@ -347,6 +347,7 @@ exists; never start another attempt using that key. A new explicit retry after a
 confirmed later failure gets a new key. Return `409 JOB_NOT_FAILED` for a fresh key
 on active/completed jobs, `409 ACTIVE_JOB_EXISTS` if another job is active, or
 `409 IDEMPOTENCY_CONFLICT` if a key is bound to a different operation/job.
+Missing/inaccessible jobs return `404 JOB_NOT_FOUND`. Original CREATE keys also conflict.
 A logical job can have only one successful story.
 
 ## Stories
@@ -463,9 +464,10 @@ header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stabl
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-The older explicit retry and paginated listing sections describe future API5/API4,
-not implemented story SDK operations. Existing mobile actions retain local cached
-data on those remote failures until those APIs ship.
+Explicit retry is implemented through the shared SDK. Paginated listing remains
+future API4 scope. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
+logical job and succeeds on later executions, independent of user text. Existing
+SUCCESS, FAILURE, CONTENT_REJECTED and cover modes remain available.
 
 ## API2 asset delivery and recovery
 

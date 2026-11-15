@@ -170,6 +170,52 @@ class GenerationProgressTest {
             assertTrue(api.retryKeys.isEmpty())
         }
 
+    @Test fun unresolvedAcceptanceAndUnavailableStatusDoNotOfferAnotherRetry() =
+        runTest {
+            Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+            val scope = ViewModelStore()
+            try {
+                val api = ProgressApi()
+                val repository = testGenerationRepository(FakeGenerationDao(), api)
+                repository.start(key, api.configuration)
+                api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
+                repository.refresh(id)
+                val vm =
+                    GenerationViewModel(ObserveGenerations(repository), RefreshGeneration(repository), RetryGeneration(repository, keys))
+                scope.put("progress", vm)
+                runCurrent()
+                api.loseRetryResponse = true
+                vm.dispatch(GenerationAction.Retry(id))
+                runCurrent()
+                assertTrue(
+                    vm.uiState.value.jobs
+                        .single()
+                        .retryPending,
+                )
+                vm.dispatch(GenerationAction.Retry(id))
+                runCurrent()
+                assertEquals(1, api.retryKeys.size)
+                api.loseRetryResponse = false
+                repository.retry(id, key)
+                api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
+                repository.refresh(id)
+                api.offline = true
+                repository.refresh(id)
+                runCurrent()
+                assertTrue(
+                    vm.uiState.value.jobs
+                        .single()
+                        .statusUnknown,
+                )
+                vm.dispatch(GenerationAction.Retry(id))
+                runCurrent()
+                assertEquals(2, api.retryKeys.size)
+            } finally {
+                scope.clear()
+                Dispatchers.resetMain()
+            }
+        }
+
     @Test fun viewModelBlocksRepeatedRetryAndEmitsSpecificReaderEffect() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))

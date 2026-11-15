@@ -6,7 +6,7 @@ import com.kjursa.foundation.presentation.text.UiText
 
 fun GenerationJob.message(): UiText =
     UiText.Resource(
-        if (statusUnknown) {
+        if (statusUnknown || retryPending) {
             Res.string.generation_unavailable
         } else {
             when (status) {
