@@ -9,3 +9,10 @@ dozy:
   database:
     path: "${DOZY_DATABASE_PATH:data/dozy.db}"
     busyTimeoutMillis: "${DOZY_DATABASE_BUSY_TIMEOUT_MS:5000}"
+  generation:
+    textMode: "${DOZY_STORY_TEXT_MODE:SUCCESS}"
+    coverMode: "${DOZY_STORY_COVER_MODE:SUCCESS}"
+    delayMillis: "${DOZY_STORY_DELAY_MS:250}"
+    concurrency: "${DOZY_STORY_CONCURRENCY:2}"
+    assetBaseUrl: "${DOZY_ASSET_BASE_URL:https://localhost:8080}"
+    allowHttp: "${DOZY_ASSET_ALLOW_HTTP:false}"

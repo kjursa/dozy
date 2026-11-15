@@ -9,32 +9,23 @@ This repository contains both parts of the project:
 
 ## Mobile
 
-The Android app is an early implementation. It supports Home, My Stories, and Characters tabs, plus character creation with validation and local database storage. Saved characters appear on Home and in the character list. Story cards and artwork are sample content; the story creation screen is a prototype form whose generate action currently returns to Home. Real story and avatar generation, saved generated stories, and completion notifications are not implemented.
+The Android app supports saved characters and places, manual or automatic story submission, durable progress, and an immutable reader. Configure the local fake backend to generate deterministic text and one cover image. Requests retain their snapshots and idempotency key across uncertain responses and restarts. Home and the local library expose completed stories; Android WorkManager reconciles jobs and posts completion notifications when permission is granted.
 
-The intended flow is **characters and places → your own idea or “Surprise me” → generated text and one cover → automatically saved story → reading**. Parents will select reusable heroes and a setting, or let “Surprise me” invent the setting, events, and ending. The cover will also serve as the library thumbnail and reader's opening image; the rest of the story will be text. “New adventure with these heroes” will reuse the cast for an independent adventure, without continuing an earlier plot.
-
-The screens below summarize the current app and the planned experience:
-
-| Screen | Purpose and implementation status |
+| Screen | Implementation status |
 | --- | --- |
-| Home | Available with sample recent stories, saved characters, and entry points for creating a story or character. Places and generation status cards are planned. |
-| My Stories | Available as a library layout with sample covers and titles. A persisted story library and opening stories are planned. |
-| Characters | Available list of locally saved characters, with creation, details, editing and deletion through a local-first repository and shared Characters SDK. |
-| Character creation / editing | Creation and saving of name, type, personality, and appearance are available. Creation and editing use existing forms; bundled previews stay local-only. Remote avatar generation arrives in API2. |
-| Character details | Available with saved descriptions, editing, deletion, and story entry points. |
-| Places | Planned: browse custom places followed by predefined suggestions and select a setting from Home or the story form. |
-| Place creation / editing | Planned: save a custom place's name, description, and optional inhabitants for reuse. |
-| Story creation | Prototype form with sample heroes, theme and length choices, and optional wishes. Selecting saved characters and places, “Surprise me”, and submitting a real generation job are planned. |
-| Generation progress | Planned: text and cover stages, readiness, failure, and retry. |
-| Reader | Planned: cover and scrollable story text, text-size settings, evening mode, and a new independent adventure with the same cast. |
+| Home / My Stories | Persisted local stories and jobs; remote paginated listing is reserved for API4. |
+| Characters / Places | Local-first collections and forms using shared SDK clients. Remote avatar generation is reserved for API2; cast snapshots may have no avatar. |
+| Story creation | Saved cast, optional manual setting/idea/ending, automatic mode, SHORT/LONG lengths. |
+| Generation progress | Backend stages, leave/reopen, status recovery and completion. Explicit server retry is reserved for API5. |
+| Reader | Immutable cover and text, reading settings, and a new independent adventure with the same heroes. |
 
-Generation is intended to continue after leaving the progress screen or closing the app. A completion notification, when system permission is granted, will open the ready story; it will also be available on Home and in the library. Background jobs and these completion paths are planned, not operational services in the current app.
+Server execution continues after leaving the screen. Android background observation and notifications retain their existing WorkManager behavior; iOS has no background scheduler or server push.
 
 See [mobile/README.md](mobile/README.md) for running and building the Android app, and [mobile/SPEC.MD](mobile/SPEC.MD) for detailed intended behavior, screen variants, and open decisions. Open the [HTML mockup catalog](mobile/design/screens/index.html) locally in a browser to explore the designs. These mockups simulate interactions with example content; they do not implement generation, notifications, or durable app storage.
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. Other endpoints in [the API reference](backend/API.md) remain proposals.
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. It also implements story submission/status, immutable story reads, and installation-scoped PNG cover delivery. Remote library listing and explicit retry remain proposals for API4/API5 in [the API reference](backend/API.md).
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 
@@ -44,8 +35,14 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 | `PORT` | `8080` | Listen port |
 | `DOZY_DATABASE_PATH` | `data/dozy.db` | Persistent SQLite file, relative to the server working directory |
 | `DOZY_DATABASE_BUSY_TIMEOUT_MS` | `5000` | SQLite lock wait, from 1 to 60000 ms |
+| `DOZY_STORY_TEXT_MODE` | `SUCCESS` | `SUCCESS`, `FAILURE`, or `CONTENT_REJECTED` |
+| `DOZY_STORY_COVER_MODE` | `SUCCESS` | `SUCCESS` or `FAILURE` |
+| `DOZY_STORY_DELAY_MS` | `250` | Delay per fake generator in milliseconds |
+| `DOZY_STORY_CONCURRENCY` | `2` | Worker concurrency, 1–32 |
+| `DOZY_ASSET_BASE_URL` | `https://localhost:8080` | Stable externally reachable backend origin, including optional hosting prefix |
+| `DOZY_ASSET_ALLOW_HTTP` | `false` | Explicit development HTTP opt-in |
 
-The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Version 2 adds characters, permanent deletion reservations and the shared asset metadata registry. Local database files are ignored by Git when running from `backend/`.
+The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Version 2 adds characters, permanent deletion reservations and the shared asset metadata registry. Version 3 adds durable story jobs, immutable results and local cover bytes. Local database files are ignored by Git when running from `backend/`.
 
 Place requests require a canonical UUID in `X-Installation-Id`. Custom places are private to that installation; predefined places are read-only. This is the initial installation-based contract, without accounts or authentication. The shared Places client sends this header automatically using a persisted installation ID. See [API.md](backend/API.md) for bodies and errors, and [DB.md](backend/DB.md) for the SQLite implementation and future PostgreSQL design.
 
@@ -60,8 +57,8 @@ Run backend and mobile tests from the repository root with `./test-all` (uses ea
 
 `api/` contains an independent Kotlin Multiplatform build included by both backend
 and mobile through Gradle composite builds. `api/contracts` owns the v1 Places
-and Characters request/response DTOs and shared errors; `api/client` provides
-`DozyClient.places.v1` and `DozyClient.characters.v1` with injectable plural feature containers. The client has JVM/Android-compatible and iOS
+and Characters request/response DTOs, story snapshots/jobs/results and shared errors; `api/client` provides
+`DozyClient.places.v1`, `DozyClient.characters.v1`, `DozyClient.storyGenerations.v1` and `DozyClient.stories.v1` with injectable plural feature containers. The client has JVM/Android-compatible and iOS
 targets and does not depend on mobile domain models, Room, Compose, or Koin.
 See [API library setup and versioning](api/README.md).
 
@@ -69,3 +66,17 @@ Characters use client-generated UUIDv7 IDs and durable local-first pending write
 and deletion tombstones. Server avatar references must match owned READY asset
 metadata. Remote avatar generation arrives in API2; no generator or provider is
 implemented by API1, and bundled development avatars are never uploaded.
+
+For a local HTTP backend, run from `backend/`:
+
+```sh
+DOZY_ASSET_BASE_URL=http://10.0.2.2:8080 DOZY_ASSET_ALLOW_HTTP=true ./gradlew --no-daemon run
+```
+
+Set the Android API base URL to `http://10.0.2.2:8080` (the emulator host bridge).
+Use a matching reachable origin for other devices. Images are generated from a checked-in PNG fixture and stored in SQLite; no image bytes are fetched from third parties. Production-style URLs default to HTTPS. API and assets must use the same externally reachable origin so the mobile image client can attach the installation header safely.
+
+Build the Android debug app against that backend with
+`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
+Without this property, remote APIs remain disabled. Debug builds allow cleartext
+for local development; release builds retain Android's HTTPS-only default.

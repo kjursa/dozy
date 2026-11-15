@@ -1,8 +1,8 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.database.*
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -20,7 +20,7 @@ internal class FakeGenerationDao : GenerationDao {
 
 internal fun testStartGeneration() =
     StartGeneration(
-        DefaultGenerationRepository(
+        testGenerationRepository(
             FakeGenerationDao(),
             object : GenerationApi {
                 override suspend fun status(id: String): GenerationStatusDto? = null

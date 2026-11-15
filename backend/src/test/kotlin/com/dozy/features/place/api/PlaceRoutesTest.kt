@@ -14,6 +14,9 @@ import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
+import com.dozy.features.asset.domain.repository.AssetRepository
+import com.dozy.features.story.UnusedGenerationRepository
+import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.module
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -140,6 +143,8 @@ class PlaceRoutesTest {
     fun `DI fake overrides production repository and database failures have safe errors`() = testApplication {
         environment { config = databaseConfig(directory) }
         application {
+            dependencies.provide<AssetRepository> { AssetRepository { _, _ -> null } }
+            dependencies.provide<GenerationRepository> { UnusedGenerationRepository() }
             dependencies.provide<PlaceRepository> { FailingRepository() }
             dependencies.provide<CharacterRepository> { FailingCharacterRepository() }
             module()

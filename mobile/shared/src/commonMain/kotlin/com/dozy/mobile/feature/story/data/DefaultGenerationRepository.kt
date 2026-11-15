@@ -1,8 +1,19 @@
 package com.dozy.mobile.feature.story.data
 
-import com.dozy.mobile.feature.story.data.api.*
-import com.dozy.mobile.feature.story.data.database.*
-import com.dozy.mobile.feature.story.domain.model.*
+import com.dozy.api.client.ApiResult
+import com.dozy.api.client.story.StoriesClients
+import com.dozy.api.client.story.v1.StoryReadError
+import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
+import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
+import com.dozy.mobile.feature.story.data.api.StoryDto
+import com.dozy.mobile.feature.story.data.api.StorySummaryDto
+import com.dozy.mobile.feature.story.data.database.GenerationDao
+import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.model.Story
+import com.dozy.mobile.feature.story.domain.model.StorySummary
 import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 import kotlinx.coroutines.flow.first
@@ -14,7 +25,9 @@ import kotlinx.serialization.json.Json
 /** Persist before sending so uncertain responses can safely replay the exact same snapshots. */
 class DefaultGenerationRepository(
     private val dao: GenerationDao,
-    private val api: GenerationApi,
+    private val generations: StoryGenerationsClients,
+    private val reader: StoriesClients,
+    private val legacy: LegacyStoryApi,
 ) : GenerationRepository {
     private val mutex = Mutex()
 
@@ -30,7 +43,7 @@ class DefaultGenerationRepository(
             rows
                 .mapNotNull { row ->
                     row.summary?.let { Json.decodeFromString<StorySummaryDto>(it).toDomain() }
-                        ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto().toDomain() }
+                        ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto().toDomain(allowDevelopmentHttp = true) }
                 }.groupBy { it.id }
                 .values
                 .map { versions -> versions.maxBy { it.createdAt.epochMillis } }
@@ -43,7 +56,7 @@ class DefaultGenerationRepository(
             val cursors = mutableSetOf<String>()
             var cursor: String? = null
             do {
-                val page = api.stories(cursor) ?: return@withLock false
+                val page = legacy.stories(cursor) ?: return@withLock false
                 page.stories.forEach { it.toDomain() }
                 collected += page.stories
                 cursor = page.nextCursor
@@ -67,10 +80,16 @@ class DefaultGenerationRepository(
         mutex.withLock {
             stories().first().find { it.id == id }?.let { return@withLock it }
             val dto =
-                try {
-                    api.story(id.value) ?: error("Story service unavailable")
-                } catch (_: StoryNotFoundException) {
-                    return@withLock null
+                when (val response = reader.v1.read(id.value)) {
+                    is ApiResult.Success -> response.value
+                    is ApiResult.Failure ->
+                        if (response.error ==
+                            StoryReadError.NotFound
+                        ) {
+                            return@withLock null
+                        } else {
+                            error("Story unavailable")
+                        }
                 }
             require(dto.id == id.value)
             val story = dto.toDomain()
@@ -91,11 +110,19 @@ class DefaultGenerationRepository(
             val saved = row(id) ?: return@withLock null
             if (saved.result != null) return@withLock saved.toJob()
             runCatchingSuspend {
-                val remote = api.status(id.value) ?: error("Status unavailable")
+                val remote =
+                    when (val response = generations.v1.status(id.value)) {
+                        is ApiResult.Success -> response.value
+                        is ApiResult.Failure -> error("Status unavailable")
+                    }
                 require(remote.jobId == id.value)
                 val result =
                     if (remote.status == "READY") {
-                        val story = api.story(requireNotNull(remote.storyId)) ?: error("Story unavailable")
+                        val story =
+                            when (val response = reader.v1.read(requireNotNull(remote.storyId))) {
+                                is ApiResult.Success -> response.value
+                                is ApiResult.Failure -> error("Story unavailable")
+                            }
                         require(story.id == remote.storyId)
                         // Validate snapshots before committing READY. One row stores status and result atomically.
                         story.toDomain()
@@ -127,7 +154,7 @@ class DefaultGenerationRepository(
             check(dao.observe().first().none { it.jobId != id.value && (it.status in activeStatuses || it.retryKey != null) })
             val pending = saved.copy(retryKey = saved.retryKey ?: key.value)
             dao.upsert(pending)
-            val response = api.retry(id.value, requireNotNull(pending.retryKey)) ?: return@withLock null
+            val response = legacy.retry(id.value, requireNotNull(pending.retryKey)) ?: return@withLock null
             require(response.jobId == id.value)
             val updated = pending.copy(status = response.status, errorCode = null, statusUnknown = false, retryKey = null)
             dao.upsert(updated)
@@ -162,7 +189,11 @@ class DefaultGenerationRepository(
                     ).also { dao.upsert(it) }
             row.toJob()?.let { return@withLock it }
             check(dao.observe().first().none { it.requestKey != key.value && (it.status in activeStatuses || it.retryKey != null) })
-            val response = api.start(key.value, Json.decodeFromString<GenerationRequestDto>(row.configuration)) ?: return@withLock null
+            val response =
+                when (val response = generations.v1.start(key.value, Json.decodeFromString<GenerationRequestDto>(row.configuration))) {
+                    is ApiResult.Success -> response.value
+                    is ApiResult.Failure -> return@withLock null
+                }
             val accepted = row.copy(jobId = response.jobId, status = response.status)
             dao.upsert(accepted)
             accepted.toJob()

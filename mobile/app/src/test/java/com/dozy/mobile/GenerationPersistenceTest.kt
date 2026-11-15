@@ -7,12 +7,12 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
 import com.dozy.mobile.feature.story.data.api.StoryPageDto
 import com.dozy.mobile.feature.story.data.api.StorySummaryDto
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.presentation.generation.notificationStoryId
 import kotlinx.coroutines.flow.first
@@ -51,12 +51,12 @@ class GenerationPersistenceTest {
                 }
             var database = open()
             try {
-                val repo = DefaultGenerationRepository(database.generations(), api)
+                val repo = testGenerationRepository(database.generations(), api)
                 assertTrue(repo.refreshStories())
                 assertEquals(0, progress.storyReads)
                 database.close()
                 database = open()
-                val restored = DefaultGenerationRepository(database.generations(), api)
+                val restored = testGenerationRepository(database.generations(), api)
                 assertEquals(
                     "story",
                     restored
@@ -73,7 +73,7 @@ class GenerationPersistenceTest {
                 progress.storyUnavailable = true
                 assertEquals(
                     "Once upon a time",
-                    DefaultGenerationRepository(database.generations(), api).readStory(Story.Id("story"))?.text,
+                    testGenerationRepository(database.generations(), api).readStory(Story.Id("story"))?.text,
                 )
                 assertEquals(1, progress.storyReads)
             } finally {
@@ -92,10 +92,10 @@ class GenerationPersistenceTest {
             val id = GenerationJob.Id("job")
             var database = open()
             try {
-                DefaultGenerationRepository(database.generations(), api).start(GenerationJob.RequestKey("key"), api.configuration)
+                testGenerationRepository(database.generations(), api).start(GenerationJob.RequestKey("key"), api.configuration)
                 database.close()
                 database = open()
-                val repository = DefaultGenerationRepository(database.generations(), api)
+                val repository = testGenerationRepository(database.generations(), api)
                 assertEquals(
                     id,
                     repository
@@ -108,7 +108,7 @@ class GenerationPersistenceTest {
                 repository.refresh(id)
                 database.close()
                 database = open()
-                val restored = DefaultGenerationRepository(database.generations(), api)
+                val restored = testGenerationRepository(database.generations(), api)
                 repeat(2) { restored.refresh(id) }
                 assertEquals(
                     "Once upon a time",

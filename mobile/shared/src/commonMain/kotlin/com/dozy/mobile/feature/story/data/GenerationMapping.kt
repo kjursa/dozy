@@ -8,7 +8,9 @@ import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
 import com.dozy.mobile.feature.story.data.api.StoryDto
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
-import com.dozy.mobile.feature.story.domain.model.*
+import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.model.Story
 import kotlinx.serialization.json.Json
 
 fun GenerationConfiguration.toDto() =
@@ -54,7 +56,7 @@ fun GenerationRequestDto.toDomain() =
 
 fun StoryDto.toDomain(): Story {
     require(id.matches(Regex("[A-Za-z0-9_-]{1,128}")))
-    require(title.isNotBlank() && text.isNotBlank() && coverUrl.startsWith("https://"))
+    require(title.isNotBlank() && text.isNotBlank() && validStoryCoverUrl(coverUrl))
     require(configuration.cast.isNotEmpty() && configuration.cast.distinctBy { it.id }.size == configuration.cast.size)
     return Story(Story.Id(id), title, text, coverUrl, configuration.toDomain())
 }

@@ -12,15 +12,11 @@ launch or E2E suite is included.
   envelopes, and API version paths. Depends on Kotlin serialization, not Ktor,
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
-  `PlacesClients` and `CharactersClients` version containers, with its contracts dependency exposed to consumers. Engines,
+  `PlacesClients`, `CharactersClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
-Places and Characters are implemented in the shared contracts/client and backend.
-Story DTOs remain in mobile until their backend API is implemented. Character DTOs
-and avatar references are shared; avatar job request/poll DTOs remain at the mobile
-generator boundary until API2. Remote avatar generation arrives in API2; this task
-provides only the asset metadata registry and reference checks.
+Places, Characters, story submission/status and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; no listing or explicit retry methods are exposed by these SDK containers. Remote avatar jobs remain reserved for API2.
 
 ## Usage
 
@@ -100,6 +96,27 @@ SINGLE_LINE and INVALID_VALUE. Save also classifies CONFLICT and
 REFERENCE_UNAVAILABLE. Structural errors and malformed/transport responses follow
 the exception policy above. See [character integration](../mobile/CHARACTER_DATA.md)
 and [backend API](../backend/API.md) for limits, ownership and deletion semantics.
+
+## Story generation and reading
+
+Inject `client.storygeneration.StoryGenerationsClients` and `client.story.StoriesClients`.
+Call `storyGenerations.v1.start(idempotencyKey, request)`, `.status(jobId)` and
+`stories.v1.read(storyId)`. Every operation sends `X-Installation-Id`; start also
+sends the persisted UUIDv4 `Idempotency-Key`. The client owns serialization and
+omits `place`/`idea`/`ending` in AUTOMATIC mode even if a local draft retains them.
+Cast and place are complete immutable snapshots, with nullable character avatars.
+`GenerationField.reasons` defines start validation combinations; mode, length,
+stage and terminal failure values are defined beside the story DTOs.
+
+Start errors distinguish idempotency conflict, active job, unavailable reference,
+validation, unavailability and unknown errors. Status/read distinguish the known
+`JOB_NOT_FOUND` / `STORY_NOT_FOUND` codes from other errors. Classification uses
+body codes, including for unexpected HTTP error statuses. Structural errors,
+malformed terminal combinations, transport failure and cancellation are exceptions.
+A missing story never triggers generation. HTTP covers require an explicitly HTTP
+API base URL and the same origin; otherwise the SDK requires HTTPS. Story cover
+bytes are fetched through the caller-owned image client using the installation
+header, scoped to the configured backend origin.
 
 ## Versioning
 

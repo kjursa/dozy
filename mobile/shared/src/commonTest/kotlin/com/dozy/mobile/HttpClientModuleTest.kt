@@ -1,5 +1,6 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.httpClientModule
@@ -33,6 +34,8 @@ class HttpClientModuleTest {
                     modules(
                         httpClientModule,
                         module {
+                            single { ApiConfig("https://example.test") }
+                            single<InstallationIdProvider> { InstallationIdProvider { "installation" } }
                             single<HttpEngineFactory> {
                                 HttpEngineFactory {
                                     engines++

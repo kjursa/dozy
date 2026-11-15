@@ -2,6 +2,7 @@ package com.dozy.mobile.di
 
 import androidx.work.WorkManager
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.mobile.BuildConfig
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.dozyClientModule
@@ -14,11 +15,21 @@ import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
-import com.dozy.mobile.feature.story.data.background.*
+import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
+import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
+import com.dozy.mobile.feature.story.data.background.GenerationWorkerFactory
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.StoryCompletionNotifier
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.place_island
+import com.dozy.mobile.resources.place_island_description
+import com.dozy.mobile.resources.place_village
+import com.dozy.mobile.resources.place_village_description
+import com.dozy.mobile.resources.place_village_inhabitants
+import com.dozy.mobile.resources.place_woods
+import com.dozy.mobile.resources.place_woods_description
+import com.dozy.mobile.resources.place_woods_inhabitants
 import io.ktor.client.engine.android.Android
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
@@ -33,8 +44,7 @@ internal val androidModule =
         single<StoryCompletionNotifier> { AndroidStoryCompletionNotifier(androidContext()) }
         single { GenerationWorkerFactory(get()) }
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
-        // Enable after the backend exposes the agreed API contract.
-        single { ApiConfig(baseUrl = null) }
+        single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL) }
         includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
         single<InstallationIdProvider> { AndroidInstallationIdProvider(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }

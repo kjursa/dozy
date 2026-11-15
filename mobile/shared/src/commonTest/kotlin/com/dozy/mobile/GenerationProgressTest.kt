@@ -2,8 +2,8 @@ package com.dozy.mobile
 
 import androidx.lifecycle.ViewModelStore
 import com.dozy.mobile.core.config.ApiConfig
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.*
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.data.toDto
 import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.domain.usecase.*
@@ -29,7 +29,7 @@ class GenerationProgressTest {
         runTest {
             val dao = FakeGenerationDao()
             val api = ProgressApi()
-            val repository = DefaultGenerationRepository(dao, api)
+            val repository = testGenerationRepository(dao, api)
             repository.start(key, api.configuration)
             api.remote = GenerationStatusDto("job", "CREATING_TEXT")
             assertEquals(GenerationJob.Status.CREATING_TEXT, repository.refresh(id)?.status)
@@ -37,7 +37,7 @@ class GenerationProgressTest {
             val offline = repository.refresh(id)!!
             assertTrue(offline.statusUnknown)
             assertEquals(GenerationJob.Status.CREATING_TEXT, offline.status)
-            val resumed = DefaultGenerationRepository(dao, api)
+            val resumed = testGenerationRepository(dao, api)
             assertTrue(
                 resumed
                     .observe()
@@ -72,7 +72,7 @@ class GenerationProgressTest {
         runTest {
             val dao = FakeGenerationDao()
             val api = ProgressApi()
-            val repository = DefaultGenerationRepository(dao, api)
+            val repository = testGenerationRepository(dao, api)
             repository.start(key, api.configuration)
             api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
             repository.refresh(id)
@@ -80,7 +80,7 @@ class GenerationProgressTest {
             api.loseRetryResponse = true
             assertEquals(RetryGeneration.Result.Unavailable, RetryGeneration(repository, keys)(id))
             assertEquals("retry", dao.find(key.value)?.retryKey)
-            val recreated = DefaultGenerationRepository(dao, api)
+            val recreated = testGenerationRepository(dao, api)
             api.loseRetryResponse = false
             val retried = RetryGeneration(recreated, GenerationKeyGenerator { GenerationJob.RequestKey("new-key") })(id)
             assertTrue(retried is RetryGeneration.Result.Accepted)
@@ -102,13 +102,13 @@ class GenerationProgressTest {
         runTest {
             val api = ProgressApi()
             val dao = FakeGenerationDao()
-            var repository = DefaultGenerationRepository(dao, api)
+            var repository = testGenerationRepository(dao, api)
             repository.start(key, api.configuration)
             api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
             repository.refresh(id)
             api.loseRetryResponse = true
             RetryGeneration(repository, keys)(id)
-            repository = DefaultGenerationRepository(dao, api)
+            repository = testGenerationRepository(dao, api)
             api.loseRetryResponse = false
             var permitted = false
             val notifications = mutableListOf<Story.Id>()
@@ -156,7 +156,7 @@ class GenerationProgressTest {
     @Test fun onlyOneActiveJobAndCompletedJobCannotBeRetried() =
         runTest {
             val api = ProgressApi()
-            val repository = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val repository = testGenerationRepository(FakeGenerationDao(), api)
             repository.start(key, api.configuration)
             try {
                 repository.start(GenerationJob.RequestKey("another"), api.configuration)
@@ -176,7 +176,7 @@ class GenerationProgressTest {
             val scope = ViewModelStore()
             try {
                 val api = ProgressApi()
-                val repository = DefaultGenerationRepository(FakeGenerationDao(), api)
+                val repository = testGenerationRepository(FakeGenerationDao(), api)
                 repository.start(key, api.configuration)
                 api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
                 repository.refresh(id)
@@ -291,8 +291,8 @@ class GenerationProgressTest {
                 try {
                     val dao = FakeGenerationDao()
                     val api = ProgressApi()
-                    DefaultGenerationRepository(dao, api).start(key, api.configuration)
-                    val repository = DefaultGenerationRepository(dao, KtorGenerationApi(http, ApiConfig("https://example.test")))
+                    testGenerationRepository(dao, api).start(key, api.configuration)
+                    val repository = testGenerationRepository(dao, KtorGenerationApi(http, ApiConfig("https://example.test")))
                     val job = repository.refresh(id)!!
                     assertTrue(job.statusUnknown)
                     assertEquals(GenerationJob.Status.QUEUED, job.status)
@@ -304,9 +304,9 @@ class GenerationProgressTest {
             try {
                 val dao = FakeGenerationDao()
                 val api = ProgressApi()
-                DefaultGenerationRepository(dao, api).start(key, api.configuration)
+                testGenerationRepository(dao, api).start(key, api.configuration)
                 try {
-                    DefaultGenerationRepository(dao, KtorGenerationApi(http, ApiConfig("https://example.test"))).refresh(id)
+                    testGenerationRepository(dao, KtorGenerationApi(http, ApiConfig("https://example.test"))).refresh(id)
                     fail("Cancellation must propagate")
                 } catch (_: CancellationException) {
                 }

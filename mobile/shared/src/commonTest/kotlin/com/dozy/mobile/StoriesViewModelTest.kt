@@ -1,7 +1,7 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.data.api.*
+import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.list.*
@@ -39,7 +39,7 @@ class StoriesViewModelTest {
                         return if (offline) null else StoryPageDto(emptyList())
                     }
                 }
-            val repo = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val repo = testGenerationRepository(FakeGenerationDao(), api)
             val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
             assertTrue(vm.uiState.value.loading)
             runCurrent()
@@ -75,7 +75,7 @@ class StoriesViewModelTest {
     @Test fun completedStoryUpdatesLibraryAndNavigationIsOneOffAndCanResume() =
         runTest(dispatcher) {
             val api = ProgressApi()
-            val repo = DefaultGenerationRepository(FakeGenerationDao(), api)
+            val repo = testGenerationRepository(FakeGenerationDao(), api)
             val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
             advanceUntilIdle()
             repo.start(

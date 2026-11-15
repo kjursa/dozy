@@ -1,5 +1,10 @@
 package com.dozy
 
+import com.dozy.features.asset.api.v1.assetV1Routes
+import com.dozy.features.asset.domain.repository.AssetRepository
+import com.dozy.features.story.application.GenerationWorker
+import com.dozy.features.story.application.StoryService
+import com.dozy.features.story.api.v1.storyV1Routes
 import com.dozy.features.character.api.v1.characterV1Routes
 import com.dozy.api.contracts.ApiVersion
 import com.dozy.di.configureDependencies
@@ -29,9 +34,15 @@ fun Application.module() {
     install(CallLogging)
     install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
     val places: PlaceService by dependencies
+    val assets: AssetRepository by dependencies
+    val stories: StoryService by dependencies
+    val worker: GenerationWorker by dependencies
+    worker.start(this)
     routing {
         get("/hello") { call.respond(HelloResponse("Hello world from Dozy")) }
         route(ApiVersion.V1.path) {
+            assetV1Routes(assets)
+            storyV1Routes(stories)
             placeV1Routes(places)
             characterV1Routes()
         }

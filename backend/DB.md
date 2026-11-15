@@ -2,7 +2,7 @@
 
 ## Current SQLite implementation
 
-The initial backend stores installations, places, characters and asset metadata in a local SQLite file.
+The initial backend stores installations, places, characters, asset metadata/bytes, story jobs and immutable stories in a local SQLite file.
 `application.yaml` supplies the path and lock timeout through typed `AppConfig` /
 `DatabaseConfig`; use `DOZY_DATABASE_PATH` and `DOZY_DATABASE_BUSY_TIMEOUT_MS` to
 override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
@@ -21,7 +21,7 @@ entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
 to domain models. Flyway and Exposed share the configured SQLite data source.
 Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
 
-Add future changes as `V3__description.sql`, `V4__description.sql`, and so on;
+Add future changes as `V4__description.sql`, `V5__description.sql`, and so on;
 do not edit an applied migration after deployment. During the current development
 phase, the V1 schema is reset in place: places use `origin` with `SYSTEM`/`USER`
 values, replacing the previous `ownership` column. No upgrade migration is
@@ -65,6 +65,29 @@ ownership/readiness and paired ID/URL values atomically. No provider, generation
 endpoint or production asset seeding is included. API2 will populate this registry;
 only test fixtures seed ready metadata today. Null avatars remain valid for
 historical records. Read mapping never applies current write length limits.
+
+### Durable story execution (V3)
+
+`story_jobs` stores the original canonical request, normalized accepted configuration,
+operation, installation/key binding, preallocated UUIDv7 story/asset IDs, stage,
+persisted generated text, lease token/expiry, and execution count. A unique
+installation/key constraint and a partial unique index on active installation jobs
+make concurrent submissions atomic. Replays precede the active-limit check.
+
+Workers claim in short IMMEDIATE transactions and run injected generators outside
+transactions. Concurrency is bounded by typed configuration. A 30-second lease is
+renewed during generation. On process death another worker recovers the stored
+stage when its lease expires, reusing persisted text at CREATING_COVER. Lease tokens
+fence old executions. Storage failures leave work recoverable; generator failures
+alone produce terminal failure codes. API5 can add execution bindings without
+rewriting the existing operation/request/key binding.
+
+Publishing inserts `assets`, `asset_contents` (local PNG bytes), and immutable
+`stories` and transitions the job to READY in one transaction. A unique story job
+reference and fenced publication prevent multiple successful results. Publication
+sets the immutable UTC epoch-millisecond createdAt. No update/read path mutates a
+saved result or invokes a generator. All job/story/asset reads filter by installation.
+
 
 ## Proposed PostgreSQL database
 

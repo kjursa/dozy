@@ -1,13 +1,23 @@
-# Proposed story generation contract (F9/F10)
+# Story generation contract (API3, F9–F13)
 
-This contract is a mobile proposal, not an implemented backend endpoint. It extends
-CHARACTER_DATA.md and PLACE_DATA.md using the same string IDs and uppercase enums.
-The client uses ApiConfig. A null base URL performs no HTTP requests and reports
-unavailability; there is no simulated acceptance.
+Story start/status/read are implemented by the shared SDK and deterministic fake
+backend. Remote paginated library listing and explicit retry sections remain
+proposals for API4/API5. CHARACTER_DATA.md and PLACE_DATA.md define the reused
+snapshot fields. A null ApiConfig base URL sends no HTTP and reports unavailability.
+
+`DefaultGenerationRepository` directly injects `StoryGenerationsClients`,
+`StoriesClients`, and the existing Room DAO; `LegacyStoryApi` retains only listing
+and explicit retry. Shared story DTOs replace mobile-owned transport models.
+All new operations carry the persisted `X-Installation-Id`. Android WorkManager,
+completion notifications, local caches, reader settings and independent cast-only
+new-adventure requests retain their existing behavior. Protected cover loads use
+the same HttpClient, with an installation header restricted to the configured
+backend asset origin. Local HTTP needs matching HTTP app/backend URLs and the
+backend's explicit development opt-in.
 
 ## Start and replay
 
-`POST /api/v1/story-generations`, JSON, `Idempotency-Key: <client UUID>`.
+`POST /api/v1/story-generations`, JSON, `Idempotency-Key: <client UUIDv4>`.
 
 Request:
 
@@ -31,8 +41,7 @@ optional (500); whitespace is trimmed. AUTOMATIC includes cast, mode and length 
 manual place, idea and ending are omitted, including when retained in the draft.
 
 Response: `202 {"jobId":"job-1","status":"QUEUED"}`. A replay returns 202 with
-the same job ID and current status. IDs are opaque URL-safe strings (1–128 ASCII
-letters, digits, underscores or hyphens). Status is QUEUED, CREATING_TEXT,
+the same job ID and current status. New job/story/asset IDs are backend-generated UUIDv7; character source IDs are client-generated UUIDv7. Status is QUEUED, CREATING_TEXT,
 CREATING_COVER, READY or FAILED.
 
 The server atomically binds an idempotency key to the request and resulting job,
@@ -115,7 +124,7 @@ key. A confirmed progressing/completed GET can also acknowledge the pending retr
 The local mutex and disabled action prevent duplicate concurrent submissions. A
 completed local job cannot be retried. One active job is allowed; starting another
 or retrying an older failed job while one is active is rejected locally. The backend
-must enforce the same per-account limit (409 ACTIVE_JOB_EXISTS), including uncertain
+enforces the same per-installation limit (409 ACTIVE_JOB_EXISTS), including uncertain
 initial POSTs and other devices. No cancellation or multi-job management UI is added.
 
 ## Scheduling and notification delivery
@@ -142,8 +151,7 @@ permission is requested only after the parent taps the opt-in action on progress
 Home and library still show the saved result. Granting permission schedules a check.
 Open progress stays on its ready card with a Read story action; no automatic jump.
 
-**Backend/system integration requirements:** these proposed endpoints and a durable
-backend job executor must be implemented before enabling ApiConfig. The current
+**Backend/system integration:** configure the implemented local fake backend and enable ApiConfig to use submission/progress/reading. Remote listing/retry remain API4/API5. The current
 client uses polling, not push, so completion alerts can be delayed by Doze, OS quotas,
 network loss, or manufacturer restrictions. Android force-stop suppresses background
 work until the user opens the app again; permission cannot override this. Guaranteed
@@ -262,3 +270,22 @@ or retry. Collections remain locally readable; job status can show unavailable.
 Home consumes the same Ktor clients verified by the existing MockEngine character,
 place, generation and story-library contract tests. No backend/generator change is
 included in this mobile proposal.
+
+## API3 acceptance and execution details
+
+Start canonicalizes object key order recursively, preserving array order and
+null/omission differences. Original accepted snapshots are stored durably; only
+manual idea/ending are trimmed (1000/500 UTF-16 units). Historical character/place
+text is not subjected to current creation limits. Cast must be nonempty with unique
+source IDs; avatar may be null. Owned READY avatar ID/URL references are verified,
+without requiring character/place rows. Automatic requests omit manual fields;
+submitting any of them, including null, is a structural error. Snapshot permissions
+never grant access. A replay returns current status before enforcing the active limit.
+
+Missing/inaccessible jobs return `JOB_NOT_FOUND`; stories return `STORY_NOT_FOUND`.
+READY is emitted only after a transaction stores the immutable story and cover bytes.
+The SQLite worker resumes persisted stages using expiring claims and stale-worker
+fencing; no transaction is held during either generator. Only generator failures
+produce FAILED. Transport/status failures continue to display unknown state and
+remain eligible for reconciliation. Deterministic text uses approximately 600/1500
+words; a checked-in PNG fixture supplies the single durable cover.

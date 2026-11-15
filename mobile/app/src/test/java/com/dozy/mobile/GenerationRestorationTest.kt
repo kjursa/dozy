@@ -37,7 +37,7 @@ class GenerationRestorationTest {
                 val gate = CompletableDeferred<Unit>()
                 val start =
                     StartGeneration(
-                        DefaultGenerationRepository(
+                        testGenerationRepository(
                             dao,
                             object : GenerationApi {
                                 override suspend fun status(id: String): GenerationStatusDto? = null

@@ -32,17 +32,17 @@ class ReaderTest {
         runTest {
             val dao = FakeGenerationDao()
             val api = ProgressApi()
-            val reader = ReadStory(DefaultGenerationRepository(dao, api))
+            val reader = ReadStory(testGenerationRepository(dao, api))
             val first = reader(id) as ReadStory.Result.Found
             assertEquals("Once upon a time", first.story.text)
             assertEquals(api.configuration.cast, first.story.configuration.cast)
             assertEquals("https://example.test/cover.png", first.story.coverUrl)
             assertEquals(1, first.story.readingMinutes())
             api.storyUnavailable = true
-            val restored = ReadStory(DefaultGenerationRepository(dao, api))(id)
+            val restored = ReadStory(testGenerationRepository(dao, api))(id)
             assertEquals(first, restored)
             assertEquals(1, api.storyReads)
-            assertEquals(first.story, DefaultGenerationRepository(dao, api).stories().first().single())
+            assertEquals(first.story, testGenerationRepository(dao, api).stories().first().single())
         }
 
     @Test fun httpUsesExactIdHandles404FailuresAndDisabledMode() =
@@ -61,14 +61,17 @@ class ReaderTest {
                 ) { install(ContentNegotiation) { json() } }
             try {
                 suspend fun read(config: ApiConfig = ApiConfig("https://example.test")) =
-                    ReadStory(DefaultGenerationRepository(FakeGenerationDao(), KtorGenerationApi(client, config)))(id)
+                    ReadStory(testGenerationRepository(FakeGenerationDao(), KtorGenerationApi(client, config)))(id)
                 assertTrue(read() is ReadStory.Result.Found)
                 status = HttpStatusCode.NotFound
+                val savedBody = body
+                body = """{"code":"STORY_NOT_FOUND"}"""
                 assertEquals(ReadStory.Result.Missing, read())
                 status = HttpStatusCode.ServiceUnavailable
+                body = """{"code":"UNAVAILABLE"}"""
                 assertEquals(ReadStory.Result.Unavailable, read())
                 status = HttpStatusCode.OK
-                body = body.replace("\"id\":\"story\"", "\"id\":\"other\"")
+                body = savedBody.replace("\"id\":\"story\"", "\"id\":\"other\"")
                 assertEquals(ReadStory.Result.Unavailable, read())
                 val previous = calls
                 assertEquals(ReadStory.Result.Unavailable, read(ApiConfig(null)))
@@ -113,7 +116,7 @@ class ReaderTest {
                     override suspend fun story(id: String): StoryDto? = throw CancellationException("Cancelled")
                 }
             try {
-                ReadStory(DefaultGenerationRepository(FakeGenerationDao(), api))(id)
+                ReadStory(testGenerationRepository(FakeGenerationDao(), api))(id)
                 fail("Cancellation must propagate")
             } catch (_: CancellationException) {
             }
