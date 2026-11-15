@@ -1,11 +1,11 @@
 # Story generation contract (API3, F9–F13)
 
-Story start/status/read are implemented by the shared SDK and deterministic fake
-backend. Stable remote library listing is implemented; explicit retry remains a proposal for API5. CHARACTER_DATA.md and PLACE_DATA.md define the reused
+Story start/status/retry are implemented by the shared SDK and deterministic fake
+backend. Stable remote library listing is implemented. CHARACTER_DATA.md and PLACE_DATA.md define the reused
 snapshot fields. A null ApiConfig base URL sends no HTTP and reports unavailability.
 
 `DefaultGenerationRepository` directly injects `StoryGenerationsClients`,
-`StoriesClients`, and the existing Room DAO; `LegacyStoryApi` retains only explicit retry. Shared story DTOs replace mobile-owned transport models.
+`StoriesClients`, and the existing Room DAO. Shared story DTOs replace mobile-owned transport models.
 All new operations carry the persisted `X-Installation-Id`. Android WorkManager,
 completion notifications, local caches, reader settings and independent cast-only
 new-adventure requests retain their existing behavior. Protected cover loads use
@@ -104,7 +104,7 @@ A full offline image cache and the remaining reader controls belong to F11/F12.
 ## Failed-job retry
 
 `POST /api/v1/story-generations/{jobId}/retry`, no body,
-`Idempotency-Key: <new client UUID>` returns 202 `{jobId,status}` using the same
+`Idempotency-Key: <new client UUIDv4>` returns 202 `{jobId,status}` using the same
 logical job ID. Only FAILED jobs can start a new execution. The backend reuses the
 original immutable configuration; the client never reconstructs it from edited or
 deleted characters/places. The logical job has at most one successful durable result.
@@ -118,7 +118,10 @@ through retries. Retain all bindings for the lifetime of the job/story.
 
 The client saves its pending retry key before HTTP, retains it on timeout or process
 death, and replays it from background reconciliation. Acceptance clears the pending
-key. A confirmed progressing/completed GET can also acknowledge the pending retry.
+key. GET never acknowledges an unresolved retry: only replay of its persisted key
+can distinguish the recorded execution from an older or newer terminal execution.
+Terminal retry acknowledgements are followed by status reconciliation before
+a new retry becomes available.
 The local mutex and disabled action prevent duplicate concurrent submissions. A
 completed local job cannot be retried. One active job is allowed; starting another
 or retrying an older failed job while one is active is rejected locally. The backend
@@ -149,7 +152,7 @@ permission is requested only after the parent taps the opt-in action on progress
 Home and library still show the saved result. Granting permission schedules a check.
 Open progress stays on its ready card with a Read story action; no automatic jump.
 
-**Backend/system integration:** configure the implemented local fake backend and enable ApiConfig to use submission/progress/reading. Stable remote listing is implemented; explicit retry remains API5. The current
+**Backend/system integration:** configure the implemented local fake backend and enable ApiConfig to use submission/progress/reading. Stable remote listing and failed-job retry are implemented. The current
 client uses polling, not push, so completion alerts can be delayed by Doze, OS quotas,
 network loss, or manufacturer restrictions. Android force-stop suppresses background
 work until the user opens the app again; permission cannot override this. Guaranteed

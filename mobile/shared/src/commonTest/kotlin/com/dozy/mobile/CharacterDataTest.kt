@@ -6,7 +6,6 @@ import com.dozy.api.client.character.v1.CharactersSaveError
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.UuidCharacterIdGenerator
-import com.dozy.mobile.feature.character.data.api.CharacterApi
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.data.toDomain
@@ -15,6 +14,7 @@ import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import fixtures.CharactersClientFixture
+import fixtures.avatarClients
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -33,7 +33,13 @@ class CharacterDataTest {
     private fun repository(
         dao: FakeDao,
         client: CharactersClientFixture = CharactersClientFixture(),
-    ) = DefaultCharacterRepository(dao, client, CharacterApi { null })
+    ) = DefaultCharacterRepository(
+        dao,
+        client,
+        avatarClients {
+            throw ApiDisabledException()
+        },
+    )
 
     @Test fun newIdsUseSharedUuidV7Facility() {
         val ids = List(100) { UuidCharacterIdGenerator().next().value }

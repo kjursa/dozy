@@ -153,20 +153,22 @@ Character CRUD uses the shared `CharactersClients` container with persisted
 installation identity. Saves/edits and deletion tombstones are durable before HTTP;
 refresh retries pending mutations and replaces only synced collection data.
 Android injects the common Kotlin UUIDv7 character ID generator. Bundled development
-avatars remain local-only. Remote avatar generation arrives in API2; this backend
-currently validates references against asset metadata without generating assets.
+avatars remain local-only. API2 generates deterministic fake PNGs and validates
+character references against the shared owned asset registry.
 See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantics.
 
 ## Local fake story generation
 
-API3 integrates story submission, durable progress, completion and immutable reading
+API3/API5 integrate story submission, durable retry/progress, completion and immutable reading
 through the shared SDK. Run the fake backend with matching `DOZY_ASSET_BASE_URL`
 and app API base URL; see the [root setup](../README.md). For an Android emulator,
 use `http://10.0.2.2:8080` and `DOZY_ASSET_ALLOW_HTTP=true` on the backend. API defaults
 remain disabled until configured. The existing Android WorkManager scheduler and
-local completion notifications observe the same persisted jobs. Remote library pagination uses the shared Stories client and persistent backend snapshots. A complete traversal atomically replaces remote summary rows; failed or cancelled traversal retains the cache. Explicit failed-job retry remains reserved for API5. See [the story contract](STORY_GENERATION_API.md).
+local completion notifications observe the same persisted jobs. Remote library pagination uses the shared Stories client and persistent backend snapshots. A complete traversal atomically replaces remote summary rows; failed or cancelled traversal retains the cache. Failed-job retry uses the shared SDK. See [the story contract](STORY_GENERATION_API.md).
 
 Build the Android debug app against that backend with
 `./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
 Without this property, remote APIs remain disabled. Debug builds allow cleartext
 for local development; release builds retain Android's HTTPS-only default.
+
+API2 uses shared `CharacterAvatarsClients` and repository polling. See [character data](CHARACTER_DATA.md) and the root README for local development URLs and debug build configuration.

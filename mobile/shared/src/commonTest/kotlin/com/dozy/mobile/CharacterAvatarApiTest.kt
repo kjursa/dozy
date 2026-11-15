@@ -1,12 +1,13 @@
 package com.dozy.mobile
 
+import com.dozy.api.client.DozyClient
+import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.characteravatar.CharacterAvatarsClients
 import com.dozy.api.contracts.v1.character.AvatarDto
+import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
-import com.dozy.mobile.feature.character.data.api.AvatarRequestDto
-import com.dozy.mobile.feature.character.data.api.CharacterApi
-import com.dozy.mobile.feature.character.data.api.KtorCharacterApi
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.data.toAvatarDto
@@ -15,6 +16,7 @@ import com.dozy.mobile.feature.character.data.toDto
 import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
 import fixtures.CharactersClientFixture
+import fixtures.avatarClients
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandler
@@ -27,13 +29,19 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CharacterAvatarApiTest {
     @Test fun submitsDescriptionsThenPollsSameJobUntilReady() =
         runTest {
@@ -68,13 +76,15 @@ class CharacterAvatarApiTest {
             try {
                 assertEquals(
                     AvatarDto("asset", "https://example.test/avatar.png"),
-                    KtorCharacterApi(
-                        client,
-                        ApiConfig("https://example.test/"),
-                        InstallationIdProvider {
-                            "installation"
-                        },
-                    ).generateAvatar(createInput().toAvatarDto()),
+                    repository(
+                        avatarClient(
+                            client,
+                            ApiConfig("https://example.test/"),
+                            InstallationIdProvider {
+                                "installation"
+                            },
+                        ),
+                    ).generateAvatar(createInput())?.let { AvatarDto(it.id.value, it.url.value) },
                 )
                 assertEquals(3, requests)
             } finally {
@@ -88,7 +98,7 @@ class CharacterAvatarApiTest {
             try {
                 val result =
                     GenerateCharacterAvatar(
-                        repository(KtorCharacterApi(client, ApiConfig(null), InstallationIdProvider { "installation" })),
+                        repository(avatarClient(client, ApiConfig(null), InstallationIdProvider { "installation" })),
                     )(createInput())
                 assertEquals(GenerateCharacterAvatar.Result.Unavailable, result)
             } finally {
@@ -113,7 +123,7 @@ class CharacterAvatarApiTest {
                     val generate =
                         GenerateCharacterAvatar(
                             repository(
-                                KtorCharacterApi(client, ApiConfig("https://example.test"), InstallationIdProvider { "installation" }),
+                                avatarClient(client, ApiConfig("https://example.test"), InstallationIdProvider { "installation" }),
                             ),
                         )
                     assertEquals(GenerateCharacterAvatar.Result.Failure, generate(createInput()))
@@ -141,7 +151,7 @@ class CharacterAvatarApiTest {
                     GenerateCharacterAvatar.Result.Failure,
                     GenerateCharacterAvatar(
                         repository(
-                            KtorCharacterApi(
+                            avatarClient(
                                 client,
                                 ApiConfig("https://example.test"),
                                 InstallationIdProvider {
@@ -154,10 +164,7 @@ class CharacterAvatarApiTest {
             } finally {
                 client.close()
             }
-            val cancelled =
-                object : CharacterApi {
-                    override suspend fun generateAvatar(input: AvatarRequestDto): AvatarDto? = throw CancellationException()
-                }
+            val cancelled = avatarClients { throw CancellationException() }
             try {
                 GenerateCharacterAvatar(repository(cancelled))(createInput())
                 fail("Cancellation must propagate")
@@ -171,7 +178,52 @@ class CharacterAvatarApiTest {
         assertEquals(AvatarDto("asset", "https://example.test/avatar.png"), character.toDto().avatar)
     }
 
-    private fun repository(api: CharacterApi) =
+    @Test fun pollingStopsAt120GetsAndExitCancelsObservation() =
+        runTest {
+            var posts = 0
+            var gets = 0
+            val http =
+                client { request ->
+                    if (request.method == HttpMethod.Post) posts++ else gets++
+                    respond(
+                        """{"jobId":"job","status":"RUNNING"}""",
+                        if (request.method ==
+                            HttpMethod.Post
+                        ) {
+                            HttpStatusCode.Accepted
+                        } else {
+                            HttpStatusCode.OK
+                        },
+                        headers,
+                    )
+                }
+            try {
+                val repository =
+                    repository(avatarClient(http, ApiConfig("https://example.test"), InstallationIdProvider { "installation" }))
+                assertEquals(GenerateCharacterAvatar.Result.Failure, GenerateCharacterAvatar(repository)(createInput()))
+                assertEquals(1, posts)
+                assertEquals(120, gets)
+                val observing = launch { repository.generateAvatar(createInput()) }
+                runCurrent()
+                observing.cancel()
+                observing.join()
+                advanceTimeBy(5000)
+                runCurrent()
+                assertEquals(2, posts)
+                assertEquals(120, gets)
+            } finally {
+                http.close()
+            }
+        }
+
+    @Test fun developmentAssetsRequireExplicitLocalMode() {
+        val local = AvatarDto("asset", "http://10.0.2.2:8080/assets/asset")
+        assertFailsWith<IllegalArgumentException> { local.toDomain() }
+        assertEquals(local.url, local.toDomain(true).url.value)
+        assertFailsWith<IllegalArgumentException> { AvatarDto("asset", "http://example.com/image").toDomain(true) }
+    }
+
+    private fun repository(api: CharacterAvatarsClients) =
         DefaultCharacterRepository(
             object : CharacterDao {
                 override fun observe(id: String) = flowOf<CharacterEntity?>(null)
@@ -203,6 +255,12 @@ class CharacterAvatarApiTest {
             CharactersClientFixture(),
             api,
         )
+
+    private fun avatarClient(
+        client: HttpClient,
+        config: ApiConfig,
+        installations: InstallationIdProvider,
+    ) = DozyClient(client, DozyClientConfig(config.baseUrl), installations).characterAvatars
 
     private fun client(handler: MockRequestHandler) = HttpClient(MockEngine(handler)) { install(ContentNegotiation) { json() } }
 

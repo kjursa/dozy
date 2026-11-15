@@ -1,5 +1,13 @@
 package com.dozy.di
 
+import com.dozy.config.AvatarConfig
+import com.dozy.features.characteravatar.application.AvatarWorker
+import com.dozy.features.characteravatar.data.repository.SqliteAvatarJobs
+import com.dozy.features.characteravatar.data.FakeAvatarGenerator
+import com.dozy.features.characteravatar.data.LocalAvatarStorage
+import com.dozy.features.characteravatar.domain.repository.AvatarJobs
+import com.dozy.features.characteravatar.domain.repository.AvatarGenerator
+import com.dozy.features.characteravatar.domain.repository.AvatarStorage
 import com.dozy.features.character.application.CharacterService
 import com.dozy.features.character.data.repository.SqliteCharacterRepository
 import com.dozy.features.character.domain.repository.CharacterRepository
@@ -34,6 +42,11 @@ fun Application.configureDependencies() {
         provide<StoryService> { StoryService(resolve()) }
         provide<GenerationWorker> { GenerationWorker(resolve(), resolve(), resolve(), resolve()) }
         provide<AppConfig> { AppConfig.from(configuration) }
+        provide<AvatarConfig> { resolve<AppConfig>().avatars }
+        provide<AvatarJobs> { SqliteAvatarJobs(resolve(), resolve()) }
+        provide<AvatarGenerator> { FakeAvatarGenerator(resolve()) }
+        provide<AvatarStorage> { LocalAvatarStorage(resolve()) }
+        provide<AvatarWorker> { AvatarWorker(resolve(), resolve(), resolve(), resolve()) }
         provide<DatabaseConfig> { resolve<AppConfig>().database }
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
         provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }

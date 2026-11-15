@@ -1,0 +1,103 @@
+package com.dozy.features.characteravatar
+
+import com.dozy.databaseConfig
+import com.dozy.module
+import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.characteravatar.AvatarJobDto
+import com.dozy.api.contracts.v1.character.AvatarDto
+import com.dozy.config.AvatarConfig
+import com.dozy.config.FakeAvatarMode
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.put
+import io.ktor.client.request.header
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.bodyAsBytes
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.server.plugins.di.dependencies
+import io.ktor.server.testing.testApplication
+import java.nio.file.Path
+import java.io.ByteArrayInputStream
+import javax.imageio.ImageIO
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import org.junit.jupiter.api.io.TempDir
+
+class AvatarRoutesTest {
+    @TempDir lateinit var directory: Path
+    private val owner = "019a0000-0000-7000-8000-000000000001"
+    private val stranger = "019a0000-0000-7000-8000-000000000002"
+    private val request = """{"type":"CHILD","personality":"Kind","appearance":"Green eyes"}"""
+
+    @Test fun acceptedJobsServeValidPngAndOwnedCharacterReference() = testApplication {
+        environment { config = databaseConfig(directory) }
+        application {
+            dependencies.provide<AvatarConfig> { AvatarConfig(storagePath = directory.resolve("assets").toString(), delayMillis = 0) }
+            module()
+        }
+        val accepted = client.post("/api/v1/character-avatars") {
+            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request)
+        }
+        assertEquals(HttpStatusCode.Accepted, accepted.status)
+        var job = Json.decodeFromString<AvatarJobDto>(accepted.bodyAsText())
+        assertEquals("QUEUED", job.status)
+        assertNull(job.asset); assertNull(job.error)
+        for (attempt in 0 until 100) {
+            val status = client.get("/api/v1/character-avatars/${job.jobId}") { header("X-Installation-Id", owner) }
+            assertEquals(HttpStatusCode.OK, status.status)
+            job = Json.decodeFromString(status.bodyAsText())
+            if (job.status == "READY") break
+            delay(20)
+        }
+        assertEquals("READY", job.status)
+        val asset = assertNotNull(job.asset)
+        val image = client.get("/assets/${asset.id}")
+        assertEquals(HttpStatusCode.OK, image.status)
+        assertEquals("image/png", image.headers["Content-Type"])
+        assertEquals(64, ImageIO.read(ByteArrayInputStream(image.bodyAsBytes())).height)
+        assertEquals(HttpStatusCode.NotFound, client.get("/assets/unknown").status)
+        for (id in listOf(job.jobId, "unknown")) {
+            val missing = client.get("/api/v1/character-avatars/$id") { header("X-Installation-Id", stranger) }
+            assertEquals(HttpStatusCode.NotFound, missing.status)
+            assertEquals("AVATAR_JOB_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(missing.bodyAsText()).code)
+        }
+        val character = """{"name":"Hero","type":"CHILD","personality":"Kind","appearance":"Green eyes","avatar":${Json.encodeToString(asset)}}"""
+        assertEquals(HttpStatusCode.Created, client.put("/api/v1/characters/${job.jobId}") {
+            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(character)
+        }.status)
+        val invalid = client.post("/api/v1/character-avatars") {
+            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request.replace("Kind", ""))
+        }
+        assertEquals(HttpStatusCode.UnprocessableEntity, invalid.status)
+        assertEquals("personality", Json.decodeFromString<ApiErrorResponse>(invalid.bodyAsText()).field)
+    }
+
+    @Test fun failedJobIsSuccessfulStatusWithContractError() = testApplication {
+        environment { config = databaseConfig(directory) }
+        application {
+            dependencies.provide<AvatarConfig> { AvatarConfig(storagePath = directory.resolve("assets").toString(), mode = FakeAvatarMode.FAILURE, delayMillis = 0) }
+            module()
+        }
+        val accepted = client.post("/api/v1/character-avatars") {
+            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request)
+        }
+        var job = Json.decodeFromString<AvatarJobDto>(accepted.bodyAsText())
+        for (attempt in 0 until 100) {
+            val status = client.get("/api/v1/character-avatars/${job.jobId}") { header("X-Installation-Id", owner) }
+            assertEquals(HttpStatusCode.OK, status.status)
+            job = Json.decodeFromString(status.bodyAsText())
+            if (job.status == "FAILED") break
+            delay(20)
+        }
+        assertEquals("FAILED", job.status)
+        assertEquals("GENERATION_FAILED", job.error)
+        assertNull(job.asset)
+    }
+}

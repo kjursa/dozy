@@ -52,6 +52,35 @@ class StoryRoutesTest {
             assertEquals("INVALID_CURSOR", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/stories?cursor=$cursor").bodyAsText()).code)
         }
     }
+    @Test fun `retry route uses durable same job and typed errors`() = testApplication {
+        environment { config = databaseConfig(directory).apply { put("dozy.generation.textMode", "FAIL_ONCE") } }
+        application { module() }
+        val original = UUID.randomUUID().toString()
+        val job = json.decodeFromString<GenerationAcceptedDto>(client.start(key = original).bodyAsText())
+        suspend fun retry(key: String, id: String = job.jobId, installation: String = owner) = client.post("/api/v1/story-generations/$id/retry") {
+            header("X-Installation-Id", installation)
+            header("Idempotency-Key", key)
+        }
+        suspend fun awaitStage(stage: String) = withTimeout(10000) {
+            do {
+                val current = json.decodeFromString<GenerationStatusDto>(client.read("/api/v1/story-generations/${job.jobId}").bodyAsText())
+                if (current.status == stage) break
+                delay(20)
+            } while (true)
+        }
+        awaitStage("FAILED")
+        assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(original).bodyAsText()).code)
+        assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString(), installation = stranger).bodyAsText()).code)
+        val key = UUID.randomUUID().toString()
+        val response = retry(key)
+        assertEquals(HttpStatusCode.Accepted, response.status)
+        assertEquals(job.jobId, json.decodeFromString<GenerationAcceptedDto>(response.bodyAsText()).jobId)
+        awaitStage("READY")
+        assertEquals(GenerationAcceptedDto(job.jobId, "READY"), json.decodeFromString(retry(key).bodyAsText()))
+        assertEquals("JOB_NOT_FAILED", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString()).bodyAsText()).code)
+        assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(key, "other").bodyAsText()).code)
+    }
+
     @Test fun `full route flow canonical replay immutable read and asset isolation`() = testApplication {
         environment { config = databaseConfig(directory) }
         application { module() }

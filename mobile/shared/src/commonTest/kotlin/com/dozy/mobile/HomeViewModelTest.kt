@@ -19,6 +19,7 @@ import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.ObserveGenerations
 import com.dozy.mobile.feature.story.domain.usecase.ObserveStoryLibrary
+import com.dozy.mobile.feature.story.domain.usecase.ReconcileGenerations
 import com.dozy.mobile.feature.story.domain.usecase.RefreshGeneration
 import com.dozy.mobile.feature.story.domain.usecase.RefreshStories
 import com.dozy.mobile.feature.story.domain.usecase.RetryGeneration
@@ -291,7 +292,7 @@ class HomeViewModelTest {
             assertFalse(vm.uiState.value.generation.busy)
         }
 
-    @Test fun unavailableRetryRetainsFailedJobAndOffersAnotherAttempt() =
+    @Test fun unavailableRetryRetainsKeyAndBlocksTapsUntilBackgroundReconciliation() =
         runTest(dispatcher) {
             repository.start(GenerationJob.RequestKey("key"), api.configuration)
             api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
@@ -312,6 +313,13 @@ class HomeViewModelTest {
             )
             api.loseRetryResponse = false
             vm.dispatch(HomeAction.Generation(GenerationAction.Retry(jobId)))
+            advanceUntilIdle()
+            assertEquals(listOf("retry"), api.retryKeys)
+            ReconcileGenerations(
+                repository,
+                RetryGeneration(repository, GenerationKeyGenerator { GenerationJob.RequestKey("unused") }),
+            ) { true }()
+            vm.dispatch(HomeAction.Generation(GenerationAction.Refresh(jobId)))
             advanceUntilIdle()
             assertTrue(
                 vm.uiState.value.errors

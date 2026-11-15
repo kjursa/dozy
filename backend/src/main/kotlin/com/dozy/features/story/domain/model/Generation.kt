@@ -31,7 +31,14 @@ enum class Stage { QUEUED, CREATING_TEXT, CREATING_COVER, READY, FAILED }
 enum class Failure { CONTENT_REJECTED, GENERATION_FAILED }
 data class Job(val id: String, val stage: Stage, val storyId: String? = null, val failure: Failure? = null)
 data class SavedStory(val id: String, val title: String, val text: String, val coverUrl: String, val configuration: StoryConfiguration, val createdAt: Long)
-data class Execution(val job: Job, val token: String, val configuration: StoryConfiguration, val title: String?, val text: String?)
+data class Execution(val job: Job, val token: String, val configuration: StoryConfiguration, val title: String?, val text: String?, val ordinal: Int, val id: String)
+sealed interface RetrySubmission {
+    data class Accepted(val job: Job) : RetrySubmission
+    data object JobNotFound : RetrySubmission
+    data object JobNotFailed : RetrySubmission
+    data object ActiveJobExists : RetrySubmission
+    data object IdempotencyConflict : RetrySubmission
+}
 sealed interface Submission {
     data class Accepted(val job: Job) : Submission
     data object IdempotencyConflict : Submission

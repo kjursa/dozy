@@ -8,7 +8,7 @@ and response examples. It works locally without a build step or API calls.
 This document combines implemented routes and proposals consolidated from the
 mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
 `PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
-Story start/status/read and protected PNG asset reads are implemented. Avatar generation arrives in API2; stable library listing is implemented; explicit retry remains a proposal for API5. `/hello` returns
+Story start/status/retry/read, protected PNG asset reads and fake avatar generation are implemented. Stable library listing is implemented. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
@@ -18,8 +18,8 @@ Sources:
 - [Place contract](../mobile/PLACE_DATA.md).
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
-- Shared Places and Characters contracts and clients under `api/contracts` and `api/client`.
-- Legacy `KtorCharacterApi` and `KtorLegacyStoryApi` under
+- Shared feature contracts and clients under `api/contracts` and `api/client`.
+- Mobile feature repositories under
   `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
 
@@ -158,7 +158,7 @@ return 400 `INVALID_INSTALLATION_ID` on every operation.
 
 ## Character avatars
 
-Proposed for API2. No generation endpoint/provider is implemented in API1.
+Implemented with an injected deterministic PNG fake; no external model is called.
 
 ### POST /api/v1/character-avatars
 
@@ -186,17 +186,15 @@ Return `200` with the same envelope. Status: `QUEUED`, `RUNNING`, `READY`, `FAIL
 {"jobId":"avatar-job-1","status":"READY","asset":{"id":"asset-1","url":"https://assets.example.test/asset-1.png"},"error":null}
 ```
 
-READY requires a complete durable asset; FAILED may carry a code in **`error`**
+READY requires a complete durable asset; FAILED carries the contract code in **`error`**
 (for example `GENERATION_FAILED`), not the story endpoint's `errorCode`. Use null or
 omit non-applicable optional fields. Unknown/mismatched jobs, invalid responses,
 non-success HTTP, or observation timeout are mobile failures, not implicit deletion.
 The current client polls every second for up to 120 GETs. A later PUT explicitly
-attaches the ready asset to a character. Retention/cleanup of unattached results
-needs a policy that accommodates persisted unsaved form drafts.
+attaches the ready asset to a character. Jobs and unattached assets are retained without automatic cleanup during development.
 
 Local fake avatars (`bundled-avatar://...`) exist only in disabled-API development
-mode. They are not server assets or accepted HTTPS transport references. Users
-must regenerate them with the real service before uploading those references.
+mode. They are not server assets. Users must regenerate them through backend jobs before uploading references.
 
 ## Places
 
@@ -339,7 +337,7 @@ not cancel generation. Internal worker retries must not publish a second story.
 
 ### POST /api/v1/story-generations/{jobId}/retry
 
-No body. Header `Idempotency-Key: <new client UUID>`. Return 202 `{jobId,status}`
+No body. Header `Idempotency-Key: <new client UUIDv4>`. Return 202 `{jobId,status}`
 with the **same logical job ID**. Reuse the original snapshot, never edited live data.
 
 Only a FAILED job may start a new execution. Bind each retry key atomically to one
@@ -349,6 +347,7 @@ exists; never start another attempt using that key. A new explicit retry after a
 confirmed later failure gets a new key. Return `409 JOB_NOT_FAILED` for a fresh key
 on active/completed jobs, `409 ACTIVE_JOB_EXISTS` if another job is active, or
 `409 IDEMPOTENCY_CONFLICT` if a key is bound to a different operation/job.
+Missing/inaccessible jobs return `404 JOB_NOT_FOUND`. Original CREATE keys also conflict.
 A logical job can have only one successful story.
 
 ## Stories
@@ -464,4 +463,26 @@ header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stabl
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-The explicit retry section describes future API5. Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-installation and limit-mismatched tokens return INVALID_CURSOR.
+Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-installation and limit-mismatched tokens return INVALID_CURSOR.
+
+Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
+logical job and succeeds on later executions, independent of user text. Existing
+SUCCESS, FAILURE, CONTENT_REJECTED and cover modes remain available.
+
+## API2 asset delivery and recovery
+
+Missing and other-installation avatar jobs both return 404 `AVATAR_JOB_NOT_FOUND`.
+FAILED observations return HTTP 200 with `error: "GENERATION_FAILED"`, no asset,
+and no story `errorCode`. QUEUED/RUNNING contain neither asset nor error; READY
+contains one complete asset and no error. The shared client validates combinations.
+POST has no name or idempotency key and persists the owner/request before 202.
+
+`GET /assets/{assetId}` delivers immutable PNG bytes without an installation header;
+it is static public delivery, not a feature SDK endpoint. Its URL must match the
+owned READY metadata for character PUT. Normal URLs use HTTPS; explicitly enabled
+loopback/emulator HTTP development URLs are supported. See root README for settings.
+A bounded worker pool recovers RUNNING jobs to QUEUED at process startup. Database
+transactions cover only state changes, never generation, file writes or delay.
+The job's UUIDv7 asset ID is fixed at acceptance; repeated publication is a no-op.
+This local worker runs in one backend process per database; multi-process leasing
+is outside this development implementation.

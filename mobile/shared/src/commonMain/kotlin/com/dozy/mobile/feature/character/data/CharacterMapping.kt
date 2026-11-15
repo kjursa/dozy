@@ -3,12 +3,11 @@ package com.dozy.mobile.feature.character.data
 import com.dozy.api.contracts.v1.character.AvatarDto
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
-import com.dozy.mobile.feature.character.data.api.AvatarRequestDto
+import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
+import com.dozy.mobile.core.config.isAllowedAssetUrl
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
-import io.ktor.http.URLProtocol
-import io.ktor.http.Url
 
 fun Character.toEntity(pendingSync: Boolean) =
     CharacterEntity(
@@ -52,13 +51,12 @@ fun Character.toDto() =
 
 fun CreateCharacterInput.toAvatarDto() = AvatarRequestDto(type.name, personality.value, appearance.value)
 
-fun AvatarDto.toDomain(): Character.Avatar {
-    val parsed = Url(url)
-    require(id.isNotBlank() && parsed.protocol == URLProtocol.HTTPS && parsed.host.isNotBlank()) { "Malformed avatar asset" }
+fun AvatarDto.toDomain(allowLocalHttp: Boolean = false): Character.Avatar {
+    require(id.isNotBlank() && isAllowedAssetUrl(url, allowLocalHttp)) { "Malformed avatar asset" }
     return Character.Avatar(Character.Avatar.Id(id), Character.Avatar.Url(url))
 }
 
-fun CharacterDto.toDomain(): Character {
+fun CharacterDto.toDomain(allowLocalHttp: Boolean = false): Character {
     require(id.isNotBlank()) { "Malformed character" }
     return Character(
         Character.Id(id),
@@ -68,7 +66,7 @@ fun CharacterDto.toDomain(): Character {
             Character.Appearance(appearance),
             Character.Type.valueOf(type),
         ),
-        avatar?.toDomain(),
+        avatar?.toDomain(allowLocalHttp),
     )
 }
 

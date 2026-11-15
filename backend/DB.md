@@ -61,12 +61,10 @@ ownership and deletion before upserting, within the same IMMEDIATE transaction.
 `assets` is the minimal shared metadata registry: ID, installation ID, URL and
 PENDING/READY/FAILED status. A non-null character avatar must exactly match an
 owned READY asset ID and URL. The avatar ID has a foreign key; application checks
-ownership/readiness and paired ID/URL values atomically. No provider, generation
-endpoint or production asset seeding is included. API2 will populate this registry;
-only test fixtures seed ready metadata today. Null avatars remain valid for
+ownership/readiness and paired ID/URL values atomically. No external provider is included. API2 populates this registry after durable local PNG storage. Null avatars remain valid for
 historical records. Read mapping never applies current write length limits.
 
-### Durable story execution (V3)
+### Durable story execution (V3/V4)
 
 `story_jobs` stores the original canonical request, normalized accepted configuration,
 operation, installation/key binding, preallocated UUIDv7 story/asset IDs, stage,
@@ -79,8 +77,13 @@ transactions. Concurrency is bounded by typed configuration. A 30-second lease i
 renewed during generation. On process death another worker recovers the stored
 stage when its lease expires, reusing persisted text at CREATING_COVER. Lease tokens
 fence old executions. Storage failures leave work recoverable; generator failures
-alone produce terminal failure codes. API5 can add execution bindings without
-rewriting the existing operation/request/key binding.
+alone produce terminal failure codes. V4 adds `story_executions`: a UUIDv7 identity,
+installation-wide operation/key reservation, job ID, ordinal and durable stage for
+each accepted execution, including CREATE. Acceptance atomically inserts the binding
+and resets only the failed current job to QUEUED, clearing intermediate text and
+leases. Archived stages remain replayable even after newer executions. Workers
+guard writes with both execution identity and lease token; recovery keeps the ordinal.
+The original configuration, job/story/asset IDs and CREATE key remain unchanged.
 
 Publishing inserts `assets`, `asset_contents` (local PNG bytes), and immutable
 `stories` and transitions the job to READY in one transaction. A unique story job
@@ -465,4 +468,18 @@ PostgreSQL CHECK constraints cannot enforce arbitrary cross-table conditions.
 
 ## Stable library snapshots (API4)
 
-`V4__library_snapshots.sql` stores installation-owned `library_snapshots` with the request limit and ordered summary JSON. The first page collects immutable stories in one SQLite transaction, ordered by createdAt descending and lexical ID ascending. `library_cursors` stores opaque random tokens bound to snapshot and position; subsequent pages validate owner and limit before reading. Issued tokens and summaries survive restart. New publication cannot change a traversal. Snapshots and cursors are retained without expiry for this development phase.
+`V6__library_snapshots.sql` stores installation-owned `library_snapshots` with the request limit and ordered summary JSON. The first page collects immutable stories in one SQLite transaction, ordered by createdAt descending and lexical ID ascending. `library_cursors` stores opaque random tokens bound to snapshot and position; subsequent pages validate owner and limit before reading. Issued tokens and summaries survive restart. New publication cannot change a traversal. Snapshots and cursors are retained without expiry for this development phase.
+
+## Implemented API2 SQLite jobs
+
+Flyway V5 adds `avatar_jobs`: UUIDv7 primary ID, installation owner, normalized
+type/personality/appearance snapshot, reserved UUIDv7 asset ID, stable URL and
+QUEUED/RUNNING/READY/FAILED state. The state index supports atomic claims under the
+existing immediate SQLite transactions. READY publication inserts the shared owned
+asset metadata and changes job state in one transaction. Terminal jobs cannot be
+published again. The single backend process resets unfinished RUNNING jobs on
+startup and bounds generation by configured worker count. No transaction spans
+generation or delay. PNG bytes are atomically written to configurable local
+storage before metadata publication. Keep SQLite and the storage directory together.
+No expiry or unattached-asset cleanup runs during development. The PostgreSQL
+schema elsewhere in this document remains a future design.

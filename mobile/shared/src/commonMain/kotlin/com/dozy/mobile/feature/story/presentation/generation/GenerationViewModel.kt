@@ -31,7 +31,11 @@ class GenerationViewModel(
                     )
                 }
             is GenerationAction.Refresh -> perform { refresh(action.id) is RefreshGeneration.Result.Updated }
-            is GenerationAction.Retry -> perform { retry(action.id) is RetryGeneration.Result.Accepted }
+            is GenerationAction.Retry -> {
+                val job = uiState.value.jobs.find { it.id == action.id } ?: return
+                if (job.statusUnknown || job.retryPending) return
+                perform { retry(action.id) is RetryGeneration.Result.Accepted }
+            }
         }
     }
 

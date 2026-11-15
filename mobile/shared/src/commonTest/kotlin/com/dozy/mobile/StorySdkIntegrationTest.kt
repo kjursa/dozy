@@ -7,8 +7,6 @@ import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.createHttpClient
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
-import com.dozy.mobile.feature.story.data.api.GenerationAcceptedDto
-import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
 import com.dozy.mobile.feature.story.data.api.StoryPageDto
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
@@ -28,13 +26,93 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 
 class StorySdkIntegrationTest {
-    private val unavailableLegacy =
-        object : LegacyStoryApi {
 
-            override suspend fun retry(
-                id: String,
-                key: String,
-            ): GenerationAcceptedDto? = null
+    @Test fun `SDK retry reconciles persisted key before polling and later failure gets a fresh key`() =
+        runTest {
+            val dao = FakeGenerationDao()
+            val configuration = ProgressApi().configuration
+            val keys = mutableListOf<String>()
+            var lost = true
+            var polls = 0
+            val http =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals("installation", request.headers["X-Installation-Id"])
+                        when (request.url.encodedPath) {
+                            "/api/v1/story-generations" -> respond("""{"jobId":"job","status":"QUEUED"}""", HttpStatusCode.Accepted)
+                            "/api/v1/story-generations/job/retry" -> {
+                                keys += requireNotNull(request.headers["Idempotency-Key"])
+                                if (lost) error("Lost acceptance")
+                                respond("""{"jobId":"job","status":"FAILED"}""", HttpStatusCode.Accepted)
+                            }
+                            else -> {
+                                polls++
+                                respond("""{"jobId":"job","status":"FAILED","errorCode":"GENERATION_FAILED"}""")
+                            }
+                        }
+                    },
+                )
+            val sdk = DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "installation" })
+
+            fun repository() = DefaultGenerationRepository(dao, sdk.storyGenerations, sdk.stories)
+            val id = GenerationJob.Id("job")
+            try {
+                repository().start(GenerationJob.RequestKey("create"), configuration)
+                repository().refresh(id)
+                val snapshot =
+                    dao.rows.value
+                        .single()
+                        .configuration
+                try {
+                    repository().retry(id, GenerationJob.RequestKey("retry-one"))
+                } catch (_: IllegalStateException) {
+                }
+                assertEquals(
+                    "retry-one",
+                    dao.rows.value
+                        .single()
+                        .retryKey,
+                )
+                // A status poll must not clear acceptance uncertainty, even for a terminal state.
+                repository().refresh(id)
+                assertEquals(1, polls)
+                assertEquals(
+                    "retry-one",
+                    dao.rows.value
+                        .single()
+                        .retryKey,
+                )
+                lost = false
+                repository().retry(id, GenerationJob.RequestKey("unused"))
+                assertEquals(listOf("retry-one", "retry-one"), keys)
+                assertNull(
+                    dao.rows.value
+                        .single()
+                        .retryKey,
+                )
+                assertTrue(
+                    dao.rows.value
+                        .single()
+                        .statusUnknown,
+                )
+                repository().refresh(id)
+                repository().retry(id, GenerationJob.RequestKey("retry-two"))
+                assertEquals(listOf("retry-one", "retry-one", "retry-two"), keys)
+                assertEquals(
+                    "job",
+                    dao.rows.value
+                        .single()
+                        .jobId,
+                )
+                assertEquals(
+                    snapshot,
+                    dao.rows.value
+                        .single()
+                        .configuration,
+                )
+            } finally {
+                http.close()
+            }
         }
 
     @Test fun `shared listing traverses pages with identity and accepts configured local covers without generation`() = runTest {
@@ -52,7 +130,7 @@ class StorySdkIntegrationTest {
         })
         try {
             val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"), InstallationIdProvider { "installation" })
-            val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories, unavailableLegacy)
+            val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories)
             assertTrue(repo.refreshStories())
             assertEquals(listOf(null, "opaque /+"), cursors)
             assertEquals(listOf("a", "b"), repo.summaries().first().map { it.id.value })
@@ -96,7 +174,7 @@ class StorySdkIntegrationTest {
                 )
             val sdk = DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "installation" })
 
-            fun repository() = DefaultGenerationRepository(dao, sdk.storyGenerations, sdk.stories, unavailableLegacy)
+            fun repository() = DefaultGenerationRepository(dao, sdk.storyGenerations, sdk.stories)
             val key = GenerationJob.RequestKey("stable")
             try {
                 try {

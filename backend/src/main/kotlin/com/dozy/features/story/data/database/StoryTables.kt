@@ -18,6 +18,8 @@ internal object StoryJobs : Table("story_jobs") {
     val error = text("error_code").nullable()
     val leaseToken = text("lease_token").nullable()
     val leaseUntil = long("lease_until")
+    val executionId = text("execution_id")
+    val ordinal = integer("ordinal")
     val executionCount = integer("execution_count")
     override val primaryKey = PrimaryKey(id)
 }
@@ -30,5 +32,16 @@ internal object Stories : Table("stories") {
     val coverUrl = text("cover_url")
     val configuration = text("configuration")
     val createdAt = long("created_at")
+    override val primaryKey = PrimaryKey(id)
+}
+
+internal object StoryExecutions : Table("story_executions") {
+    val id = text("id")
+    val installation = text("installation_id")
+    val jobId = text("job_id")
+    val key = text("idempotency_key")
+    val operation = text("operation")
+    val ordinal = integer("ordinal")
+    val stage = text("stage")
     override val primaryKey = PrimaryKey(id)
 }

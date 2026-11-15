@@ -52,6 +52,7 @@ class GenerationWorker(
     private suspend fun execute(execution: Execution) {
         if (execution.job.stage == Stage.CREATING_TEXT) {
             val result = try {
+                if (config.textMode == GenerationConfig.TextMode.FAIL_ONCE && execution.ordinal == 1) error("Configured first execution failure")
                 text.generate(execution.configuration)
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (_: ContentRejectedException) {
