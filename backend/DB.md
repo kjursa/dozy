@@ -466,6 +466,10 @@ The schema uses composite foreign keys and partial unique indexes supported by
 Cross-row invariants described above require transactions/application checks;
 PostgreSQL CHECK constraints cannot enforce arbitrary cross-table conditions.
 
+## Stable library snapshots (API4)
+
+`V6__library_snapshots.sql` stores installation-owned `library_snapshots` with the request limit and ordered summary JSON. The first page collects immutable stories in one SQLite transaction, ordered by createdAt descending and lexical ID ascending. `library_cursors` stores opaque random tokens bound to snapshot and position; subsequent pages validate owner and limit before reading. Issued tokens and summaries survive restart. New publication cannot change a traversal. Snapshots and cursors are retained without expiry for this development phase.
+
 ## Implemented API2 SQLite jobs
 
 Flyway V5 adds `avatar_jobs`: UUIDv7 primary ID, installation owner, normalized

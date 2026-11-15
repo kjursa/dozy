@@ -8,24 +8,24 @@ import com.dozy.databaseConfig
 import com.dozy.module
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
-import io.ktor.client.request.post
 import io.ktor.client.request.header
+import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import java.net.URI
 import java.nio.file.Path
 import java.util.UUID
-import java.net.URI
-import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.io.TempDir
 
 class StoryRoutesTest {
@@ -40,6 +40,18 @@ class StoryRoutesTest {
     }
     private suspend fun HttpClient.read(path: String, installation: String = owner) = get(path) { header("X-Installation-Id", installation) }
 
+    @Test fun `listing defaults empty and rejects invalid limits and cursors`() = testApplication {
+        environment { config = databaseConfig(directory) }
+        application { module() }
+        assertEquals("{\"stories\":[],\"nextCursor\":null}", client.read("/api/v1/stories").bodyAsText())
+        for (limit in listOf("0", "101", "abc", "1.5", "", "-1", "1&limit=2")) {
+            val response = client.read("/api/v1/stories?limit=$limit")
+            assertEquals(ApiErrorResponse("VALIDATION_FAILED", "limit", "INVALID_VALUE"), json.decodeFromString(response.bodyAsText()))
+        }
+        for (cursor in listOf("", "unknown", "one&cursor=two")) {
+            assertEquals("INVALID_CURSOR", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/stories?cursor=$cursor").bodyAsText()).code)
+        }
+    }
     @Test fun `retry route uses durable same job and typed errors`() = testApplication {
         environment { config = databaseConfig(directory).apply { put("dozy.generation.textMode", "FAIL_ONCE") } }
         application { module() }

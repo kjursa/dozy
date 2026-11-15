@@ -1,11 +1,11 @@
 # Story generation contract (API3, F9–F13)
 
 Story start/status/retry are implemented by the shared SDK and deterministic fake
-backend. Remote paginated library listing remains a proposal for API4. CHARACTER_DATA.md and PLACE_DATA.md define the reused
+backend. Stable remote library listing is implemented. CHARACTER_DATA.md and PLACE_DATA.md define the reused
 snapshot fields. A null ApiConfig base URL sends no HTTP and reports unavailability.
 
 `DefaultGenerationRepository` directly injects `StoryGenerationsClients`,
-`StoriesClients`, and the existing Room DAO; `LegacyStoryApi` retains only listing. Shared story DTOs replace mobile-owned transport models.
+`StoriesClients`, and the existing Room DAO. Shared story DTOs replace mobile-owned transport models.
 All new operations carry the persisted `X-Installation-Id`. Android WorkManager,
 completion notifications, local caches, reader settings and independent cast-only
 new-adventure requests retain their existing behavior. Protected cover loads use
@@ -152,7 +152,7 @@ permission is requested only after the parent taps the opt-in action on progress
 Home and library still show the saved result. Granting permission schedules a check.
 Open progress stays on its ready card with a Read story action; no automatic jump.
 
-**Backend/system integration:** configure the implemented local fake backend and enable ApiConfig to use submission/progress/reading. Remote listing remains API4 scope; retry is implemented in API5. The current
+**Backend/system integration:** configure the implemented local fake backend and enable ApiConfig to use submission/progress/reading. Stable remote listing and failed-job retry are implemented. The current
 client uses polling, not push, so completion alerts can be delayed by Doze, OS quotas,
 network loss, or manufacturer restrictions. Android force-stop suppresses background
 work until the user opens the app again; permission cannot override this. Guaranteed
@@ -217,14 +217,13 @@ Pages belong to a stable snapshot, have unique story IDs across pages, and use
 opaque URL-encoded cursors. The last page omits `nextCursor` or returns null. A
 refresh starts at the first page and follows all cursors; repeated/blank cursors,
 duplicate IDs, invalid metadata or malformed pages fail the refresh. The client
-validates all pages before merging. Cancellation propagates. Retry is an explicit
+validates all pages before replacing remote summary rows in one Room transaction. Cancellation propagates. Retry is an explicit
 idempotent GET starting at page one; no generation, cover generation or POST occurs.
 
-Errors use the existing `{code}` envelope: 400 INVALID_CURSOR, 401 UNAUTHORIZED,
-429 RATE_LIMITED, 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
+Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_INSTALLATION_ID,
+422 VALIDATION_FAILED (`limit`, `INVALID_VALUE`), 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
 retryable library error while retaining known cards; raw server messages are not
-shown. Transport I/O failures and null ApiConfig show the offline library, without
-claiming a successful synchronization. Null configuration sends no requests.
+shown. Transport failures retain the cache and show a retryable error. Null ApiConfig shows the offline library without claiming synchronization and sends no requests.
 
 The existing shared GenerationRepository owns both jobs and stories; no parallel
 list repository is introduced. DozyDatabase v8 adds nullable summary JSON to the
@@ -233,8 +232,7 @@ reserved `library:<id>` rows without jobs. Locally completed jobs and durable re
 fetches continue storing the complete result in their existing rows. Observation
 merges by story ID, choosing the metadata with the newest creation timestamp and
 sorting deterministically. Summary refresh never overwrites full text, job status,
-configuration or notification state and never deletes absent stories, including on
-empty responses or temporary failures. The reader fetches full text only when no
+configuration or notification state. Successful traversal replaces remote summary rows, including clearing them on an empty result; failures preserve them. The reader fetches full text only when no
 local result exists. A remote summary alone therefore does not promise offline text.
 
 
@@ -290,3 +288,7 @@ fencing; no transaction is held during either generator. Only generator failures
 produce FAILED. Transport/status failures continue to display unknown state and
 remain eligible for reconciliation. Deterministic text uses approximately 600/1500
 words; a checked-in PNG fixture supplies the single durable cover.
+
+## Shared listing integration (API4)
+
+The repository calls `StoriesClients.v1.list(ListStoriesRequest)` directly and traverses the complete backend snapshot before a Room transaction replaces `library:<id>` summary rows. A successful empty traversal clears these rows. Failure, cancellation, duplicate IDs or cursor cycles leave the previous cache intact. Pending generations and persisted full reader results remain independent. Home/library reuse existing flows and states; opening a card uses the shared read operation. Local HTTP covers are accepted only after SDK validation against the configured backend origin. No list or refresh operation submits a generation. Legacy HTTP code retains explicit retry only.

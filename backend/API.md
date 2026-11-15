@@ -8,7 +8,7 @@ and response examples. It works locally without a build step or API calls.
 This document combines implemented routes and proposals consolidated from the
 mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
 `PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
-Story start/status/retry/read, protected PNG asset reads and fake avatar generation are implemented. Library listing remains a proposal for API4. `/hello` returns
+Story start/status/retry/read, protected PNG asset reads and fake avatar generation are implemented. Stable library listing is implemented. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
 
@@ -18,8 +18,8 @@ Sources:
 - [Place contract](../mobile/PLACE_DATA.md).
 - [Story contract](../mobile/STORY_GENERATION_API.md), including F9–F13 amendments.
 - [Mobile specification](../mobile/SPEC.MD).
-- Shared Places and Characters contracts and clients under `api/contracts` and `api/client`.
-- Legacy `KtorCharacterApi` and `KtorLegacyStoryApi` under
+- Shared feature contracts and clients under `api/contracts` and `api/client`.
+- Mobile feature repositories under
   `mobile/shared/src/commonMain/kotlin/com/dozy/mobile/feature/`.
 - [Proposed PostgreSQL schema](DB.md).
 
@@ -80,7 +80,7 @@ For example, characters now support deletion, and full story responses include
 | GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
 | POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
 | GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
-| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through saved story summaries (API4 proposal) |
+| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through a persistent, installation-owned snapshot of story summaries |
 | GET | `/api/v1/assets/{assetId}` | 200 | Read an owned durable PNG cover |
 
 There are **13 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
@@ -390,12 +390,11 @@ Summaries omit text and configuration. `readingMinutes` is a positive integer,
 count. Order: descending createdAt, ascending story ID for ties. Use explicit
 lexical ordering consistently rather than locale-dependent sorting.
 
-Mobile requests limit 100; a proposed backend bound is 1–100. Every page belongs
+Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 VALIDATION_FAILED with field `limit` and reason `INVALID_VALUE`. Every page belongs
 to the same stable snapshot, with no repeated IDs; stories published mid-pagination
 appear on a later refresh, not halfway through the current traversal. Cursor is
 opaque, URL-encoded, installation-bound and validated; last page omits it or returns null.
-Errors: `400 INVALID_CURSOR`, `401 UNAUTHORIZED`, `429 RATE_LIMITED`,
-`503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
+Errors: `400 INVALID_CURSOR`, `400 INVALID_INSTALLATION_ID`, `422 VALIDATION_FAILED`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
 concrete snapshot implementation.
 
 ## Background execution and delivery
@@ -464,8 +463,9 @@ header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stabl
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-Explicit retry is implemented through the shared SDK. Paginated listing remains
-future API4 scope. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
+Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-installation and limit-mismatched tokens return INVALID_CURSOR.
+
+Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing
 SUCCESS, FAILURE, CONTENT_REJECTED and cover modes remain available.
 

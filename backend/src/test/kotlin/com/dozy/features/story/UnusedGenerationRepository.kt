@@ -8,11 +8,13 @@ import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.Job
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
+import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.repository.GenerationRepository
 
 /** Keeps unrelated route DI tests independent of background storage. */
 class UnusedGenerationRepository : GenerationRepository {
+    override suspend fun list(installation: InstallationId, limit: Int, cursor: String?): StoryPage? = error("unused")
     override suspend fun claim(): Execution? = null
     override suspend fun start(installation: InstallationId, key: String, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
     override suspend fun retry(installation: InstallationId, id: String, key: String): RetrySubmission = error("Unused")

@@ -8,9 +8,11 @@ import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.Job
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
+import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.domain.model.Submission
 
 interface GenerationRepository {
+    suspend fun list(installation: InstallationId, limit: Int, cursor: String?): StoryPage?
     suspend fun start(installation: InstallationId, key: String, canonicalRequest: String, command: StartGeneration): Submission
     suspend fun retry(installation: InstallationId, id: String, key: String): RetrySubmission
     suspend fun status(installation: InstallationId, id: String): Job?

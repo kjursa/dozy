@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
 import androidx.room3.Room
+import androidx.room3.withWriteTransaction
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.story.data.api.GenerationApi
@@ -12,12 +13,18 @@ import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
 import com.dozy.mobile.feature.story.data.api.StoryPageDto
 import com.dozy.mobile.feature.story.data.api.StorySummaryDto
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
+import com.dozy.mobile.feature.story.data.database.GenerationEntity
 import com.dozy.mobile.feature.story.data.testGenerationRepository
-import com.dozy.mobile.feature.story.domain.model.*
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.presentation.generation.notificationStoryId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +38,29 @@ import org.robolectric.annotation.Config
 class GenerationPersistenceTest {
     @Before fun initializeSharedResources() {
         initializeComposeResourceProvider()
+    }
+
+    @Test fun libraryReplacementIsAtomicAndLeavesPendingGenerationsIndependent() = runBlocking {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val database = Room.inMemoryDatabaseBuilder<DozyDatabase>(context).setDriver(AndroidSQLiteDriver()).build()
+        try {
+            val dao = database.generations()
+            val pending = GenerationEntity("pending", "configuration", jobId = "job", status = "QUEUED")
+            val old = GenerationEntity("library:old", "", summary = "old")
+            dao.upsert(pending)
+            dao.replaceLibrary(listOf(old))
+            try {
+                database.withWriteTransaction {
+                    dao.replaceLibrary(listOf(GenerationEntity("library:new", "", summary = "new")))
+                    throw CancellationException("cancel transaction")
+                }
+                fail("Cancellation must propagate")
+            } catch (_: CancellationException) {
+            }
+            assertEquals(setOf(pending, old), dao.observe().first().toSet())
+            dao.replaceLibrary(emptyList())
+            assertEquals(listOf(pending), dao.observe().first())
+        } finally { database.close() }
     }
 
     @Test fun remoteSummariesSurviveRestartWithoutDownloadingFullStories() =

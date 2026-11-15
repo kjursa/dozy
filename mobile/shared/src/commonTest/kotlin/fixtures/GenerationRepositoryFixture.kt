@@ -1,21 +1,24 @@
 package com.dozy.mobile.feature.story.data
 
+import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.story.StoriesClients
 import com.dozy.api.client.story.v1.StoriesClient
+import com.dozy.api.client.story.v1.StoryListError
 import com.dozy.api.client.story.v1.StoryReadError
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
 import com.dozy.api.client.storygeneration.v1.GenerationRetryError
 import com.dozy.api.client.storygeneration.v1.GenerationStartError
 import com.dozy.api.client.storygeneration.v1.GenerationStatusError
 import com.dozy.api.client.storygeneration.v1.StoryGenerationsClient
+import com.dozy.api.contracts.v1.story.ListStoriesRequest
 import com.dozy.mobile.feature.story.data.api.GenerationAcceptedDto
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
 import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
-import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
 import com.dozy.mobile.feature.story.data.api.StoryDto
 import com.dozy.mobile.feature.story.data.api.StoryNotFoundException
+import com.dozy.mobile.feature.story.data.api.StoryPageDto
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 
 internal fun testGenerationRepository(
@@ -45,6 +48,9 @@ internal fun testGenerationRepository(
     object : StoriesClients {
         override val v1 =
             object : StoriesClient {
+                override suspend fun list(request: ListStoriesRequest): ApiResult<StoryPageDto, StoryListError> =
+                    api.stories(request.cursor)?.let { ApiResult.Success(it) } ?: throw ApiDisabledException()
+
                 override suspend fun read(storyId: String): ApiResult<StoryDto, StoryReadError> =
                     try {
                         api.story(storyId)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(StoryReadError.Unavailable)
@@ -52,8 +58,5 @@ internal fun testGenerationRepository(
                         ApiResult.Failure(StoryReadError.NotFound)
                     }
             }
-    },
-    object : LegacyStoryApi {
-        override suspend fun stories(cursor: String?) = api.stories(cursor)
     },
 )

@@ -13,7 +13,7 @@ The Android app supports saved characters and places, manual or automatic story 
 
 | Screen | Implementation status |
 | --- | --- |
-| Home / My Stories | Persisted local stories and jobs; remote paginated listing is reserved for API4. |
+| Home / My Stories | Persisted stories and independent jobs; shared SDK listing refreshes a stable remote library snapshot. |
 | Characters / Places | Local-first collections and forms using shared SDK clients. Backend fake avatar jobs are available through API2; cast snapshots may have no avatar. |
 | Story creation | Saved cast, optional manual setting/idea/ending, automatic mode, SHORT/LONG lengths. |
 | Generation progress | Backend stages, leave/reopen, status recovery and completion. Idempotent failed-job retry preserves the job and immutable snapshot. |
@@ -25,7 +25,7 @@ See [mobile/README.md](mobile/README.md) for running and building the Android ap
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. It also implements story submission/status/retry, immutable story reads, and installation-scoped PNG cover delivery. Remote library listing remains a proposal for API4 in [the API reference](backend/API.md). API2 also supplies asynchronous avatar jobs with deterministic fixture PNG generation.
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. It also implements story submission/status/retry, immutable story reads, and installation-scoped PNG cover delivery. Stable library listing is implemented in [the API reference](backend/API.md). API2 also supplies asynchronous avatar jobs with deterministic fixture PNG generation.
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 

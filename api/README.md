@@ -16,7 +16,7 @@ launch or E2E suite is included.
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
-Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing remains outside these SDK containers. Avatar jobs are implemented by API2.
+Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing uses `stories.v1.list(ListStoriesRequest)`. Avatar jobs are implemented by API2.
 
 Avatar DTOs,
 states and failure codes live in `contracts.v1.characteravatar` and reuse the
@@ -162,3 +162,7 @@ check versioned paths, installation headers, serialization, acknowledgements,
 structured/non-JSON errors, disabled configuration, additive fields, cancellation,
 and malformed payloads. Backend route tests retain raw HTTP/JSON coverage. These
 are unit/component tests, not E2E.
+
+## Story library listing (API4)
+
+`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `ApiResult<StoryPageDto, StoryListError>`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known errors include InvalidCursor, Validation and Unavailable; unknown codes/details remain Unknown. Structural errors and malformed pages remain exceptions. Cursors are opaque, URL-encoded by the client, and bound to a persistent installation-owned snapshot, request limit and position. The final page returns nextCursor null.

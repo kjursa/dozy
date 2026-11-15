@@ -9,6 +9,9 @@ import com.dozy.api.contracts.v1.story.StoryLength
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StoryPageDto
+import com.dozy.api.contracts.v1.story.StorySummaryDto
+import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
 import com.dozy.features.story.domain.model.Job
@@ -59,3 +62,8 @@ internal fun JsonObject.command(): StartGeneration {
 }
 internal fun Job.toDto() = GenerationStatusDto(id, stage.name, storyId, failure?.name)
 internal fun SavedStory.toDto() = StoryDto(id, title, text, coverUrl, configuration.toDto(), createdAt)
+
+internal fun StoryPage.toDto() = StoryPageDto(
+    stories.map { StorySummaryDto(it.id, it.title, it.coverUrl, it.readingMinutes, it.createdAt) },
+    nextCursor,
+)

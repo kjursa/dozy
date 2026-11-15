@@ -1,14 +1,18 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.story.v1.StoryListError
 import com.dozy.api.client.story.v1.StoryReadError
 import com.dozy.api.client.storygeneration.v1.GenerationRetryError
 import com.dozy.api.client.storygeneration.v1.GenerationStartError
 import com.dozy.api.client.storygeneration.v1.GenerationStatusError
+import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
-import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.api.contracts.v1.story.GenerationField
-import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.ListStoriesRequest
+import com.dozy.api.contracts.v1.story.StoryPageDto
+import com.dozy.api.contracts.v1.story.StoryListField
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -27,6 +31,29 @@ import kotlinx.serialization.json.jsonObject
 class StoryClientsTest {
     private val input = GenerationRequestDto(listOf(CharacterDto("hero", "Luna", "Kind", "Coat", "ANIMAL")), "AUTOMATIC", "SHORT", idea = "hidden", ending = "hidden")
     private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/service"), InstallationIdProvider { "installation" })
+
+    @Test fun `listing encodes opaque cursor sends identity and maps error codes independent of status`() = runTest {
+        val http = HttpClient(MockEngine { request ->
+            assertEquals("/service/api/v1/stories", request.url.encodedPath)
+            assertEquals("installation", request.headers["X-Installation-Id"])
+            assertEquals("a /+?&", request.url.parameters["cursor"])
+            assertEquals("2", request.url.parameters["limit"])
+            respond("""{"stories":[],"nextCursor":null}""")
+        })
+        try { assertEquals(emptyList(), assertIs<ApiResult.Success<StoryPageDto>>(sdk(http).stories.v1.list(ListStoriesRequest(2, "a /+?&"))).value.stories) } finally { http.close() }
+        for ((body, expected) in listOf(
+            """{"code":"INVALID_CURSOR"}""" to StoryListError.InvalidCursor,
+            """{"code":"UNAVAILABLE"}""" to StoryListError.Unavailable,
+            """{"code":"VALIDATION_FAILED","field":"limit","reason":"INVALID_VALUE"}""" to StoryListError.Validation(StoryListField.LIMIT, ValidationReason.INVALID_VALUE),
+        )) {
+            val errors = HttpClient(MockEngine { respond(body, HttpStatusCode.InternalServerError) })
+            try { assertEquals(ApiResult.Failure(expected), sdk(errors).stories.v1.list(ListStoriesRequest())) } finally { errors.close() }
+        }
+        for (body in listOf("""{"code":"FUTURE"}""", """{"code":"INVALID_CURSOR","field":"future"}""", """{"code":"VALIDATION_FAILED","field":"limit","reason":"REQUIRED"}""")) {
+            val errors = HttpClient(MockEngine { respond(body, HttpStatusCode.BadRequest) })
+            try { assertIs<StoryListError.Unknown>(assertIs<ApiResult.Failure<*>>(sdk(errors).stories.v1.list(ListStoriesRequest())).error) } finally { errors.close() }
+        }
+    }
 
     @Test fun `retry sends no body and maps contract codes independently of status`() = runTest {
         val http = HttpClient(MockEngine { request ->

@@ -1,25 +1,76 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.core.config.ApiConfig
-import com.dozy.mobile.feature.story.data.*
-import com.dozy.mobile.feature.story.data.api.*
-import com.dozy.mobile.feature.story.domain.model.*
-import com.dozy.mobile.feature.story.domain.usecase.*
+import com.dozy.mobile.feature.story.data.api.GenerationApi
+import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
+import com.dozy.mobile.feature.story.data.api.KtorGenerationApi
+import com.dozy.mobile.feature.story.data.api.StoryDto
+import com.dozy.mobile.feature.story.data.api.StoryPageDto
+import com.dozy.mobile.feature.story.data.api.StorySummaryDto
+import com.dozy.mobile.feature.story.data.testGenerationRepository
+import com.dozy.mobile.feature.story.data.toDomain
+import com.dozy.mobile.feature.story.data.toDto
+import com.dozy.mobile.feature.story.data.toSummaryDto
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.model.Story
+import com.dozy.mobile.feature.story.domain.model.StorySummary
+import com.dozy.mobile.feature.story.domain.usecase.ObserveStoryLibrary
+import com.dozy.mobile.feature.story.domain.usecase.RefreshStories
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.*
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.http.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import kotlin.test.*
 
 class StoryLibraryTest {
     private fun summary(
         id: String,
         time: Long = 100,
     ) = StorySummaryDto(id, "Story $id", "https://example.test/$id.png", 3, time)
+
+    @Test fun completeTraversalReplacesRemoteCacheAndFailedDuplicateCycleOrCancellationRetainsIt() = runTest {
+        val dao = FakeGenerationDao()
+        var mode = "seed"
+        val api = object : GenerationApi by ProgressApi() {
+            override suspend fun stories(cursor: String?): StoryPageDto = when (mode) {
+                "seed" -> StoryPageDto(listOf(summary("old")))
+                "empty" -> StoryPageDto(emptyList())
+                else -> if (cursor == null) StoryPageDto(listOf(summary("new")), "next") else when (mode) {
+                    "duplicate" -> StoryPageDto(listOf(summary("new")))
+                    "cycle" -> StoryPageDto(listOf(summary("another")), "next")
+                    "cancel" -> throw CancellationException("cancel second page")
+                    else -> error("failed second page")
+                }
+            }
+        }
+        val repository = testGenerationRepository(dao, api)
+        assertTrue(repository.refreshStories())
+        val before = dao.rows.value
+        for (failure in listOf("duplicate", "cycle", "failure", "cancel")) {
+            mode = failure
+            try { repository.refreshStories(); fail("Must reject traversal") } catch (_: IllegalArgumentException) {
+            } catch (_: IllegalStateException) {
+            } catch (_: CancellationException) {
+            }
+            assertEquals(before, dao.rows.value)
+        }
+        mode = "empty"
+        assertTrue(repository.refreshStories())
+        assertTrue(repository.summaries().first().isEmpty())
+    }
 
     @Test fun mergesAllPagesWithCompletedJobsWithoutDuplicatesAndKeepsSavedText() =
         runTest {
