@@ -4,6 +4,7 @@ import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.features.installation.api.installationId
 import com.dozy.features.story.application.StoryService
+import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.plugins.ApiException
 import io.ktor.http.HttpStatusCode
@@ -26,6 +27,17 @@ fun Route.storyV1Routes(service: StoryService) {
             Submission.IdempotencyConflict -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.IDEMPOTENCY_CONFLICT)
             Submission.ActiveJobExists -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.ACTIVE_JOB_EXISTS)
             Submission.ReferenceUnavailable -> throw ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.REFERENCE_UNAVAILABLE)
+        }
+    }
+    post("/story-generations/{id}/retry") {
+        val installation = call.installationId()
+        val key = requireUuid(call.request.headers.getAll("Idempotency-Key")?.singleOrNull(), 4)
+        when (val result = service.retry(installation, call.parameters["id"].orEmpty(), key)) {
+            is RetrySubmission.Accepted -> call.respond(HttpStatusCode.Accepted, GenerationAcceptedDto(result.job.id, result.job.stage.name))
+            RetrySubmission.JobNotFound -> throw ApiException(HttpStatusCode.NotFound, ApiErrorCode.JOB_NOT_FOUND)
+            RetrySubmission.JobNotFailed -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.JOB_NOT_FAILED)
+            RetrySubmission.ActiveJobExists -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.ACTIVE_JOB_EXISTS)
+            RetrySubmission.IdempotencyConflict -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.IDEMPOTENCY_CONFLICT)
         }
     }
     get("/story-generations/{id}") {

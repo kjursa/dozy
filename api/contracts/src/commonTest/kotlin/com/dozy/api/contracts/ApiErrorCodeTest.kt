@@ -17,6 +17,10 @@ class ApiErrorCodeTest {
             ApiErrorCode.FORBIDDEN to "FORBIDDEN",
             ApiErrorCode.CONFLICT to "CONFLICT",
             ApiErrorCode.UNAVAILABLE to "UNAVAILABLE",
+            ApiErrorCode.JOB_NOT_FAILED to "JOB_NOT_FAILED",
+            ApiErrorCode.JOB_NOT_FOUND to "JOB_NOT_FOUND",
+            ApiErrorCode.IDEMPOTENCY_CONFLICT to "IDEMPOTENCY_CONFLICT",
+            ApiErrorCode.ACTIVE_JOB_EXISTS to "ACTIVE_JOB_EXISTS",
         )
         expected.forEach { (code, value) ->
             assertEquals(value, code.value)

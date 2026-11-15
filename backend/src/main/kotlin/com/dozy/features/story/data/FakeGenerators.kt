@@ -14,7 +14,7 @@ class FakeTextGenerator(private val config: GenerationConfig) : TextGenerator {
         when (config.textMode) {
             GenerationConfig.TextMode.FAILURE -> error("Configured text failure")
             GenerationConfig.TextMode.CONTENT_REJECTED -> throw ContentRejectedException()
-            GenerationConfig.TextMode.SUCCESS -> Unit
+            GenerationConfig.TextMode.FAIL_ONCE, GenerationConfig.TextMode.SUCCESS -> Unit
         }
         val heroes = configuration.cast.joinToString(" and ") { it.name }
         val setting = configuration.place?.name ?: "the quiet moonlit garden"

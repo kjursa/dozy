@@ -12,6 +12,7 @@ import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.Failure
 import com.dozy.features.story.domain.model.StoryConfiguration
 import com.dozy.features.story.domain.model.Stage
+import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.data.database.StoryJobs
 import com.dozy.features.asset.data.database.Assets
@@ -43,6 +44,74 @@ class GenerationRepositoryTest {
     private val stranger = InstallationId("019a0000-0000-7000-8000-000000000011")
     private val dbConfig get() = DatabaseConfig(directory.resolve("dozy.db").toString(), 5000)
     private val config = GenerationConfig(delayMillis = 0, leaseMillis = 300)
+
+    @Test fun `fail once retry survives restart replays before lifecycle and publishes once`() = runBlocking {
+        val options = config.copy(textMode = GenerationConfig.TextMode.FAIL_ONCE)
+        val first = SqliteDatabase(dbConfig)
+        val repository = SqliteGenerationRepository(first, options)
+        val originalKey = UUID.randomUUID().toString()
+        val job = assertIs<Submission.Accepted>(repository.start(installation, originalKey, "snapshot", command())).job
+        val worker = GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options)
+        assertTrue(worker.runOne())
+        assertEquals(Stage.FAILED, repository.status(installation, job.id)?.stage)
+        assertIs<RetrySubmission.IdempotencyConflict>(repository.retry(installation, job.id, originalKey))
+        assertIs<RetrySubmission.JobNotFound>(repository.retry(stranger, job.id, UUID.randomUUID().toString()))
+        val key = UUID.randomUUID().toString()
+        val accepted = assertIs<RetrySubmission.Accepted>(repository.retry(installation, job.id, key))
+        assertEquals(job, accepted.job)
+        assertIs<RetrySubmission.IdempotencyConflict>(repository.retry(installation, "other", key))
+        assertIs<Submission.IdempotencyConflict>(repository.start(installation, key, "snapshot", command()))
+        assertIs<RetrySubmission.JobNotFailed>(repository.retry(installation, job.id, UUID.randomUUID().toString()))
+        first.close()
+        SqliteDatabase(dbConfig).use { second ->
+            val recovered = SqliteGenerationRepository(second, options)
+            assertEquals(accepted, recovered.retry(installation, job.id, key))
+            assertTrue(GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+            val ready = assertNotNull(recovered.status(installation, job.id))
+            assertEquals(Stage.READY, ready.stage)
+            assertEquals(Stage.READY, assertIs<RetrySubmission.Accepted>(recovered.retry(installation, job.id, key)).job.stage)
+            assertEquals(command().configuration, recovered.read(installation, requireNotNull(ready.storyId))?.configuration)
+            assertFalse(GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+        }
+    }
+
+    @Test fun `concurrent retries archive each attempt and stale results cannot change newer execution`() = runBlocking {
+        SqliteDatabase(dbConfig).use { db ->
+            val repository = SqliteGenerationRepository(db, config)
+            val job = assertIs<Submission.Accepted>(repository.start(installation, UUID.randomUUID().toString(), "snapshot", command())).job
+            val stale = assertNotNull(repository.claim())
+            repository.fail(stale, Failure.GENERATION_FAILED)
+            val key = UUID.randomUUID().toString()
+            val results = List(8) { async { repository.retry(installation, job.id, key) } }.awaitAll()
+            results.forEach { assertEquals(job, assertIs<RetrySubmission.Accepted>(it).job) }
+            val execution = assertNotNull(repository.claim())
+            assertEquals(2, execution.ordinal)
+            assertFalse(repository.saveText(stale, GeneratedText("Stale", "Stale")))
+            assertFalse(repository.publish(stale, byteArrayOf(1)))
+            repository.fail(stale, Failure.CONTENT_REJECTED)
+            assertEquals(Stage.CREATING_TEXT, repository.status(installation, job.id)?.stage)
+            repository.fail(execution, Failure.GENERATION_FAILED)
+            val competing = assertIs<Submission.Accepted>(repository.start(installation, UUID.randomUUID().toString(), "snapshot", command())).job
+            assertIs<RetrySubmission.ActiveJobExists>(repository.retry(installation, job.id, UUID.randomUUID().toString()))
+            // Recorded binding wins over the different active job and FAILED lifecycle.
+            assertEquals(Stage.FAILED, assertIs<RetrySubmission.Accepted>(repository.retry(installation, job.id, key)).job.stage)
+            repository.fail(assertNotNull(repository.claim()), Failure.GENERATION_FAILED)
+            val newKeys = List(8) { UUID.randomUUID().toString() }
+            val attempts = newKeys.map { async { repository.retry(installation, job.id, it) } }.awaitAll()
+            assertEquals(1, attempts.count { it is RetrySubmission.Accepted })
+            assertEquals(7, attempts.count { it is RetrySubmission.JobNotFailed })
+            assertEquals(Stage.FAILED, assertIs<RetrySubmission.Accepted>(repository.retry(installation, job.id, key)).job.stage)
+            assertEquals(Stage.FAILED, repository.status(installation, competing.id)?.stage)
+            val latest = assertNotNull(repository.claim())
+            assertEquals(3, latest.ordinal)
+            assertTrue(repository.saveText(latest, GeneratedText("Final", "Final")))
+            assertTrue(repository.publish(latest, byteArrayOf(1)))
+            assertFalse(repository.publish(latest, byteArrayOf(1)))
+            repository.fail(execution, Failure.GENERATION_FAILED)
+            assertEquals(Stage.READY, repository.status(installation, job.id)?.stage)
+            assertEquals(Stage.FAILED, assertIs<RetrySubmission.Accepted>(repository.retry(installation, job.id, key)).job.stage)
+        }
+    }
 
     @Test fun `atomic concurrent start replay ordering active limit and isolation`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->

@@ -5,6 +5,7 @@ import com.dozy.api.client.story.StoriesClients
 import com.dozy.api.client.story.v1.StoriesClient
 import com.dozy.api.client.story.v1.StoryReadError
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.api.client.storygeneration.v1.GenerationRetryError
 import com.dozy.api.client.storygeneration.v1.GenerationStartError
 import com.dozy.api.client.storygeneration.v1.GenerationStatusError
 import com.dozy.api.client.storygeneration.v1.StoryGenerationsClient
@@ -31,6 +32,12 @@ internal fun testGenerationRepository(
                 ): ApiResult<GenerationAcceptedDto, GenerationStartError> =
                     api.start(idempotencyKey, request)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(GenerationStartError.Unavailable)
 
+                override suspend fun retry(
+                    jobId: String,
+                    idempotencyKey: String,
+                ): ApiResult<GenerationAcceptedDto, GenerationRetryError> =
+                    api.retry(jobId, idempotencyKey)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(GenerationRetryError.Unavailable)
+
                 override suspend fun status(jobId: String): ApiResult<GenerationStatusDto, GenerationStatusError> =
                     api.status(jobId)?.let { ApiResult.Success(it) } ?: ApiResult.Failure(GenerationStatusError.Unavailable)
             }
@@ -48,10 +55,5 @@ internal fun testGenerationRepository(
     },
     object : LegacyStoryApi {
         override suspend fun stories(cursor: String?) = api.stories(cursor)
-
-        override suspend fun retry(
-            id: String,
-            key: String,
-        ) = api.retry(id, key)
     },
 )

@@ -1,6 +1,7 @@
 package com.dozy.api.client
 
 import com.dozy.api.client.story.v1.StoryReadError
+import com.dozy.api.client.storygeneration.v1.GenerationRetryError
 import com.dozy.api.client.storygeneration.v1.GenerationStartError
 import com.dozy.api.client.storygeneration.v1.GenerationStatusError
 import com.dozy.api.contracts.v1.character.CharacterDto
@@ -26,6 +27,31 @@ import kotlinx.serialization.json.jsonObject
 class StoryClientsTest {
     private val input = GenerationRequestDto(listOf(CharacterDto("hero", "Luna", "Kind", "Coat", "ANIMAL")), "AUTOMATIC", "SHORT", idea = "hidden", ending = "hidden")
     private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/service"), InstallationIdProvider { "installation" })
+
+    @Test fun `retry sends no body and maps contract codes independently of status`() = runTest {
+        val http = HttpClient(MockEngine { request ->
+            assertEquals("/service/api/v1/story-generations/job/retry", request.url.encodedPath)
+            assertEquals("POST", request.method.value)
+            assertEquals("installation", request.headers["X-Installation-Id"])
+            assertEquals("retry-key", request.headers["Idempotency-Key"])
+            assertEquals(0L, request.body.contentLength)
+            respond("""{"jobId":"job","status":"FAILED"}""", HttpStatusCode.Accepted)
+        })
+        try {
+            assertEquals(ApiResult.Success(GenerationAcceptedDto("job", "FAILED")), sdk(http).storyGenerations.v1.retry("job", "retry-key"))
+        } finally { http.close() }
+        for ((code, expected) in listOf(
+            "JOB_NOT_FOUND" to GenerationRetryError.JobNotFound,
+            "JOB_NOT_FAILED" to GenerationRetryError.JobNotFailed,
+            "ACTIVE_JOB_EXISTS" to GenerationRetryError.ActiveJobExists,
+            "IDEMPOTENCY_CONFLICT" to GenerationRetryError.IdempotencyConflict,
+            "UNAVAILABLE" to GenerationRetryError.Unavailable,
+        )) {
+            val errors = HttpClient(MockEngine { respond("""{"code":"$code"}""", HttpStatusCode.InternalServerError) })
+            try { assertEquals(ApiResult.Failure(expected), sdk(errors).storyGenerations.v1.retry("job", "key")) }
+            finally { errors.close() }
+        }
+    }
 
     @Test fun `versioned containers submit snapshot omission key identity and retrieve status and story`() = runTest {
         var calls = 0

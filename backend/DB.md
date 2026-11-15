@@ -66,7 +66,7 @@ endpoint or production asset seeding is included. API2 will populate this regist
 only test fixtures seed ready metadata today. Null avatars remain valid for
 historical records. Read mapping never applies current write length limits.
 
-### Durable story execution (V3)
+### Durable story execution (V3/V4)
 
 `story_jobs` stores the original canonical request, normalized accepted configuration,
 operation, installation/key binding, preallocated UUIDv7 story/asset IDs, stage,
@@ -79,8 +79,13 @@ transactions. Concurrency is bounded by typed configuration. A 30-second lease i
 renewed during generation. On process death another worker recovers the stored
 stage when its lease expires, reusing persisted text at CREATING_COVER. Lease tokens
 fence old executions. Storage failures leave work recoverable; generator failures
-alone produce terminal failure codes. API5 can add execution bindings without
-rewriting the existing operation/request/key binding.
+alone produce terminal failure codes. V4 adds `story_executions`: a UUIDv7 identity,
+installation-wide operation/key reservation, job ID, ordinal and durable stage for
+each accepted execution, including CREATE. Acceptance atomically inserts the binding
+and resets only the failed current job to QUEUED, clearing intermediate text and
+leases. Archived stages remain replayable even after newer executions. Workers
+guard writes with both execution identity and lease token; recovery keeps the ordinal.
+The original configuration, job/story/asset IDs and CREATE key remain unchanged.
 
 Publishing inserts `assets`, `asset_contents` (local PNG bytes), and immutable
 `stories` and transitions the job to READY in one transaction. A unique story job

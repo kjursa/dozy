@@ -16,7 +16,7 @@ The Android app supports saved characters and places, manual or automatic story 
 | Home / My Stories | Persisted local stories and jobs; remote paginated listing is reserved for API4. |
 | Characters / Places | Local-first collections and forms using shared SDK clients. Remote avatar generation is reserved for API2; cast snapshots may have no avatar. |
 | Story creation | Saved cast, optional manual setting/idea/ending, automatic mode, SHORT/LONG lengths. |
-| Generation progress | Backend stages, leave/reopen, status recovery and completion. Explicit server retry is reserved for API5. |
+| Generation progress | Backend stages, leave/reopen, status recovery and completion. Idempotent failed-job retry preserves the job and immutable snapshot. |
 | Reader | Immutable cover and text, reading settings, and a new independent adventure with the same heroes. |
 
 Server execution continues after leaving the screen. Android background observation and notifications retain their existing WorkManager behavior; iOS has no background scheduler or server push.
@@ -25,7 +25,7 @@ See [mobile/README.md](mobile/README.md) for running and building the Android ap
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. It also implements story submission/status, immutable story reads, and installation-scoped PNG cover delivery. Remote library listing and explicit retry remain proposals for API4/API5 in [the API reference](backend/API.md).
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. It also implements story submission/status, immutable story reads, and installation-scoped PNG cover delivery. Remote library listing remains a proposal for API4 in [the API reference](backend/API.md).
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 
@@ -35,7 +35,7 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 | `PORT` | `8080` | Listen port |
 | `DOZY_DATABASE_PATH` | `data/dozy.db` | Persistent SQLite file, relative to the server working directory |
 | `DOZY_DATABASE_BUSY_TIMEOUT_MS` | `5000` | SQLite lock wait, from 1 to 60000 ms |
-| `DOZY_STORY_TEXT_MODE` | `SUCCESS` | `SUCCESS`, `FAILURE`, or `CONTENT_REJECTED` |
+| `DOZY_STORY_TEXT_MODE` | `SUCCESS` | `SUCCESS`, `FAILURE`, `CONTENT_REJECTED`, or `FAIL_ONCE` |
 | `DOZY_STORY_COVER_MODE` | `SUCCESS` | `SUCCESS` or `FAILURE` |
 | `DOZY_STORY_DELAY_MS` | `250` | Delay per fake generator in milliseconds |
 | `DOZY_STORY_CONCURRENCY` | `2` | Worker concurrency, 1–32 |

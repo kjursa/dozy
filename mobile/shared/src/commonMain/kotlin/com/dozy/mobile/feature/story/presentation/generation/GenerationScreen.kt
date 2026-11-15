@@ -70,7 +70,7 @@ internal fun GenerationCard(
                     enabled = !busy,
                 ) { Text(stringResource(Res.string.generation_read)) }
             } else {
-                if (job.status == GenerationJob.Status.FAILED && !job.statusUnknown) {
+                if (job.status == GenerationJob.Status.FAILED && !job.statusUnknown && !job.retryPending) {
                     Button(
                         onClick = { dispatch(GenerationAction.Retry(job.id)) },
                         enabled = !busy,
