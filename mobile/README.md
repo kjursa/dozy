@@ -153,8 +153,8 @@ Character CRUD uses the shared `CharactersClients` container with persisted
 installation identity. Saves/edits and deletion tombstones are durable before HTTP;
 refresh retries pending mutations and replaces only synced collection data.
 Android injects the common Kotlin UUIDv7 character ID generator. Bundled development
-avatars remain local-only. Remote avatar generation arrives in API2; this backend
-currently validates references against asset metadata without generating assets.
+avatars remain local-only. API2 generates deterministic fake PNGs and validates
+character references against the shared owned asset registry.
 See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantics.
 
 ## Local fake story generation
@@ -172,3 +172,5 @@ Build the Android debug app against that backend with
 `./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
 Without this property, remote APIs remain disabled. Debug builds allow cleartext
 for local development; release builds retain Android's HTTPS-only default.
+
+API2 uses shared `CharacterAvatarsClients` and repository polling. See [character data](CHARACTER_DATA.md) and the root README for local development URLs and debug build configuration.

@@ -3,7 +3,9 @@ package com.dozy.mobile.feature.character.data
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.ApiResult
 import com.dozy.api.client.character.CharactersClients
-import com.dozy.mobile.feature.character.data.api.CharacterApi
+import com.dozy.api.client.characteravatar.CharacterAvatarsClients
+import com.dozy.api.contracts.v1.characteravatar.AvatarJobState
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.domain.model.Character
@@ -12,6 +14,7 @@ import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
 import com.dozy.mobile.feature.character.domain.model.SavedCharacter
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -21,11 +24,40 @@ import kotlinx.coroutines.sync.withLock
 class DefaultCharacterRepository(
     private val dao: CharacterDao,
     private val characters: CharactersClients,
-    private val avatars: CharacterApi,
+    private val avatars: CharacterAvatarsClients,
+    private val config: ApiConfig = ApiConfig(null),
 ) : CharacterRepository {
     private val mutations = Mutex()
 
-    override suspend fun generateAvatar(input: CreateCharacterInput) = avatars.generateAvatar(input.toAvatarDto())?.toDomain()
+    override suspend fun generateAvatar(input: CreateCharacterInput): Character.Avatar? {
+        var job =
+            try {
+                when (val result = avatars.v1.start(input.toAvatarDto())) {
+                    is ApiResult.Success -> result.value
+                    is ApiResult.Failure -> error("Avatar submission failed")
+                }
+            } catch (_: ApiDisabledException) {
+                return null
+            }
+        val id = job.jobId
+        repeat(121) { poll ->
+            check(job.jobId == id) { "Mismatched avatar job" }
+            when (job.status) {
+                AvatarJobState.READY.name -> return requireNotNull(job.asset).toDomain(config.allowLocalAssetHttp)
+                AvatarJobState.FAILED.name -> error("Avatar generation failed")
+                AvatarJobState.QUEUED.name, AvatarJobState.RUNNING.name -> Unit
+                else -> error("Unknown avatar state")
+            }
+            check(poll < 120) { "Avatar generation timed out" }
+            delay(1000)
+            job =
+                when (val result = avatars.v1.status(id)) {
+                    is ApiResult.Success -> result.value
+                    is ApiResult.Failure -> error("Avatar status unavailable")
+                }
+        }
+        error("Avatar generation timed out")
+    }
 
     override fun observe() = dao.observe().map { rows -> rows.map { it.toDomain() } }
 
@@ -65,7 +97,7 @@ class DefaultCharacterRepository(
                     is ApiResult.Failure -> return@withLock false
                 }
             require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Duplicate character IDs" }
-            val entities = snapshot.map { it.toDomain().toEntity(pendingSync = false) }
+            val entities = snapshot.map { it.toDomain(config.allowLocalAssetHttp).toEntity(pendingSync = false) }
             dao.replaceSnapshot(entities)
             true
         }
