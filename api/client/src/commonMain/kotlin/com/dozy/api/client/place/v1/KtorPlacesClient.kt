@@ -56,7 +56,7 @@ internal class KtorPlacesClient(
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(request))
         }
-        if (response.status.value in setOf(201, 204)) {
+        if (response.status.value in 200..299) {
             PlacesSaveResult.Success
         } else {
             response.failure(

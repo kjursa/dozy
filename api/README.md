@@ -62,7 +62,7 @@ unrecognized values so future codes can still become `Unknown`.
 Places returns operation-specific sealed results: `PlacesListResult` and
 `PlacesSaveResult`. Each exposes `Success`, `ApiError(error)` and
 `TechnicalError(error)`, so the caller handles one exhaustive `when`. List success
-contains `response: PlacesResponse`; save success is an object without a payload.
+contains `response: PlacesResponse`; save success is an object without a payload and accepts every HTTP 2xx status.
 Business errors use `PlacesListError`/`PlacesSaveError`. Shared technical failures
 live in `api.client.TechnicalError`, not the transport contracts.
 

@@ -43,8 +43,9 @@ class DozyClientTest {
     }
 
     @Test
-    fun `encodes path ID and sends only editable fields for both success statuses`() = runTest {
+    fun `encodes path ID and sends only editable fields for every successful HTTP status`() = runTest {
         var calls = 0
+        val statuses = (200..299).toList()
         val input = SavePlaceRequest("Garden", "Quiet", null)
         val http = HttpClient(MockEngine { request ->
             assertEquals("PUT", request.method.value)
@@ -53,11 +54,11 @@ class DozyClientTest {
             val body = (request.body as TextContent).text
             assertEquals(setOf("name", "description", "inhabitants"), Json.parseToJsonElement(body).jsonObject.keys)
             assertEquals(input, Json.decodeFromString<SavePlaceRequest>(body))
-            respond("", if (calls++ == 0) HttpStatusCode.Created else HttpStatusCode.NoContent)
+            respond("", HttpStatusCode.fromValue(statuses[calls++]))
         })
         try {
-            repeat(2) { assertEquals(PlacesSaveResult.Success, sdk(http).places.v1.save("custom/one two", input)) }
-            assertEquals(2, calls)
+            repeat(statuses.size) { assertEquals(PlacesSaveResult.Success, sdk(http).places.v1.save("custom/one two", input)) }
+            assertEquals(statuses.size, calls)
         } finally { http.close() }
     }
 
@@ -118,7 +119,11 @@ class DozyClientTest {
             val http = HttpClient(MockEngine { respond(body, HttpStatusCode.fromValue(status)) }) { followRedirects = false }
             try {
                 assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.list()))
-                assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+                if (status in 200..299) {
+                    assertEquals(PlacesSaveResult.Success, sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")))
+                } else {
+                    assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+                }
             } finally { http.close() }
         }
     }
