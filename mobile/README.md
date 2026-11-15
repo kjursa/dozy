@@ -146,3 +146,13 @@ through xcode-select, plus Kotlin/Native toolchain download access. Both librari
 set iOS deployment target 15.0. Shared publishes a static `DozyShared` framework;
 there is no Xcode host, signing or simulator launch. The iOS controller factory
 is compiled into the framework without building or running an iOS application.
+
+## Characters API1
+
+Character CRUD uses the shared `CharactersClients` container with persisted
+installation identity. Saves/edits and deletion tombstones are durable before HTTP;
+refresh retries pending mutations and replaces only synced collection data.
+Android injects the common Kotlin UUIDv7 character ID generator. Bundled development
+avatars remain local-only. Remote avatar generation arrives in API2; this backend
+currently validates references against asset metadata without generating assets.
+See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantics.

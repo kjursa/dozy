@@ -1,5 +1,7 @@
 package com.dozy.mobile.feature.character.di
 
+import com.dozy.api.client.DozyClient
+import com.dozy.api.client.character.CharactersClients
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
@@ -17,9 +19,10 @@ import org.koin.dsl.module
 
 val characterDataModule =
     module {
-        single<CharacterApi> { KtorCharacterApi(get(), get()) }
+        single<CharactersClients> { get<DozyClient>().characters }
+        single<CharacterApi> { KtorCharacterApi(get(), get(), get()) }
         single<CharacterRepository> {
-            val repository = DefaultCharacterRepository(get(), get())
+            val repository = DefaultCharacterRepository(get(), get(), get())
             if (get<ApiConfig>().baseUrl == null) FakeAvatarGenerator(repository) else repository
         }
         factoryOf(::ObserveCharacter)

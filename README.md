@@ -19,9 +19,9 @@ The screens below summarize the current app and the planned experience:
 | --- | --- |
 | Home | Available with sample recent stories, saved characters, and entry points for creating a story or character. Places and generation status cards are planned. |
 | My Stories | Available as a library layout with sample covers and titles. A persisted story library and opening stories are planned. |
-| Characters | Available list of locally saved characters, with an action to add a character. Opening details is planned. |
-| Character creation / editing | Creation and saving of name, type, personality, and appearance are available. The avatar preview uses sample artwork; generating an avatar from the description and editing saved characters are planned. |
-| Character details | Planned: avatar and descriptions, editing, deletion, and starting a story with this hero. |
+| Characters | Available list of locally saved characters, with creation, details, editing and deletion through a local-first repository and shared Characters SDK. |
+| Character creation / editing | Creation and saving of name, type, personality, and appearance are available. Creation and editing use existing forms; bundled previews stay local-only. Remote avatar generation arrives in API2. |
+| Character details | Available with saved descriptions, editing, deletion, and story entry points. |
 | Places | Planned: browse custom places followed by predefined suggestions and select a setting from Home or the story form. |
 | Place creation / editing | Planned: save a custom place's name, description, and optional inhabitants for reuse. |
 | Story creation | Prototype form with sample heroes, theme and length choices, and optional wishes. Selecting saved characters and places, “Surprise me”, and submitting a real generation job are planned. |
@@ -34,7 +34,7 @@ See [mobile/README.md](mobile/README.md) for running and building the Android ap
 
 ## Backend
 
-The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`. Other endpoints in [the API reference](backend/API.md) remain proposals.
+The backend is a Ktor 3.6.0 application using constructor injection, Ktor DI, and Exposed SQL DSL over SQLite. Run it from `backend/` with `./gradlew run` (JDK 21). It implements `GET /hello`, `GET /api/v1/places`, and `PUT /api/v1/places/{id}`, plus installation-scoped character GET/PUT/DELETE. Other endpoints in [the API reference](backend/API.md) remain proposals.
 
 Settings are loaded from `backend/src/main/resources/application.yaml` into `AppConfig`. Environment overrides:
 
@@ -45,7 +45,7 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 | `DOZY_DATABASE_PATH` | `data/dozy.db` | Persistent SQLite file, relative to the server working directory |
 | `DOZY_DATABASE_BUSY_TIMEOUT_MS` | `5000` | SQLite lock wait, from 1 to 60000 ms |
 
-The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Local database files are ignored by Git when running from `backend/`.
+The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Version 2 adds characters, permanent deletion reservations and the shared asset metadata registry. Local database files are ignored by Git when running from `backend/`.
 
 Place requests require a canonical UUID in `X-Installation-Id`. Custom places are private to that installation; predefined places are read-only. This is the initial installation-based contract, without accounts or authentication. The shared Places client sends this header automatically using a persisted installation ID. See [API.md](backend/API.md) for bodies and errors, and [DB.md](backend/DB.md) for the SQLite implementation and future PostgreSQL design.
 
@@ -60,7 +60,12 @@ Run backend and mobile tests from the repository root with `./test-all` (uses ea
 
 `api/` contains an independent Kotlin Multiplatform build included by both backend
 and mobile through Gradle composite builds. `api/contracts` owns the v1 Places
-request/response DTOs and shared errors; `api/client` provides `DozyClient.places.v1`
-and the injectable `PlacesClients` version container. The client has JVM/Android-compatible and iOS
+and Characters request/response DTOs and shared errors; `api/client` provides
+`DozyClient.places.v1` and `DozyClient.characters.v1` with injectable plural feature containers. The client has JVM/Android-compatible and iOS
 targets and does not depend on mobile domain models, Room, Compose, or Koin.
 See [API library setup and versioning](api/README.md).
+
+Characters use client-generated UUIDv7 IDs and durable local-first pending writes
+and deletion tombstones. Server avatar references must match owned READY asset
+metadata. Remote avatar generation arrives in API2; no generator or provider is
+implemented by API1, and bundled development avatars are never uploaded.

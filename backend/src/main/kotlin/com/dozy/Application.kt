@@ -1,5 +1,6 @@
 package com.dozy
 
+import com.dozy.features.character.api.v1.characterV1Routes
 import com.dozy.api.contracts.ApiVersion
 import com.dozy.di.configureDependencies
 import com.dozy.features.place.api.v1.placeV1Routes
@@ -30,7 +31,10 @@ fun Application.module() {
     val places: PlaceService by dependencies
     routing {
         get("/hello") { call.respond(HelloResponse("Hello world from Dozy")) }
-        route(ApiVersion.V1.path) { placeV1Routes(places) }
+        route(ApiVersion.V1.path) {
+            placeV1Routes(places)
+            characterV1Routes()
+        }
     }
 }
 

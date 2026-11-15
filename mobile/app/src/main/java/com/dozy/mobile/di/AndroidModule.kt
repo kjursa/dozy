@@ -9,7 +9,7 @@ import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.core.data.database.databaseModule
-import com.dozy.mobile.feature.character.domain.model.Character
+import com.dozy.mobile.feature.character.data.UuidCharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.domain.model.Place
@@ -90,5 +90,5 @@ internal val androidModule =
                 )
             }
         }
-        single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id(UUID.randomUUID().toString()) } }
+        single<CharacterIdGenerator> { UuidCharacterIdGenerator() }
     }

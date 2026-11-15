@@ -17,13 +17,15 @@ class SqliteDatabaseTest {
     private val config get() = DatabaseConfig(path.toString(), 5000)
 
     @Test
-    fun `records one validated migration across repeated startups`() {
+    fun `records validated migrations across repeated startups`() {
         repeat(2) { SqliteDatabase(config).use { } }
         val flyway = Flyway.configure().dataSource(url, null, null).load()
         val applied = flyway.info().applied()
-        assertEquals(1, applied.size)
-        assertEquals("1", applied.single().version.version)
-        assertEquals("V1__places.sql", applied.single().script)
+        assertEquals(2, applied.size)
+        assertEquals("1", applied.first().version.version)
+        assertEquals("V1__places.sql", applied.first().script)
+        assertEquals("2", applied.last().version.version)
+        assertEquals("V2__characters_and_assets.sql", applied.last().script)
         flyway.validate()
     }
 
