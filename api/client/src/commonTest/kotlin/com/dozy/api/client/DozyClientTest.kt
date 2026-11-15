@@ -1,6 +1,9 @@
 package com.dozy.api.client
 
 import com.dozy.api.client.place.v1.PlacesListError
+import com.dozy.api.client.place.v1.PlacesListResult
+import com.dozy.api.client.place.v1.PlacesSaveResult
+import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
@@ -53,7 +56,7 @@ class DozyClientTest {
             respond("", if (calls++ == 0) HttpStatusCode.Created else HttpStatusCode.NoContent)
         })
         try {
-            repeat(2) { assertEquals(ApiResult.Success(Unit), sdk(http).places.v1.save("custom/one two", input)) }
+            repeat(2) { assertEquals(PlacesSaveResult.Success, sdk(http).places.v1.save("custom/one two", input)) }
             assertEquals(2, calls)
         } finally { http.close() }
     }
@@ -71,7 +74,7 @@ class DozyClientTest {
         )
         for ((code, expected) in errors) {
             val http = HttpClient(MockEngine { respond("""{"code":"$code"}""", HttpStatusCode.UnprocessableEntity) }) { expectSuccess = true }
-            try { assertEquals(ApiResult.Failure(ClientError.ApiError(expected)), sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))) }
+            try { assertEquals(PlacesSaveResult.ApiError(expected), sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))) }
             finally { http.close() }
         }
     }
@@ -80,11 +83,11 @@ class DozyClientTest {
     fun `unknown API codes preserve envelope and status`() = runTest {
         val http = HttpClient(MockEngine { respond("""{"code":"validation.new_field.new_rule"}""", HttpStatusCode.UnprocessableEntity) })
         try {
-            val result = assertIs<ClientError.ApiError<*>>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+            val result = assertIs<PlacesSaveResult.ApiError>(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")))
             val error = assertIs<PlacesSaveError.Unknown>(result.error)
             assertEquals(422, error.status)
             assertEquals("validation.new_field.new_rule", error.error.code)
-            assertIs<PlacesListError.Unknown>(assertIs<ClientError.ApiError<*>>(failure(sdk(http).places.v1.list())).error)
+            assertIs<PlacesListError.Unknown>(assertIs<PlacesListResult.ApiError>(sdk(http).places.v1.list()).error)
         } finally { http.close() }
     }
 
@@ -94,8 +97,8 @@ class DozyClientTest {
             for (body in listOf("<html>Unavailable</html>", "", """{"code":"place.conflict"}""")) {
                 val http = HttpClient(MockEngine { respond(body, HttpStatusCode.fromValue(status)) }) { expectSuccess = true }
                 try {
-                    assertEquals(ClientError.ServerError(status), failure(sdk(http).places.v1.list()))
-                    assertEquals(ClientError.ServerError(status), failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+                    assertEquals(TechnicalError.Server(status), failure(sdk(http).places.v1.list()))
+                    assertEquals(TechnicalError.Server(status), failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
                 } finally { http.close() }
             }
         }
@@ -114,8 +117,8 @@ class DozyClientTest {
         )) {
             val http = HttpClient(MockEngine { respond(body, HttpStatusCode.fromValue(status)) }) { followRedirects = false }
             try {
-                assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.list()))
-                assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+                assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.list()))
+                assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
             } finally { http.close() }
         }
     }
@@ -125,8 +128,8 @@ class DozyClientTest {
         val transport = IOException("Transport failed")
         val http = HttpClient(MockEngine { throw transport })
         try {
-            assertEquals(transport.message, assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.list())).exception.message)
-            assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+            assertEquals(transport.message, assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.list())).exception.message)
+            assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
         } finally { http.close() }
     }
 
@@ -134,25 +137,26 @@ class DozyClientTest {
     fun `request timeout is returned as a communication failure`() = runTest {
         val http = HttpClient(MockEngine { request -> throw HttpRequestTimeoutException(request) })
         try {
-            val error = assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.list()))
+            val error = assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.list()))
             assertIs<HttpRequestTimeoutException>(error.exception)
-            assertIs<ClientError.CommunicationError>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+            assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
         } finally { http.close() }
     }
 
     @Test
-    fun `disabled configuration returns communication failure but misuse and cancellation propagate`() = runTest {
+    fun `all Exceptions including local misuse become results while cancellation propagates`() = runTest {
         val http = HttpClient(MockEngine { error("Must not send a request") })
         val cancelled = HttpClient(MockEngine { throw CancellationException("Cancelled") })
         val programmingBug = HttpClient(MockEngine { throw IllegalStateException("Bug") })
         try {
             val disabled = DozyClient(http, DozyClientConfig(null), InstallationIdProvider { owner })
-            assertIs<ApiDisabledException>(assertIs<ClientError.CommunicationError>(failure(disabled.places.v1.list())).exception)
-            assertIs<ClientError.CommunicationError>(failure(disabled.places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
-            assertFailsWith<IllegalArgumentException> { sdk(http).places.v1.save(" ", SavePlaceRequest("Garden", "Quiet")) }
+            assertIs<ApiDisabledException>(assertIs<TechnicalError.Communication>(failure(disabled.places.v1.list())).exception)
+            assertIs<TechnicalError.Communication>(failure(disabled.places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
+            assertIs<IllegalArgumentException>(assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save(" ", SavePlaceRequest("Garden", "Quiet")))).exception)
             assertFailsWith<CancellationException> { sdk(cancelled).places.v1.list() }
             assertFailsWith<CancellationException> { sdk(cancelled).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")) }
-            assertFailsWith<IllegalStateException> { sdk(programmingBug).places.v1.list() }
+            assertIs<IllegalStateException>(assertIs<TechnicalError.Communication>(failure(sdk(programmingBug).places.v1.list())).exception)
+            assertIs<IllegalStateException>(assertIs<TechnicalError.Communication>(failure(sdk(programmingBug).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")))).exception)
         } finally { http.close(); cancelled.close(); programmingBug.close() }
     }
 
@@ -170,8 +174,19 @@ class DozyClientTest {
         } finally { http.close() }
     }
 
-    private fun <T, E> value(result: ApiResult<T, E>): T = assertIs<ApiResult.Success<T>>(result).value
-    private fun <T, E> failure(result: ApiResult<T, E>): E = assertIs<ApiResult.Failure<E>>(result).error
+    private fun value(result: PlacesListResult): PlacesResponse = assertIs<PlacesListResult.Success>(result).response
+
+    private fun failure(result: PlacesListResult): Any = when (result) {
+        is PlacesListResult.ApiError -> result.error
+        is PlacesListResult.TechnicalError -> result.error
+        is PlacesListResult.Success -> error("Expected failure")
+    }
+
+    private fun failure(result: PlacesSaveResult): Any = when (result) {
+        is PlacesSaveResult.ApiError -> result.error
+        is PlacesSaveResult.TechnicalError -> result.error
+        PlacesSaveResult.Success -> error("Expected failure")
+    }
 
     private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/"), InstallationIdProvider { owner })
 }

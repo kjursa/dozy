@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.place.data
 
-import com.dozy.api.client.ApiResult
+import com.dozy.api.client.place.v1.PlacesListResult
+import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.data.database.PlaceEntity
@@ -39,8 +40,8 @@ class DefaultPlaceRepository(
             val response = places.v1.list()
             val snapshot =
                 when (response) {
-                    is ApiResult.Success -> response.value.places
-                    is ApiResult.Failure -> return@withLock false
+                    is PlacesListResult.Success -> response.response.places
+                    is PlacesListResult.ApiError, is PlacesListResult.TechnicalError -> return@withLock false
                 }
             val rows = snapshot.map { it.toEntity() }
             require(rows.map { it.id }.distinct().size == rows.size)
@@ -60,7 +61,7 @@ class DefaultPlaceRepository(
         }
 
     private suspend fun synchronize(row: PlaceEntity): PlaceSync {
-        val acknowledged = places.v1.save(row.id, row.toDomain().toSaveRequest()) is ApiResult.Success
+        val acknowledged = places.v1.save(row.id, row.toDomain().toSaveRequest()) is PlacesSaveResult.Success
         if (!acknowledged) return PlaceSync.PENDING
         val updated = runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }
         return if (updated.isSuccess) PlaceSync.SYNCED else PlaceSync.PENDING

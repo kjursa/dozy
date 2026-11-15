@@ -59,25 +59,32 @@ unrecognized values so future codes can still become `Unknown`.
 
 ### Places error handling
 
-Places returns `ApiResult<Payload, ClientError<OperationError>>`: list uses
-`PlacesListError`, save uses `PlacesSaveError`. Handle the three failure categories:
+Places returns operation-specific sealed results: `PlacesListResult` and
+`PlacesSaveResult`. Each exposes `Success`, `ApiError(error)` and
+`TechnicalError(error)`, so the caller handles one exhaustive `when`. List success
+contains `response: PlacesResponse`; save success is an object without a payload.
+Business errors use `PlacesListError`/`PlacesSaveError`. Shared technical failures
+live in `api.client.TechnicalError`, not the transport contracts.
 
 - `ApiError(error)`: a decoded HTTP 4xx business failure. Save recognizes flat
   contract-owned `PlaceErrorCode` values for required/too-long fields, forbidden
   and conflict. An unfamiliar code remains the operation's `Unknown(status, envelope)`.
-- `ServerError(status)`: every HTTP 5xx, before reading or decoding its body,
+- `TechnicalError(TechnicalError.Server(status))`: every HTTP 5xx, before reading or decoding its body,
   including HTML or an empty proxy response.
-- `CommunicationError(exception)`: transport/timeout/TLS failures, invalid request
+- `TechnicalError(TechnicalError.Communication(exception))`: transport/timeout/TLS failures, invalid request
   or installation identity, malformed JSON/missing response fields, unexpected
-  response status, or disabled API configuration. The exception is diagnostic,
+  response status, disabled API configuration, or any other `Exception`, including
+  local argument/programming errors. The exception is diagnostic,
   never user-facing text. A failure does not prove a write was not committed.
 
 The backend uses 422 for validation, 403 for forbidden and 409 for conflict. The
 body code determines the business detail; the client does not parse field/reason
 combinations. Example: `{"code":"validation.name.too_long"}`. Envelope field/reason
-properties remain nullable for other features. Cancellation propagates, as do local
-programming errors such as a blank save ID; consumers do not need try/catch for
-expected communication failures. Mobile retains cached/pending data on failure.
+properties remain nullable for other features. Every public Places operation catches
+all `Exception` values except `CancellationException`, which propagates. Local checks
+(such as a blank save ID) are inside this boundary. Fatal errors are not caught.
+Consumers do not need try/catch around Places calls. Mobile retains cached/pending
+data on failure.
 
 ### Other feature errors
 

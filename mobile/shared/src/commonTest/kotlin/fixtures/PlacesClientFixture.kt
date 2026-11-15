@@ -1,14 +1,13 @@
 package com.dozy.mobile
 
-import com.dozy.api.client.ApiResult
-import com.dozy.api.client.ClientError
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesClient
-import com.dozy.api.client.place.v1.PlacesListError
-import com.dozy.api.client.place.v1.PlacesSaveError
+import com.dozy.api.client.place.v1.PlacesListResult
+import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.mobile.core.config.ApiConfig
@@ -23,26 +22,38 @@ internal fun placesClient(
     InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" },
 ).places.v1
 
-internal fun <T, E> apiValue(result: ApiResult<T, E>): T =
+internal fun apiValue(result: PlacesListResult): PlacesResponse =
     when (result) {
-        is ApiResult.Success -> result.value
-        is ApiResult.Failure -> error("Expected success, received ${result.error}")
+        is PlacesListResult.Success -> result.response
+        else -> error("Expected success, received $result")
     }
 
-internal fun <T, E> apiFailure(result: ApiResult<T, E>): E =
+internal fun apiValue(result: PlacesSaveResult) {
+    check(result == PlacesSaveResult.Success)
+}
+
+internal fun apiFailure(result: PlacesListResult): Any =
     when (result) {
-        is ApiResult.Success -> error("Expected failure")
-        is ApiResult.Failure -> result.error
+        is PlacesListResult.ApiError -> result.error
+        is PlacesListResult.TechnicalError -> result.error
+        is PlacesListResult.Success -> error("Expected failure")
     }
 
-internal fun fakePlacesClient(list: suspend () -> ApiResult<PlacesResponse, ClientError<PlacesListError>>): PlacesClient =
+internal fun apiFailure(result: PlacesSaveResult): Any =
+    when (result) {
+        is PlacesSaveResult.ApiError -> result.error
+        is PlacesSaveResult.TechnicalError -> result.error
+        PlacesSaveResult.Success -> error("Expected failure")
+    }
+
+internal fun fakePlacesClient(list: suspend () -> PlacesListResult): PlacesClient =
     object : PlacesClient {
         override suspend fun list() = list.invoke()
 
         override suspend fun save(
             id: String,
             request: SavePlaceRequest,
-        ): ApiResult<Unit, ClientError<PlacesSaveError>> = ApiResult.Failure(ClientError.ServerError(503))
+        ): PlacesSaveResult = PlacesSaveResult.TechnicalError(TechnicalError.Server(503))
     }
 
 internal fun fakePlacesClients(client: PlacesClient): PlacesClients =

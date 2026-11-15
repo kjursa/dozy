@@ -264,10 +264,11 @@ remain readable even if write limits change.
 | 409 | `place.conflict` | Custom ID belongs to another installation |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
 
-Places SDK failures are `ClientError.ApiError` for decoded business codes,
-`ServerError` for every 5xx regardless of body, and `CommunicationError` for
-invalid requests/responses or transport failures. Future decoded codes remain
-`ApiError.Unknown`. Cancellation propagates. Other features retain their current
+Places SDK operations expose their own Success/ApiError/TechnicalError result.
+Shared `TechnicalError.Server` represents every 5xx regardless of body;
+`TechnicalError.Communication` holds all other Exceptions, including invalid
+requests/responses, transport failures and local argument errors. Future decoded
+business codes remain operation-specific `Unknown`. Cancellation propagates. Other features retain their current
 field/reason and exception contracts.
 
 GET can return the installation-header and database errors above. Rate limiting

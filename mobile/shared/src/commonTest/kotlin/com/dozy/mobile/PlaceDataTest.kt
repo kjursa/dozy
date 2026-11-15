@@ -1,8 +1,9 @@
 package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.ApiResult
-import com.dozy.api.client.ClientError
+import com.dozy.api.client.TechnicalError
+import com.dozy.api.client.place.v1.PlacesListResult
+import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.client.place.v1.PlacesListError
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.mobile.core.config.ApiConfig
@@ -52,7 +53,7 @@ class PlaceDataTest {
                         dao,
                         fakePlacesClients(
                             fakePlacesClient {
-                                ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
+                                PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
                             },
                         ),
                         bundled,
@@ -67,7 +68,7 @@ class PlaceDataTest {
                     dao,
                     fakePlacesClients(
                         fakePlacesClient {
-                            ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
+                            PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
                         },
                     ),
                     emptyList(),
@@ -78,7 +79,7 @@ class PlaceDataTest {
                     dao,
                     fakePlacesClients(
                         fakePlacesClient {
-                            ApiResult.Failure(ClientError.CommunicationError(ApiDisabledException()))
+                            PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
                         },
                     ),
                     bundled,
@@ -97,7 +98,7 @@ class PlaceDataTest {
                         PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
-            val repository = DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { ApiResult.Success(snapshot) }), emptyList())
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { PlacesListResult.Success(snapshot) }), emptyList())
             assertTrue(repository.refresh())
             assertEquals(
                 "Local edit",
@@ -119,13 +120,13 @@ class PlaceDataTest {
             val dao = FakePlaceDao()
             val existing = place().toEntity().copy(local = false, pendingSync = false)
             dao.upsert(existing)
-            val failures: List<ClientError<PlacesListError>> = listOf(
-                ClientError.ApiError(PlacesListError.Unknown(409, ApiErrorResponse("NEW_RULE"))),
-                ClientError.ServerError(503),
-                ClientError.CommunicationError(IOException("Offline")),
+            val failures: List<PlacesListResult> = listOf(
+                PlacesListResult.ApiError(PlacesListError.Unknown(409, ApiErrorResponse("NEW_RULE"))),
+                PlacesListResult.TechnicalError(TechnicalError.Server(503)),
+                PlacesListResult.TechnicalError(TechnicalError.Communication(IOException("Offline"))),
             )
             for (failure in failures) {
-                val api = fakePlacesClient { ApiResult.Failure(failure) }
+                val api = fakePlacesClient { failure }
                 assertFalse(DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh())
                 assertEquals(listOf(existing), dao.rows.value)
             }
@@ -139,7 +140,7 @@ class PlaceDataTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    fakePlacesClients(fakePlacesClient { ApiResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) }),
+                    fakePlacesClients(fakePlacesClient { PlacesListResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) }),
                     emptyList(),
                 )
             try {
@@ -210,9 +211,9 @@ class PlaceDataTest {
                     },
                 )
             try {
-                assertTrue(apiFailure(placesClient(client, ApiConfig(null)).list()) is ClientError.CommunicationError)
+                assertTrue(apiFailure(placesClient(client, ApiConfig(null)).list()) is TechnicalError.Communication)
                 assertEquals(0, calls)
-                assertEquals(ClientError.ServerError(503), apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
+                assertEquals(TechnicalError.Server(503), apiFailure(placesClient(client, ApiConfig("https://example.test")).list()))
                 assertEquals(1, calls)
             } finally {
                 client.close()

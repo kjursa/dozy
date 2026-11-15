@@ -1,11 +1,11 @@
 package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.ApiResult
-import com.dozy.api.client.ClientError
+import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.v1.PlacesClient
-import com.dozy.api.client.place.v1.PlacesListError
+import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveError
+import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlacesDto
@@ -40,15 +40,15 @@ class PlaceSaveTest {
             val ids = mutableListOf<String>()
             val api =
                 object : PlacesClient {
-                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+                    override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, ClientError<PlacesSaveError>> {
+                    ): PlacesSaveResult {
                         assertEquals(request.name, dao.find(id)?.name)
                         ids += id
-                        return if (available) ApiResult.Success(Unit) else ApiResult.Failure(ClientError.ServerError(503))
+                        return if (available) PlacesSaveResult.Success else PlacesSaveResult.TechnicalError(TechnicalError.Server(503))
                     }
                 }
             val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
@@ -69,12 +69,12 @@ class PlaceSaveTest {
             val dao = FakePlaceDao()
             val api =
                 object : PlacesClient {
-                    override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+                    override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, ClientError<PlacesSaveError>> = ApiResult.Failure(ClientError.ApiError(PlacesSaveError.Conflict))
+                    ): PlacesSaveResult = PlacesSaveResult.ApiError(PlacesSaveError.Conflict)
                 }
             val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertEquals(PlaceSync.PENDING, repository.save(place()))
@@ -90,12 +90,13 @@ class PlaceSaveTest {
             var calls = 0
             val api =
                 object : PlacesClient {
-                    override suspend fun list(): ApiResult<PlacesDto, ClientError<PlacesListError>> = throw ApiDisabledException()
+                    override suspend fun list(): PlacesListResult =
+                        PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
 
                     override suspend fun save(
                         id: String,
                         request: SavePlaceRequestDto,
-                    ): ApiResult<Unit, ClientError<PlacesSaveError>> {
+                    ): PlacesSaveResult {
                         calls++
                         throw CancellationException()
                     }
@@ -155,12 +156,12 @@ class PlaceSaveTest {
                 ) { install(ContentNegotiation) { json() } }
             try {
                 assertTrue(
-                    apiFailure(placesClient(client, ApiConfig(null)).save("custom/id", requestDto)) is ClientError.CommunicationError,
+                    apiFailure(placesClient(client, ApiConfig(null)).save("custom/id", requestDto)) is TechnicalError.Communication,
                 )
                 assertEquals(0, calls)
                 val api = placesClient(client, ApiConfig("https://example.test/"))
                 apiValue(api.save("custom/id", requestDto))
-                assertEquals(ClientError.ServerError(503), apiFailure(api.save("custom/id", requestDto)))
+                assertEquals(TechnicalError.Server(503), apiFailure(api.save("custom/id", requestDto)))
             } finally {
                 client.close()
             }
@@ -177,14 +178,14 @@ class PlaceSaveTest {
                     dao,
                     fakePlacesClients(
                         object : PlacesClient {
-                            override suspend fun list() = ApiResult.Success(PlacesDto(emptyList()))
+                            override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
 
                             override suspend fun save(
                                 id: String,
                                 request: SavePlaceRequestDto,
-                            ): ApiResult<Unit, ClientError<PlacesSaveError>> {
+                            ): PlacesSaveResult {
                                 requests += request
-                                return ApiResult.Failure(ClientError.ServerError(503))
+                                return PlacesSaveResult.TechnicalError(TechnicalError.Server(503))
                             }
                         },
                     ),
