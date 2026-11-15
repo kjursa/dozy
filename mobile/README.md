@@ -159,13 +159,13 @@ See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantic
 
 ## Local fake story generation
 
-API3 integrates story submission, durable progress, completion and immutable reading
+API3/API5 integrate story submission, durable retry/progress, completion and immutable reading
 through the shared SDK. Run the fake backend with matching `DOZY_ASSET_BASE_URL`
 and app API base URL; see the [root setup](../README.md). For an Android emulator,
 use `http://10.0.2.2:8080` and `DOZY_ASSET_ALLOW_HTTP=true` on the backend. API defaults
 remain disabled until configured. The existing Android WorkManager scheduler and
 local completion notifications observe the same persisted jobs. Remote library
-pagination and explicit failed-job retry remain reserved for API4/API5; completed
+pagination remains reserved for API4; failed-job retry uses the shared SDK and completed
 local stories and fresh reader GETs work now. See [the story contract](STORY_GENERATION_API.md).
 
 Build the Android debug app against that backend with

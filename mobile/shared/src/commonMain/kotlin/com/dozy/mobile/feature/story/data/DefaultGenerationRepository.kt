@@ -4,6 +4,7 @@ import com.dozy.api.client.ApiResult
 import com.dozy.api.client.story.StoriesClients
 import com.dozy.api.client.story.v1.StoryReadError
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.api.client.storygeneration.v1.GenerationRetryError
 import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
 import com.dozy.mobile.feature.story.data.api.LegacyStoryApi
 import com.dozy.mobile.feature.story.data.api.StoryDto
@@ -108,7 +109,7 @@ class DefaultGenerationRepository(
     override suspend fun refresh(id: GenerationJob.Id): GenerationJob? =
         mutex.withLock {
             val saved = row(id) ?: return@withLock null
-            if (saved.result != null) return@withLock saved.toJob()
+            if (saved.result != null || saved.retryKey != null) return@withLock saved.toJob()
             runCatchingSuspend {
                 val remote =
                     when (val response = generations.v1.status(id.value)) {
@@ -150,13 +151,36 @@ class DefaultGenerationRepository(
     ): GenerationJob? =
         mutex.withLock {
             val saved = row(id) ?: return@withLock null
-            if (saved.status != "FAILED" || saved.result != null) return@withLock saved.toJob()
+            if ((saved.status != "FAILED" && saved.retryKey == null) || saved.result != null) return@withLock saved.toJob()
             check(dao.observe().first().none { it.jobId != id.value && (it.status in activeStatuses || it.retryKey != null) })
+            if (saved.statusUnknown && saved.retryKey == null) return@withLock null
             val pending = saved.copy(retryKey = saved.retryKey ?: key.value)
             dao.upsert(pending)
-            val response = legacy.retry(id.value, requireNotNull(pending.retryKey)) ?: return@withLock null
+            val response =
+                when (val result = generations.v1.retry(id.value, requireNotNull(pending.retryKey))) {
+                    is ApiResult.Success -> result.value
+                    is ApiResult.Failure -> {
+                        if (result.error != GenerationRetryError.Unavailable && result.error !is GenerationRetryError.Unknown) {
+                            dao.upsert(pending.copy(retryKey = null, statusUnknown = true))
+                        }
+                        return@withLock null
+                    }
+                }
             require(response.jobId == id.value)
-            val updated = pending.copy(status = response.status, errorCode = null, statusUnknown = false, retryKey = null)
+            val updated =
+                pending.copy(
+                    status = response.status,
+                    errorCode =
+                        if (response.status ==
+                            "FAILED"
+                        ) {
+                            saved.errorCode
+                        } else {
+                            null
+                        },
+                    statusUnknown = response.status in setOf("READY", "FAILED"),
+                    retryKey = null,
+                )
             dao.upsert(updated)
             updated.toJob()
         }

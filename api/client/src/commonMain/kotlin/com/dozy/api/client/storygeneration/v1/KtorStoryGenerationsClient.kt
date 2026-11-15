@@ -63,6 +63,29 @@ internal class KtorStoryGenerationsClient(
         return ApiResult.Failure(mapped)
     }
 
+    override suspend fun retry(jobId: String, idempotencyKey: String): ApiResult<GenerationAcceptedDto, GenerationRetryError> {
+        val response = http.post(config.endpoint(ApiVersion.V1, "story-generations")) {
+            expectSuccess = false
+            header("X-Installation-Id", installations.get())
+            header("Idempotency-Key", idempotencyKey)
+            url { appendPathSegments(jobId, "retry", encodeSlash = true) }
+        }
+        if (response.status.value == 202) {
+            val result = storyJson.decodeFromString<GenerationAcceptedDto>(response.bodyAsText())
+            require(result.jobId == jobId && GenerationStage.entries.any { it.name == result.status })
+            return ApiResult.Success(result)
+        }
+        val error = response.storyError()
+        return ApiResult.Failure(when (ApiErrorCode.fromValue(error.code)) {
+            ApiErrorCode.JOB_NOT_FOUND -> GenerationRetryError.JobNotFound
+            ApiErrorCode.JOB_NOT_FAILED -> GenerationRetryError.JobNotFailed
+            ApiErrorCode.ACTIVE_JOB_EXISTS -> GenerationRetryError.ActiveJobExists
+            ApiErrorCode.IDEMPOTENCY_CONFLICT -> GenerationRetryError.IdempotencyConflict
+            ApiErrorCode.UNAVAILABLE -> GenerationRetryError.Unavailable
+            else -> GenerationRetryError.Unknown(response.status.value, error)
+        })
+    }
+
     override suspend fun status(jobId: String): ApiResult<GenerationStatusDto, GenerationStatusError> {
         val response = http.get(config.endpoint(ApiVersion.V1, "story-generations")) {
             expectSuccess = false

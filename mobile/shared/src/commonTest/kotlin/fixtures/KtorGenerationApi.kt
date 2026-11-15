@@ -22,7 +22,15 @@ class KtorGenerationApi(
     override suspend fun retry(
         id: String,
         key: String,
-    ) = legacy.retry(id, key)
+    ): GenerationAcceptedDto? =
+        try {
+            when (val result = sdk.storyGenerations.v1.retry(id, key)) {
+                is ApiResult.Success -> result.value
+                is ApiResult.Failure -> null
+            }
+        } catch (_: ApiDisabledException) {
+            null
+        }
 
     override suspend fun start(
         key: String,

@@ -160,7 +160,9 @@ class HomeViewModel(
             is GenerationAction.Retry -> {
                 if (job.id != action.id ||
                     HomeSection.GENERATION in uiState.value.refreshing ||
-                    job.status != GenerationJob.Status.FAILED
+                    job.status != GenerationJob.Status.FAILED ||
+                    job.statusUnknown ||
+                    job.retryPending
                 ) {
                     return
                 }
