@@ -16,3 +16,10 @@ dozy:
     concurrency: "${DOZY_STORY_CONCURRENCY:2}"
     assetBaseUrl: "${DOZY_ASSET_BASE_URL:https://localhost:8080}"
     allowHttp: "${DOZY_ASSET_ALLOW_HTTP:false}"
+  avatars:
+    storagePath: "${DOZY_AVATAR_STORAGE_PATH:data/assets}"
+    publicBaseUrl: "${DOZY_ASSET_PUBLIC_BASE_URL:https://localhost:8080}"
+    allowLocalHttp: "${DOZY_ASSET_ALLOW_LOCAL_HTTP:false}"
+    mode: "${DOZY_AVATAR_MODE:SUCCESS}"
+    delayMillis: "${DOZY_AVATAR_DELAY_MS:1000}"
+    concurrency: "${DOZY_AVATAR_CONCURRENCY:2}"

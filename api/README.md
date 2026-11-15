@@ -12,11 +12,23 @@ launch or E2E suite is included.
   envelopes, and API version paths. Depends on Kotlin serialization, not Ktor,
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
-  `PlacesClients`, `CharactersClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
+  `PlacesClients`, `CharactersClients`, `CharacterAvatarsClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
-Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing remains outside these SDK containers. Remote avatar jobs remain reserved for API2.
+Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing remains outside these SDK containers. Avatar jobs are implemented by API2.
+
+Avatar DTOs,
+states and failure codes live in `contracts.v1.characteravatar` and reuse the
+character asset reference and description validation contracts.
+
+`DozyClient.characterAvatars.v1.start(request)` performs one POST (202), and
+`status(jobId)` performs one GET (200). Both return operation-specific `ApiResult`.
+FAILED jobs are successful payloads with `error`; unknown error codes and validation
+details remain Unknown. Invalid request structure, invalid installation identity,
+malformed response combinations, transport failures and cancellation are exceptions.
+Polling belongs to consumers. Every explicit POST creates an independent job.
+
 
 ## Usage
 

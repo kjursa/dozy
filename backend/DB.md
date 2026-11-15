@@ -21,7 +21,7 @@ entities. Feature-owned `Table` definitions and queries map `ResultRow` directly
 to domain models. Flyway and Exposed share the configured SQLite data source.
 Application code no longer parses SQL scripts or tracks `PRAGMA user_version`.
 
-Add future changes as `V4__description.sql`, `V5__description.sql`, and so on;
+Add future changes as `V5__description.sql`, `V6__description.sql`, and so on;
 do not edit an applied migration after deployment. During the current development
 phase, the V1 schema is reset in place: places use `origin` with `SYSTEM`/`USER`
 values, replacing the previous `ownership` column. No upgrade migration is
@@ -61,9 +61,7 @@ ownership and deletion before upserting, within the same IMMEDIATE transaction.
 `assets` is the minimal shared metadata registry: ID, installation ID, URL and
 PENDING/READY/FAILED status. A non-null character avatar must exactly match an
 owned READY asset ID and URL. The avatar ID has a foreign key; application checks
-ownership/readiness and paired ID/URL values atomically. No provider, generation
-endpoint or production asset seeding is included. API2 will populate this registry;
-only test fixtures seed ready metadata today. Null avatars remain valid for
+ownership/readiness and paired ID/URL values atomically. No external provider is included. API2 populates this registry after durable local PNG storage. Null avatars remain valid for
 historical records. Read mapping never applies current write length limits.
 
 ### Durable story execution (V3/V4)
@@ -467,3 +465,17 @@ The schema uses composite foreign keys and partial unique indexes supported by
 [PostgreSQL constraints](https://www.postgresql.org/docs/current/ddl-constraints.html).
 Cross-row invariants described above require transactions/application checks;
 PostgreSQL CHECK constraints cannot enforce arbitrary cross-table conditions.
+
+## Implemented API2 SQLite jobs
+
+Flyway V5 adds `avatar_jobs`: UUIDv7 primary ID, installation owner, normalized
+type/personality/appearance snapshot, reserved UUIDv7 asset ID, stable URL and
+QUEUED/RUNNING/READY/FAILED state. The state index supports atomic claims under the
+existing immediate SQLite transactions. READY publication inserts the shared owned
+asset metadata and changes job state in one transaction. Terminal jobs cannot be
+published again. The single backend process resets unfinished RUNNING jobs on
+startup and bounds generation by configured worker count. No transaction spans
+generation or delay. PNG bytes are atomically written to configurable local
+storage before metadata publication. Keep SQLite and the storage directory together.
+No expiry or unattached-asset cleanup runs during development. The PostgreSQL
+schema elsewhere in this document remains a future design.

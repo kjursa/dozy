@@ -44,7 +44,7 @@ internal val androidModule =
         single<StoryCompletionNotifier> { AndroidStoryCompletionNotifier(androidContext()) }
         single { GenerationWorkerFactory(get()) }
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
-        single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL) }
+        single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL, allowLocalAssetHttp = BuildConfig.ALLOW_LOCAL_ASSET_HTTP) }
         includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
         single<InstallationIdProvider> { AndroidInstallationIdProvider(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }

@@ -8,6 +8,9 @@ import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
+import com.dozy.features.characteravatar.domain.repository.AvatarJobs
+import com.dozy.features.characteravatar.domain.model.AvatarJob
+import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.databaseConfig
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
@@ -145,6 +148,13 @@ class PlaceRoutesTest {
         application {
             dependencies.provide<AssetRepository> { AssetRepository { _, _ -> null } }
             dependencies.provide<GenerationRepository> { UnusedGenerationRepository() }
+            dependencies.provide<AvatarJobs> { object : AvatarJobs {
+                override suspend fun recover() = Unit
+                override suspend fun claim(): AvatarJob? = null
+                override suspend fun create(owner: InstallationId, input: AvatarInput): AvatarJob = error("Unexpected call")
+                override suspend fun find(owner: InstallationId, id: String): AvatarJob? = error("Unexpected call")
+                override suspend fun complete(job: AvatarJob, success: Boolean) = error("Unexpected call")
+            } }
             dependencies.provide<PlaceRepository> { FailingRepository() }
             dependencies.provide<CharacterRepository> { FailingCharacterRepository() }
             module()

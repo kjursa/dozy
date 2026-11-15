@@ -1,5 +1,8 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.characteravatar.CharacterAvatarsClients
+import com.dozy.api.client.characteravatar.DefaultCharacterAvatarsClients
+import com.dozy.api.client.characteravatar.v1.KtorCharacterAvatarsClient
 import com.dozy.api.client.character.CharactersClients
 import com.dozy.api.client.character.DefaultCharactersClients
 import com.dozy.api.client.character.v1.KtorCharactersClient
@@ -22,6 +25,7 @@ class DozyClient(
 ) {
     val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(httpClient, config, installationIdProvider))
     val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(httpClient, config, installationIdProvider))
+    val characterAvatars: CharacterAvatarsClients = DefaultCharacterAvatarsClients(KtorCharacterAvatarsClient(httpClient, config, installationIdProvider))
     val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(httpClient, config, installationIdProvider))
     val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
 }

@@ -5,6 +5,11 @@ import com.dozy.features.asset.domain.repository.AssetRepository
 import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.api.v1.storyV1Routes
+import com.dozy.features.characteravatar.api.v1.avatarV1Routes
+import com.dozy.features.characteravatar.api.v1.avatarAssetRoutes
+import com.dozy.features.characteravatar.application.AvatarWorker
+import com.dozy.features.characteravatar.domain.repository.AvatarJobs
+import com.dozy.features.characteravatar.domain.repository.AvatarStorage
 import com.dozy.features.character.api.v1.characterV1Routes
 import com.dozy.api.contracts.ApiVersion
 import com.dozy.di.configureDependencies
@@ -36,15 +41,21 @@ fun Application.module() {
     val places: PlaceService by dependencies
     val assets: AssetRepository by dependencies
     val stories: StoryService by dependencies
-    val worker: GenerationWorker by dependencies
-    worker.start(this)
+    val storyWorker: GenerationWorker by dependencies
+    val jobs: AvatarJobs by dependencies
+    val storage: AvatarStorage by dependencies
+    val avatarWorker: AvatarWorker by dependencies
+    storyWorker.start(this)
+    avatarWorker.start(this)
     routing {
+        avatarAssetRoutes(storage)
         get("/hello") { call.respond(HelloResponse("Hello world from Dozy")) }
         route(ApiVersion.V1.path) {
             assetV1Routes(assets)
             storyV1Routes(stories)
             placeV1Routes(places)
             characterV1Routes()
+            avatarV1Routes(jobs)
         }
     }
 }

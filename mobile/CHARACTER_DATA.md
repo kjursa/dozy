@@ -56,18 +56,20 @@ entire snapshot. Tombstones remain even after acknowledgement, across database
 reopening, and are never uploaded as PUTs. They protect against stale snapshots.
 Room schema v8 and existing migrations are unchanged.
 
-## Avatar generation arrives in API2
+## API2 avatar generation
 
-The existing `CharacterApi` / `KtorCharacterApi` boundary now handles only avatar
-submission and polling; it is retained for API2. This task adds no backend avatar
-generation route or provider. API2 will populate the same asset metadata registry.
-Only test fixtures seed owned READY assets today.
+The repository directly injects `CharacterAvatarsClients`, selects `.v1`, and
+performs the bounded observation loop: at most 120 one-second GETs after one POST.
+Each SDK method performs one HTTP operation. The legacy `CharacterApi` and its
+transport DTOs have been removed. Cancellation propagates through delays and HTTP;
+leaving the form stops observation without cancelling server work or saving.
 
-With the API disabled, `FakeAvatarGenerator` provides bundled previews. References
-with `fake:` IDs or `bundled-avatar:` URLs stay local-only and are never uploaded,
-including after enabling the server and refreshing. They remain pending. Real
-remote avatar generation is required before new characters can use server assets.
-The existing new-character form still requires a successful avatar; legacy reads
-can omit it. Form restoration, editing, regeneration and navigation remain in the
-existing flows; the retained HTTP generator does not make those endpoints available
-on the current backend.
+Generate Avatar is explicit, blocks form actions and shows progress. Initial Save
+requires a generated avatar. Later text edits retain it; Save can use the current
+avatar without regeneration. Failures store no character. Existing form tests
+cover these behaviors. Enabled API uses backend jobs/assets; disabled API uses
+bundled local fakes. `fake:`/`bundled-avatar:` references are never uploaded.
+
+HTTPS asset URLs are the default. Explicit debug local mode also accepts HTTP
+loopback/emulator hosts, with a matching debug-only Android network policy.
+Release defaults remain HTTPS. See root README for local backend and app commands.

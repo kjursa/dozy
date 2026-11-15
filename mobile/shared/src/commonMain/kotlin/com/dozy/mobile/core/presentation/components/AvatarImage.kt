@@ -8,12 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
+import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.config.isAllowedAssetUrl
 import com.dozy.mobile.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 
-/** Persisted fake references remain local resources; only HTTPS assets reach the network. */
+/** Persisted fake references remain local resources; remote assets follow the configured URL policy. */
 internal fun bundledAvatar(url: String?): DrawableResource? =
     when (url) {
         "bundled-avatar://character_oliver" -> Res.drawable.character_oliver
@@ -22,7 +24,10 @@ internal fun bundledAvatar(url: String?): DrawableResource? =
         else -> null
     }
 
-internal fun remoteImage(url: String?): String? = url?.takeIf { it.startsWith("https://") }
+internal fun remoteImage(
+    url: String?,
+    allowLocalHttp: Boolean = false,
+): String? = url?.takeIf { isAllowedAssetUrl(it, allowLocalHttp) }
 
 @Composable
 internal fun AvatarImage(
@@ -35,7 +40,7 @@ internal fun AvatarImage(
         Image(painterResource(bundled), description, modifier, contentScale = ContentScale.Crop)
     } else {
         SubcomposeAsyncImage(
-            model = remoteImage(url),
+            model = remoteImage(url, koinInject<ApiConfig>().allowLocalAssetHttp),
             imageLoader = koinInject(),
             contentDescription = description,
             modifier = modifier,

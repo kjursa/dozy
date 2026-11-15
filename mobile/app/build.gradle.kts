@@ -25,6 +25,15 @@ android {
         buildConfigField("String", "DOZY_API_BASE_URL", apiBaseUrlLiteral)
     }
 
+    buildTypes {
+        getByName("debug") {
+            buildConfigField("boolean", "ALLOW_LOCAL_ASSET_HTTP", "true")
+        }
+        getByName("release") {
+            buildConfigField("boolean", "ALLOW_LOCAL_ASSET_HTTP", "false")
+        }
+    }
+
     signingConfigs {
         getByName("debug") {
             // Public test key shared by local and CI builds. Never use for production.
