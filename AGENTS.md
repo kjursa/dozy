@@ -31,6 +31,10 @@ For any task that changes files under `backend/`, read and follow `backend/AGENT
 
 For any task that changes files under `mobile/`, read and follow `mobile/AGENTS.md` in addition to these repository-level instructions.
 
+## E2E
+
+For tasks under `e2e/` or changes to `test-e2e`, read and follow `e2e/AGENTS.md`. E2E execution is manual-only and is not part of routine development verification or `./test-all`.
+
 ## Commit messages
 
 Use Conventional Commit prefixes in commit messages, in the format `<type>(optional-scope): <short summary>`. Use a lowercase type such as `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `build`, `ci`, `perf`, or `revert`. Keep the summary concise and imperative, for example `docs(backend): clarify DI module placement`.

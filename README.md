@@ -100,3 +100,10 @@ only these development hosts.
 `DOZY_AVATAR_STORAGE_PATH` defaults to `data/assets`; keep this directory with the
 SQLite database across restarts. Jobs and unattached assets are retained without
 automatic cleanup. Every POST creates a new UUIDv7 job; there is no idempotency key.
+
+## Manual API E2E tests
+
+The standalone [e2e module](e2e/README.md) contains Places API scenarios using the
+shared client against a real backend. Run `./test-e2e` manually to build and start
+an isolated local backend, execute PlacesTest, print results, and stop the server.
+E2E is not part of `./test-all` or automatic development checks.
