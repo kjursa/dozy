@@ -2,6 +2,7 @@ package com.dozy.features.place.api
 
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.place.PlaceResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.databaseConfig
@@ -194,6 +195,9 @@ class PlaceRoutesTest {
         assertEquals(status, response.status)
         val error = decodeError(response)
         assertEquals(code, error.code)
+        if (status == HttpStatusCode.Forbidden || status == HttpStatusCode.Conflict) {
+            assertEquals(PlacesSaveError.fromCode(code), Json.decodeFromString<PlacesSaveError>(response.bodyAsText()))
+        }
         assertEquals(null, error.field)
         assertEquals(null, error.reason)
     }
@@ -202,6 +206,7 @@ class PlaceRoutesTest {
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
         val error = decodeError(response)
         assertEquals("validation.$field.${reason.lowercase()}", error.code)
+        assertEquals(PlacesSaveError.fromCode(error.code), Json.decodeFromString<PlacesSaveError>(response.bodyAsText()))
         assertNull(error.field)
         assertNull(error.reason)
     }

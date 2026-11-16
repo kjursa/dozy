@@ -168,7 +168,7 @@
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> validation.name.too_long</summary><p>Flat PlaceErrorCode values identify required/too-long fields; no field/reason mapping is needed.</p><pre><code>{
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> validation.name.too_long</summary><p>Shared serializable PlacesSaveError values identify required/too-long fields. Backend and client use the same contract; future codes decode as Unknown.</p><pre><code>{
   &quot;code&quot;: &quot;validation.name.too_long&quot;,
   &quot;field&quot;: null,
   &quot;reason&quot;: null

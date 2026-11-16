@@ -63,12 +63,15 @@ Places returns operation-specific sealed results: `PlacesListResult` and
 `PlacesSaveResult`. Each exposes `Success`, `ApiError(error)` and
 `TechnicalError(error)`, so the caller handles one exhaustive `when`. List success
 contains `response: PlacesResponse`; save success is an object without a payload and accepts every HTTP 2xx status.
-Business errors use `PlacesListError`/`PlacesSaveError`. Shared technical failures
+Business errors use serializable `contracts.v1.place.PlacesListError`/`PlacesSaveError`.
+Backend sends the shared error object and the client deserializes that exact type,
+just like success DTOs. The contract serializer owns the flat code lookup and
+`Unknown(code)` fallback; there is no client-side business-error mapper. Shared technical failures
 live in `api.client.TechnicalError`, not the transport contracts.
 
 - `ApiError(error)`: a decoded HTTP 4xx business failure. Save recognizes flat
-  contract-owned `PlaceErrorCode` values for required/too-long fields, forbidden
-  and conflict. An unfamiliar code remains the operation's `Unknown(status, envelope)`.
+  contract-owned `PlacesSaveError` values for required/too-long fields, forbidden
+  and conflict. An unfamiliar code remains the operation's shared `Unknown(code)`.
 - `TechnicalError(TechnicalError.Server(status))`: every HTTP 5xx, before reading or decoding its body,
   including HTML or an empty proxy response.
 - `TechnicalError(TechnicalError.Communication(exception))`: transport/timeout/TLS failures, invalid request

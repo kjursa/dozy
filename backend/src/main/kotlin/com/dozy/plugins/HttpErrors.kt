@@ -2,6 +2,8 @@ package com.dozy.plugins
 
 import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
+import com.dozy.features.place.api.v1.PlaceApiException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -13,20 +15,20 @@ import java.sql.SQLException
 
 class ApiException(
     val status: HttpStatusCode,
-    val code: String,
+    val code: ApiErrorCode,
     val field: String? = null,
     val reason: String? = null,
-) : RuntimeException() {
-    constructor(status: HttpStatusCode, code: ApiErrorCode, field: String? = null, reason: String? = null) :
-        this(status, code.value, field, reason)
-}
+) : RuntimeException()
 
 fun Application.configureErrors() {
     install(StatusPages) {
+        exception<PlaceApiException> { call, failure ->
+            call.respond<PlacesSaveError>(failure.status, failure.error)
+        }
         exception<ApiException> { call, failure ->
             call.respond(
                 failure.status,
-                ApiErrorResponse(failure.code, failure.field, failure.reason),
+                ApiErrorResponse(failure.code.value, failure.field, failure.reason),
             )
         }
         exception<BadRequestException> { call, _ ->

@@ -4,8 +4,8 @@ import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListResult
-import com.dozy.api.client.place.v1.PlacesSaveError
 import com.dozy.api.client.place.v1.PlacesSaveResult
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlacesDto

@@ -243,7 +243,10 @@ custom record; reject writes to the predefined namespace. Responses:
 Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
-Implemented place errors use flat `PlaceErrorCode` values from shared contracts.
+Implemented place business errors are shared serializable `PlacesSaveError` values
+from `api/contracts`. Backend sends that object and the SDK deserializes the same
+type. Its contract serializer encodes flat codes and preserves future values as
+`Unknown(code)`, without a client-side error mapper.
 The common envelope's `field`/`reason` properties are null and are not parsed for Places:
 
 ```json

@@ -1,7 +1,7 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
-import com.dozy.api.contracts.v1.place.PlaceErrorCode
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.features.installation.api.installationId
@@ -46,20 +46,20 @@ private fun requirePlaceId(path: String?): Place.Id {
     return Place.Id(path)
 }
 
-private fun SavePlace.Error.toApiException(): ApiException {
-    val code = when (this) {
-        SavePlace.Error.Name.Required -> PlaceErrorCode.NAME_REQUIRED
-        SavePlace.Error.Name.TooLong -> PlaceErrorCode.NAME_TOO_LONG
-        SavePlace.Error.Description.Required -> PlaceErrorCode.DESCRIPTION_REQUIRED
-        SavePlace.Error.Description.TooLong -> PlaceErrorCode.DESCRIPTION_TOO_LONG
-        SavePlace.Error.Inhabitants.TooLong -> PlaceErrorCode.INHABITANTS_TOO_LONG
+private fun SavePlace.Error.toApiException(): PlaceApiException {
+    val error = when (this) {
+        SavePlace.Error.Name.Required -> PlacesSaveError.NameRequired
+        SavePlace.Error.Name.TooLong -> PlacesSaveError.NameTooLong
+        SavePlace.Error.Description.Required -> PlacesSaveError.DescriptionRequired
+        SavePlace.Error.Description.TooLong -> PlacesSaveError.DescriptionTooLong
+        SavePlace.Error.Inhabitants.TooLong -> PlacesSaveError.InhabitantsTooLong
     }
-    return ApiException(HttpStatusCode.UnprocessableEntity, code.value)
+    return PlaceApiException(HttpStatusCode.UnprocessableEntity, error)
 }
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created
     SavePlaceResult.Updated -> HttpStatusCode.NoContent
-    SavePlaceResult.Forbidden -> throw ApiException(HttpStatusCode.Forbidden, PlaceErrorCode.FORBIDDEN.value)
-    SavePlaceResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, PlaceErrorCode.CONFLICT.value)
+    SavePlaceResult.Forbidden -> throw PlaceApiException(HttpStatusCode.Forbidden, PlacesSaveError.Forbidden)
+    SavePlaceResult.Conflict -> throw PlaceApiException(HttpStatusCode.Conflict, PlacesSaveError.Conflict)
 }

@@ -4,8 +4,7 @@ import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
-import com.dozy.api.client.place.v1.PlacesListError
-import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlaceDto
@@ -121,7 +120,7 @@ class PlaceDataTest {
             val existing = place().toEntity().copy(local = false, pendingSync = false)
             dao.upsert(existing)
             val failures: List<PlacesListResult> = listOf(
-                PlacesListResult.ApiError(PlacesListError.Unknown(409, ApiErrorResponse("NEW_RULE"))),
+                PlacesListResult.ApiError(PlacesListError.Unknown("NEW_RULE")),
                 PlacesListResult.TechnicalError(TechnicalError.Server(503)),
                 PlacesListResult.TechnicalError(TechnicalError.Communication(IOException("Offline"))),
             )

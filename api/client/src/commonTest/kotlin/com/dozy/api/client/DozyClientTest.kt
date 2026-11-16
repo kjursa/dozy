@@ -1,10 +1,10 @@
 package com.dozy.api.client
 
-import com.dozy.api.client.place.v1.PlacesListError
+import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.PlacesResponse
-import com.dozy.api.client.place.v1.PlacesSaveError
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -81,13 +81,12 @@ class DozyClientTest {
     }
 
     @Test
-    fun `unknown API codes preserve envelope and status`() = runTest {
+    fun `unknown API codes decode to the shared Unknown contract`() = runTest {
         val http = HttpClient(MockEngine { respond("""{"code":"validation.new_field.new_rule"}""", HttpStatusCode.UnprocessableEntity) })
         try {
             val result = assertIs<PlacesSaveResult.ApiError>(sdk(http).places.v1.save("one", SavePlaceRequest("Garden", "Quiet")))
             val error = assertIs<PlacesSaveError.Unknown>(result.error)
-            assertEquals(422, error.status)
-            assertEquals("validation.new_field.new_rule", error.error.code)
+            assertEquals("validation.new_field.new_rule", error.code)
             assertIs<PlacesListError.Unknown>(assertIs<PlacesListResult.ApiError>(sdk(http).places.v1.list()).error)
         } finally { http.close() }
     }

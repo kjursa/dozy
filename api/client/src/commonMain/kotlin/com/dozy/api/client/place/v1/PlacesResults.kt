@@ -1,6 +1,8 @@
 package com.dozy.api.client.place.v1
 
 import com.dozy.api.client.TechnicalError as SharedTechnicalError
+import com.dozy.api.contracts.v1.place.PlacesListError
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
 
 sealed interface PlacesListResult {

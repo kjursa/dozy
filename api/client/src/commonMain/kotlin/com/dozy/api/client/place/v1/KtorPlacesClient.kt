@@ -2,10 +2,16 @@ package com.dozy.api.client.place.v1
 
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.InvalidRequestException
 import com.dozy.api.client.InvalidResponseException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.contracts.ApiVersion
+import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.PlacesError
+import com.dozy.api.contracts.v1.place.PlacesListError
+import com.dozy.api.contracts.v1.place.PlacesSaveError
+import kotlinx.serialization.KSerializer
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
@@ -41,7 +47,8 @@ internal class KtorPlacesClient(
             PlacesListResult.Success(json.decodeFromString<PlacesResponse>(response.bodyAsText()))
         } else {
             response.failure(
-                { PlacesListResult.ApiError(PlacesListError.Unknown(response.status.value, it)) },
+                PlacesListError.serializer(),
+                PlacesListResult::ApiError,
                 PlacesListResult::TechnicalError,
             )
         }
@@ -60,17 +67,20 @@ internal class KtorPlacesClient(
             PlacesSaveResult.Success
         } else {
             response.failure(
-                { PlacesSaveResult.ApiError(it.toSaveError(response.status.value)) },
+                PlacesSaveError.serializer(),
+                PlacesSaveResult::ApiError,
                 PlacesSaveResult::TechnicalError,
             )
         }
     }
 
-    private suspend fun <R> HttpResponse.failure(apiError: (ApiErrorResponse) -> R, technicalError: (TechnicalError) -> R): R {
+    private suspend fun <E : PlacesError, R> HttpResponse.failure(serializer: KSerializer<E>, apiError: (E) -> R, technicalError: (TechnicalError) -> R): R {
         if (status.value in 500..599) return technicalError(TechnicalError.Server(status.value))
         if (status.value !in 400..499) throw InvalidResponseException(status.value)
-        val error = json.decodeFromString<ApiErrorResponse>(bodyAsText())
-        error.checkRequest(status.value)
+        val error = json.decodeFromString(serializer, bodyAsText())
+        if (ApiErrorCode.fromValue(error.code) in setOf(ApiErrorCode.INVALID_REQUEST, ApiErrorCode.INVALID_INSTALLATION_ID)) {
+            throw InvalidRequestException(status.value, ApiErrorResponse(error.code))
+        }
         return apiError(error)
     }
 
