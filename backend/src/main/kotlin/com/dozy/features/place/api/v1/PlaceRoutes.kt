@@ -1,8 +1,8 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
-import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.features.installation.api.installationId
 import com.dozy.features.place.application.PlaceService
@@ -11,6 +11,7 @@ import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
+import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -46,7 +47,7 @@ private fun requirePlaceId(path: String?): Place.Id {
     return Place.Id(path)
 }
 
-private fun SavePlace.Error.toApiException(): PlaceApiException {
+private fun SavePlace.Error.toApiException(): BusinessApiException {
     val error = when (this) {
         SavePlace.Error.Name.Required -> PlacesSaveError.NameRequired
         SavePlace.Error.Name.TooLong -> PlacesSaveError.NameTooLong
@@ -54,12 +55,12 @@ private fun SavePlace.Error.toApiException(): PlaceApiException {
         SavePlace.Error.Description.TooLong -> PlacesSaveError.DescriptionTooLong
         SavePlace.Error.Inhabitants.TooLong -> PlacesSaveError.InhabitantsTooLong
     }
-    return PlaceApiException(HttpStatusCode.UnprocessableEntity, error)
+    return BusinessApiException(HttpStatusCode.UnprocessableEntity, error)
 }
 
 private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
     SavePlaceResult.Created -> HttpStatusCode.Created
     SavePlaceResult.Updated -> HttpStatusCode.NoContent
-    SavePlaceResult.Forbidden -> throw PlaceApiException(HttpStatusCode.Forbidden, PlacesSaveError.Forbidden)
-    SavePlaceResult.Conflict -> throw PlaceApiException(HttpStatusCode.Conflict, PlacesSaveError.Conflict)
+    SavePlaceResult.Forbidden -> throw BusinessApiException(HttpStatusCode.Forbidden, PlacesSaveError.Forbidden)
+    SavePlaceResult.Conflict -> throw BusinessApiException(HttpStatusCode.Conflict, PlacesSaveError.Conflict)
 }

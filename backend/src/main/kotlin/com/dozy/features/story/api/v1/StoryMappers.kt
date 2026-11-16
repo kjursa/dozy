@@ -5,19 +5,21 @@ import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.character.CharacterType
 import com.dozy.api.contracts.v1.story.GenerationField
 import com.dozy.api.contracts.v1.story.GenerationMode
-import com.dozy.api.contracts.v1.story.StoryLength
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationStartError
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StoryLength
 import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
-import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
 import com.dozy.features.story.domain.model.Job
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
+import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.plugins.ApiException
+import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
 import java.util.UUID
 import kotlinx.serialization.SerializationException
@@ -56,7 +58,7 @@ internal fun JsonObject.command(): StartGeneration {
             val field = GenerationField.valueOf(parsed.field.name)
             val reason = ValidationReason.valueOf(parsed.reason.name)
             check(reason in field.reasons)
-            throw ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field.value, reason.value)
+            throw BusinessApiException(HttpStatusCode.UnprocessableEntity, GenerationStartError.Validation(field, reason))
         }
     }
 }

@@ -23,10 +23,10 @@ states and failure codes live in `contracts.v1.characteravatar` and reuse the
 character asset reference and description validation contracts.
 
 `DozyClient.characterAvatars.v1.start(request)` performs one POST (202), and
-`status(jobId)` performs one GET (200). Both return operation-specific `ApiResult`.
+`status(jobId)` performs one GET (200). They return `AvatarStartResult` and `AvatarStatusResult`.
 FAILED jobs are successful payloads with `error`; unknown error codes and validation
 details remain Unknown. Invalid request structure, invalid installation identity,
-malformed response combinations, transport failures and cancellation are exceptions.
+malformed responses and transport failures are `TechnicalError.Communication`; cancellation propagates.
 Polling belongs to consumers. Every explicit POST creates an independent job.
 
 
@@ -53,9 +53,9 @@ container to `DefaultPlaceRepository`. Android stores the UUID in installation
 preferences; the iOS boundary uses `NSUserDefaults`. These IDs are a namespace,
 not authentication credentials. Clearing application data can lose the namespace.
 
-`contracts.v1.ApiErrorCode` is the shared source of known wire codes for backend
-and client. Error envelopes retain a string code; `fromValue` returns null for
-unrecognized values so future codes can still become `Unknown`.
+`contracts.v1.ApiErrorCode` defines common request/server and reusable machine codes.
+Operation error contracts define their known business cases and flat validation
+codes. Shared serializers retain future codes as `Unknown(code)`.
 
 ### Places error handling
 
@@ -83,19 +83,28 @@ live in `api.client.TechnicalError`, not the transport contracts.
 The backend uses 422 for validation, 403 for forbidden and 409 for conflict. The
 body code determines the business detail; the client does not parse field/reason
 combinations. Example: `{"code":"validation.name.too_long"}`. Envelope field/reason
-properties remain nullable for other features. Every public Places operation catches
+properties remain nullable legacy metadata; business-error mapping needs only code. Every public Places operation catches
 all `Exception` values except `CancellationException`, which propagates. Local checks
 (such as a blank save ID) are inside this boundary. Fatal errors are not caught.
 Consumers do not need try/catch around Places calls. Mobile retains cached/pending
 data on failure.
 
-### Other feature errors
+### Shared error handling for all clients
 
-Characters, avatars and stories retain `ApiResult<Payload, OperationError>` and
-contract-owned field/reason validation metadata. They classify decoded errors by
-body code regardless of status. Invalid requests, invalid responses, disabled API
-configuration, transport failures and cancellation remain exceptions for these
-features. Their error migration is outside this Places change.
+Every operation exposes its own sealed result with `Success`, `ApiError(error)`
+and `TechnicalError(error)`, following Places. Business error classes live in
+`contracts.v1.<feature>` and implement `ApiBusinessError`. Backend serializes the
+same objects the SDK decodes, using shared contract serializers. Validation wire
+codes are flat (`validation.<field>.<reason>`); operation-specific `Validation`
+values expose typed fields/reasons without client-side lookup or translation.
+Future codes become the operation's `Unknown(code)`.
+
+`ClientTransport` applies the same policy to every client: 5xx wins over body
+content and becomes `TechnicalError.Server`; every other Exception becomes
+`TechnicalError.Communication`. Cancellation propagates; fatal Errors are not
+caught. Consumers need no try/catch around client calls. Payload-free writes
+accept all 2xx; payload-returning operations also decode and validate success
+bodies, so a missing/invalid body remains a communication failure.
 
 Responses tolerate additive unknown JSON fields. Write serialization is owned by
 the library and does not require caller ContentNegotiation. The SDK never closes
@@ -105,18 +114,17 @@ the caller's HttpClient or engine.
 
 Inject `client.character.CharactersClients` and call `characters.v1.list()`,
 `save(id, SaveCharacterRequest(...))`, or `delete(id)`. List returns
-`ApiResult<List<CharacterDto>, CharactersListError>` with the existing bare-array
-wire shape. Save/delete return `ApiResult<Unit, CharactersSaveError>` and
-`ApiResult<Unit, CharactersDeleteError>`; acknowledgements are explicit success
-values. Save accepts only 201/204, delete accepts 204 and the known
-`CHARACTER_NOT_FOUND` error code. Unknown 404 codes remain `Unknown`.
+`CharactersListResult` with a `Success.response: List<CharacterDto>` bare-array
+payload. Save/delete return `CharactersSaveResult`/`CharactersDeleteResult` with
+payload-free Success objects. Both accept every 2xx; delete also acknowledges the
+known `CHARACTER_NOT_FOUND` business code. Unknown 404 codes remain ApiError.Unknown;
+5xx never acknowledges deletion even if its body contains a not-found code.
 
 The write request has name, personality, appearance, type and an optional avatar;
 ID is supplied only in the path. All operations send `X-Installation-Id`.
 `CharacterField.reasons` defines allowed validation combinations, including
 SINGLE_LINE and INVALID_VALUE. Save also classifies CONFLICT and
-REFERENCE_UNAVAILABLE. Structural errors and malformed/transport responses follow
-the exception policy above. See [character integration](../mobile/CHARACTER_DATA.md)
+REFERENCE_UNAVAILABLE. All failure categories follow the shared result policy above. See [character integration](../mobile/CHARACTER_DATA.md)
 and [backend API](../backend/API.md) for limits, ownership and deletion semantics.
 
 ## Story generation and reading
@@ -131,10 +139,11 @@ Cast and place are complete immutable snapshots, with nullable character avatars
 stage and terminal failure values are defined beside the story DTOs.
 
 Start errors distinguish idempotency conflict, active job, unavailable reference,
-validation, unavailability and unknown errors. Status/read distinguish the known
+validation and unknown errors. Status/read distinguish the known
 `JOB_NOT_FOUND` / `STORY_NOT_FOUND` codes from other errors. Classification uses
-body codes, including for unexpected HTTP error statuses. Structural errors,
-malformed terminal combinations, transport failure and cancellation are exceptions.
+body codes for 4xx; every 5xx is a technical server failure. Structural errors,
+malformed terminal combinations and transport failures are communication results;
+cancellation propagates.
 A missing story never triggers generation. HTTP covers require an explicitly HTTP
 API base URL and the same origin; otherwise the SDK requires HTTPS. Story cover
 bytes are fetched through the caller-owned image client using the installation
@@ -175,4 +184,4 @@ are unit/component tests, not E2E.
 
 ## Story library listing (API4)
 
-`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `ApiResult<StoryPageDto, StoryListError>`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known errors include InvalidCursor, Validation and Unavailable; unknown codes/details remain Unknown. Structural errors and malformed pages remain exceptions. Cursors are opaque, URL-encoded by the client, and bound to a persistent installation-owned snapshot, request limit and position. The final page returns nextCursor null.
+`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Cursors are opaque, URL-encoded by the client, and bound to a persistent installation-owned snapshot, request limit and position. The final page returns nextCursor null.

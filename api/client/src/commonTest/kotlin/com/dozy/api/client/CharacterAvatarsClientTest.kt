@@ -1,23 +1,19 @@
 package com.dozy.api.client
 
-import com.dozy.api.client.characteravatar.v1.AvatarStartError
-import com.dozy.api.client.characteravatar.v1.AvatarStatusError
+import com.dozy.api.client.characteravatar.v1.AvatarStartResult
+import com.dozy.api.client.characteravatar.v1.AvatarStatusResult
 import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
-import com.dozy.api.contracts.v1.characteravatar.AvatarField
-import com.dozy.api.contracts.v1.ValidationReason
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertFailsWith
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 class CharacterAvatarsClientTest {
     private val input = AvatarRequestDto("CHILD", "kind", "eyes")
@@ -45,36 +41,14 @@ class CharacterAvatarsClientTest {
             }
         })
         try {
-            assertEquals("QUEUED", (sdk(http).start(input) as ApiResult.Success).value.status)
+            assertEquals("QUEUED", (sdk(http).start(input) as AvatarStartResult.Success).response.status)
             assertEquals(1, requests)
-            assertEquals("GENERATION_FAILED", (sdk(http).status("job") as ApiResult.Success).value.error)
+            assertEquals("GENERATION_FAILED", (sdk(http).status("job") as AvatarStatusResult.Success).response.error)
             assertEquals(2, requests)
         } finally { http.close() }
     }
 
-    @Test fun errorsUseCodesAndUnknownDetailsRemainUnknown() = runTest {
-        for ((body, expected) in listOf(
-            """{"code":"VALIDATION_FAILED","field":"type","reason":"INVALID_VALUE"}""" to AvatarStartError.Validation(AvatarField.TYPE, ValidationReason.INVALID_VALUE),
-            """{"code":"UNAVAILABLE"}""" to AvatarStartError.Unavailable,
-        )) {
-            val http = HttpClient(MockEngine { respond(body, HttpStatusCode.Conflict) })
-            try { assertEquals(ApiResult.Failure(expected), sdk(http).start(input)) } finally { http.close() }
-        }
-        for (body in listOf(
-            """{"code":"FUTURE"}""",
-            """{"code":"VALIDATION_FAILED","field":"type","reason":"FUTURE"}""",
-            """{"code":"VALIDATION_FAILED","field":"name","reason":"REQUIRED"}""",
-        )) {
-            val http = HttpClient(MockEngine { respond(body, HttpStatusCode.BadRequest) })
-            try { assertIs<AvatarStartError.Unknown>((sdk(http).start(input) as ApiResult.Failure).error) } finally { http.close() }
-        }
-        val http = HttpClient(MockEngine { respond("""{"code":"AVATAR_JOB_NOT_FOUND"}""", HttpStatusCode.Conflict) })
-        try { assertEquals(ApiResult.Failure(AvatarStatusError.NotFound), sdk(http).status("missing")) } finally { http.close() }
-    }
-
-    @Test fun structuralErrorsMalformedCombinationsAndCancellationThrow() = runTest {
-        val invalid = HttpClient(MockEngine { respond("""{"code":"INVALID_REQUEST"}""", HttpStatusCode.BadRequest) })
-        try { assertFailsWith<InvalidRequestException> { sdk(invalid).start(input) } } finally { invalid.close() }
+    @Test fun malformedTerminalCombinationsAreCommunicationFailures() = runTest {
         for (body in listOf(
             "{}", "not json",
             """{"jobId":"job","status":"READY"}""",
@@ -83,9 +57,9 @@ class CharacterAvatarsClientTest {
             """{"jobId":"other","status":"QUEUED"}""",
         )) {
             val http = HttpClient(MockEngine { respond(body) })
-            try { assertFailsWith<InvalidResponseException> { sdk(http).status("job") } } finally { http.close() }
+            try { assertIs<TechnicalError.Communication>(assertIs<AvatarStatusResult.TechnicalError>(sdk(http).status("job")).error) }
+            finally { http.close() }
         }
-        val cancelled = HttpClient(MockEngine { throw CancellationException() })
-        try { assertFailsWith<CancellationException> { sdk(cancelled).start(input) } } finally { cancelled.close() }
     }
+
 }

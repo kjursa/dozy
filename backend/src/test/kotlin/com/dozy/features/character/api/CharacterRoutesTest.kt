@@ -2,6 +2,7 @@ package com.dozy.features.character.api
 
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.character.CharacterDto
+import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
 import com.dozy.databaseConfig
 import com.dozy.module
@@ -98,9 +99,10 @@ class CharacterRoutesTest {
             val response = client.save(Json.encodeToString(request))
             assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
             val error = Json.decodeFromString<ApiErrorResponse>(response.bodyAsText())
-            assertEquals("VALIDATION_FAILED", error.code)
-            assertEquals(expected.first, error.field)
-            assertEquals(expected.second, error.reason)
+            assertEquals("validation.${expected.first}.${expected.second.lowercase()}", error.code)
+            assertEquals(null, error.field)
+            assertEquals(null, error.reason)
+            assertEquals(error.code, Json.decodeFromString<CharactersSaveError>(response.bodyAsText()).code)
         }
         val reference = client.save("""{"name":"n","personality":"p","appearance":"a","type":"CHILD","avatar":{"id":"missing","url":"https://example.test/avatar"}}""")
         assertEquals(HttpStatusCode.UnprocessableEntity, reference.status)

@@ -221,7 +221,7 @@ validates all pages before replacing remote summary rows in one Room transaction
 idempotent GET starting at page one; no generation, cover generation or POST occurs.
 
 Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_INSTALLATION_ID,
-422 VALIDATION_FAILED (`limit`, `INVALID_VALUE`), 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
+422 `validation.limit.invalid_value`, 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
 retryable library error while retaining known cards; raw server messages are not
 shown. Transport failures retain the cache and show a retryable error. Null ApiConfig shows the offline library without claiming synchronization and sends no requests.
 
@@ -292,3 +292,14 @@ words; a checked-in PNG fixture supplies the single durable cover.
 ## Shared listing integration (API4)
 
 The repository calls `StoriesClients.v1.list(ListStoriesRequest)` directly and traverses the complete backend snapshot before a Room transaction replaces `library:<id>` summary rows. A successful empty traversal clears these rows. Failure, cancellation, duplicate IDs or cursor cycles leave the previous cache intact. Pending generations and persisted full reader results remain independent. Home/library reuse existing flows and states; opening a card uses the shared read operation. Local HTTP covers are accepted only after SDK validation against the configured backend origin. No list or refresh operation submits a generation. Legacy HTTP code retains explicit retry only.
+
+## Shared SDK result and error contracts
+
+Story and generation operations return their own sealed result with Success,
+ApiError and TechnicalError branches. Requests, success payloads and business
+errors come directly from api/contracts; mobile does not define duplicate wire
+DTOs. Business errors use flat validation codes, typed contract fields/reasons,
+and Unknown(code) for future values. HTTP 5xx maps to TechnicalError.Server before
+body parsing; all other Exceptions map to TechnicalError.Communication, while
+cancellation propagates. Technical/unknown retry failures retain the persisted
+retry key for reconciliation; confirmed business rejection may release it.

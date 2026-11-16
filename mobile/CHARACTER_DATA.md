@@ -21,7 +21,7 @@ installation namespace without accounts or authentication.
 - PUT trims required names (single line, at most 50 UTF-16 units), personality and
   appearance (at most 2000 each). Types are CHILD, ANIMAL, FANTASY and OTHER.
   Contract-owned `CharacterField` and `ValidationReason` specify field errors.
-  Unknown types are `VALIDATION_FAILED` with type / INVALID_VALUE.
+  Unknown types return the shared validation error with code `validation.type.invalid_value`.
 - Avatar ID and URL must exactly match an owned READY entry in the backend asset
   registry; otherwise PUT returns `REFERENCE_UNAVAILABLE`. Nullable avatars support
   historical records; new mobile forms still require an avatar.
@@ -30,8 +30,10 @@ installation namespace without accounts or authentication.
   rows, or 404 `CHARACTER_NOT_FOUND` for missing/inaccessible IDs. The client treats
   that known code as an idempotent acknowledgement; arbitrary 404s are failures.
 
-All shared operations return typed `ApiResult` values. Structural errors,
-malformed responses, transport failures and cancellation remain exceptions.
+All SDK operations return operation-specific Success/ApiError/TechnicalError
+results. Error objects are shared serializable contracts; validation uses flat
+wire codes with typed field/reason values. HTTP 5xx becomes TechnicalError.Server;
+all other Exceptions become TechnicalError.Communication. Cancellation propagates.
 Known error codes are localized or mapped to generic UI states; backend diagnostic
 text is never displayed.
 

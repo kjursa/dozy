@@ -141,7 +141,8 @@ and appearance are trimmed, required and at most 2000 each. Reads preserve
 historical values. Unknown types are field validation failures.
 
 Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
-`VALIDATION_FAILED` with `CharacterField` / `ValidationReason` metadata for business
+flat validation codes such as `validation.name.too_long` from the shared
+`CharactersSaveError` contract for business
 input; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
 READY asset's ID and URL; 409 `CONFLICT` for another installation's or permanently
 deleted ID. The name reasons are REQUIRED, TOO_LONG and SINGLE_LINE; personality
@@ -271,8 +272,8 @@ Places SDK operations expose their own Success/ApiError/TechnicalError result.
 Shared `TechnicalError.Server` represents every 5xx regardless of body;
 `TechnicalError.Communication` holds all other Exceptions, including invalid
 requests/responses, transport failures and local argument errors. Future decoded
-business codes remain operation-specific `Unknown`. Cancellation propagates. Other features retain their current
-field/reason and exception contracts.
+business codes remain operation-specific `Unknown`. Cancellation propagates. All other clients now use the same result/technical-error policy and shared
+business-error contracts.
 
 GET can return the installation-header and database errors above. Rate limiting
 and authentication are not implemented. Edits cannot rewrite existing story
@@ -401,11 +402,11 @@ Summaries omit text and configuration. `readingMinutes` is a positive integer,
 count. Order: descending createdAt, ascending story ID for ties. Use explicit
 lexical ordering consistently rather than locale-dependent sorting.
 
-Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 VALIDATION_FAILED with field `limit` and reason `INVALID_VALUE`. Every page belongs
+Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 `validation.limit.invalid_value`. Every page belongs
 to the same stable snapshot, with no repeated IDs; stories published mid-pagination
 appear on a later refresh, not halfway through the current traversal. Cursor is
 opaque, URL-encoded, installation-bound and validated; last page omits it or returns null.
-Errors: `400 INVALID_CURSOR`, `400 INVALID_INSTALLATION_ID`, `422 VALIDATION_FAILED`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
+Errors: `400 INVALID_CURSOR`, `400 INVALID_INSTALLATION_ID`, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
 concrete snapshot implementation.
 
 ## Background execution and delivery
@@ -454,7 +455,8 @@ without current creation length caps. Unknown enums/malformed structures return
 including their URL, or return 422 `REFERENCE_UNAVAILABLE`. Snapshot origin and
 editable flags confer no permissions. MANUAL optional idea/ending are trimmed and
 limited to 1000/500 UTF-16 units. AUTOMATIC forbids submitting place/idea/ending,
-even as null. Validation returns 422 `VALIDATION_FAILED`: cast supports REQUIRED
+even as null. Validation returns shared error objects with flat 422 codes, e.g.
+`validation.cast.required`: cast supports REQUIRED
 and INVALID_VALUE; idea/ending support TOO_LONG.
 
 Bindings include installation, operation, UUIDv4 key, original canonical request
@@ -497,3 +499,15 @@ transactions cover only state changes, never generation, file writes or delay.
 The job's UUIDv7 asset ID is fixed at acceptance; repeated publication is a no-op.
 This local worker runs in one backend process per database; multi-process leasing
 is outside this development implementation.
+
+## Shared request, response and business-error types
+
+All feature routes deserialize request DTOs and serialize success DTOs from
+api/contracts. Story submission also retains raw JSON for canonical idempotency
+binding (including null versus omitted), then decodes GenerationRequestDto before
+domain validation. Query routes build the shared request type after query syntax
+validation. BusinessApiException carries an ApiBusinessError contract object;
+StatusPages serializes it with the shared code-envelope serializer. The client
+decodes the operation-specific subtype directly. Validation codes use
+validation.<field>.<reason>; fields/reasons are exposed as typed contract values,
+not separate wire metadata. Unknown future codes remain Unknown(code).

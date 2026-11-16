@@ -1,14 +1,11 @@
 package com.dozy.api.contracts.v1.place
 
-import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.ApiBusinessError
+import com.dozy.api.contracts.v1.businessErrorSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
-interface PlacesError {
-    val code: String
-}
+interface PlacesError : ApiBusinessError
 
 @Serializable(with = PlacesListErrorSerializer::class)
 sealed interface PlacesListError : PlacesError {
@@ -32,16 +29,5 @@ sealed interface PlacesSaveError : PlacesError {
     }
 }
 
-object PlacesListErrorSerializer : KSerializer<PlacesListError> by placesErrorSerializer(PlacesListError::Unknown)
-object PlacesSaveErrorSerializer : KSerializer<PlacesSaveError> by placesErrorSerializer(PlacesSaveError::fromCode)
-
-private fun <E : PlacesError> placesErrorSerializer(fromCode: (String) -> E): KSerializer<E> = object : KSerializer<E> {
-    private val envelope = ApiErrorResponse.serializer()
-    override val descriptor = envelope.descriptor
-
-    override fun serialize(encoder: Encoder, value: E) {
-        encoder.encodeSerializableValue(envelope, ApiErrorResponse(value.code))
-    }
-
-    override fun deserialize(decoder: Decoder): E = fromCode(decoder.decodeSerializableValue(envelope).code)
-}
+object PlacesListErrorSerializer : KSerializer<PlacesListError> by businessErrorSerializer(emptyList(), PlacesListError::Unknown)
+object PlacesSaveErrorSerializer : KSerializer<PlacesSaveError> by businessErrorSerializer(PlacesSaveError.known, PlacesSaveError::Unknown)

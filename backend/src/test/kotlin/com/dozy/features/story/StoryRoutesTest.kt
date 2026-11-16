@@ -46,7 +46,7 @@ class StoryRoutesTest {
         assertEquals("{\"stories\":[],\"nextCursor\":null}", client.read("/api/v1/stories").bodyAsText())
         for (limit in listOf("0", "101", "abc", "1.5", "", "-1", "1&limit=2")) {
             val response = client.read("/api/v1/stories?limit=$limit")
-            assertEquals(ApiErrorResponse("VALIDATION_FAILED", "limit", "INVALID_VALUE"), json.decodeFromString(response.bodyAsText()))
+            assertEquals(ApiErrorResponse("validation.limit.invalid_value"), json.decodeFromString(response.bodyAsText()))
         }
         for (cursor in listOf("", "unknown", "one&cursor=two")) {
             assertEquals("INVALID_CURSOR", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/stories?cursor=$cursor").bodyAsText()).code)
@@ -125,9 +125,9 @@ class StoryRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, client.start(key = owner).status)
         val empty = request.replace(Regex("\\[.*?]"), "[]")
         val error = json.decodeFromString<ApiErrorResponse>(client.start(empty).bodyAsText())
-        assertEquals(ApiErrorResponse("VALIDATION_FAILED", "cast", "REQUIRED"), error)
+        assertEquals(ApiErrorResponse("validation.cast.required"), error)
         val longIdea = client.start(request.replace("  Find a star  ", "x".repeat(1001)))
-        assertEquals(ApiErrorResponse("VALIDATION_FAILED", "idea", "TOO_LONG"), json.decodeFromString(longIdea.bodyAsText()))
+        assertEquals(ApiErrorResponse("validation.idea.too_long"), json.decodeFromString(longIdea.bodyAsText()))
         val key = UUID.randomUUID().toString()
         val historical = request.replace("Luna", "L".repeat(300)).replace("Kind", "K".repeat(3000))
         assertEquals(HttpStatusCode.Accepted, client.start(historical, key).status)

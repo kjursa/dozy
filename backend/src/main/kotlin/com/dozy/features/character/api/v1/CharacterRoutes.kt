@@ -4,8 +4,10 @@ import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.character.AvatarDto
 import com.dozy.api.contracts.v1.character.CharacterDto
-import com.dozy.api.contracts.v1.character.CharacterType
 import com.dozy.api.contracts.v1.character.CharacterField
+import com.dozy.api.contracts.v1.character.CharacterType
+import com.dozy.api.contracts.v1.character.CharactersDeleteError
+import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
 import com.dozy.features.character.application.CharacterService
 import com.dozy.features.character.domain.model.Character
@@ -13,13 +15,14 @@ import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.features.installation.api.installationId
 import com.dozy.plugins.ApiException
+import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
+import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
-import io.ktor.server.plugins.di.dependencies
-import io.ktor.server.routing.application
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.application
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.put
@@ -44,15 +47,15 @@ fun Route.characterV1Routes() {
             val status = when (service.save(installation, id, command)) {
                 SaveCharacterResult.Created -> HttpStatusCode.Created
                 SaveCharacterResult.Updated -> HttpStatusCode.NoContent
-                SaveCharacterResult.Conflict -> throw ApiException(HttpStatusCode.Conflict, ApiErrorCode.CONFLICT)
-                SaveCharacterResult.ReferenceUnavailable -> throw ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.REFERENCE_UNAVAILABLE)
+                SaveCharacterResult.Conflict -> throw BusinessApiException(HttpStatusCode.Conflict, CharactersSaveError.Conflict)
+                SaveCharacterResult.ReferenceUnavailable -> throw BusinessApiException(HttpStatusCode.UnprocessableEntity, CharactersSaveError.ReferenceUnavailable)
             }
             call.respond(status)
         }
         delete("/{id}") {
             val installation = call.installationId()
             if (!service.delete(installation, requireCharacterId(call.parameters["id"]))) {
-                throw ApiException(HttpStatusCode.NotFound, ApiErrorCode.CHARACTER_NOT_FOUND)
+                throw BusinessApiException(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
             }
             call.respond(HttpStatusCode.NoContent)
         }
@@ -67,11 +70,11 @@ private fun requireCharacterId(raw: String?): Character.Id {
     return Character.Id(uuid.toString())
 }
 
-private fun SaveCharacter.Result.Invalid.toApiException(): ApiException {
+private fun SaveCharacter.Result.Invalid.toApiException(): BusinessApiException {
     val field = CharacterField.valueOf(field.name)
     val reason = ValidationReason.valueOf(reason.name)
     check(reason in field.reasons)
-    return ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED, field.value, reason.value)
+    return BusinessApiException(HttpStatusCode.UnprocessableEntity, CharactersSaveError.Validation(field, reason))
 }
 
 private fun Character.toDto() = CharacterDto(

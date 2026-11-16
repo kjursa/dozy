@@ -1,4 +1,9 @@
 package com.dozy.mobile
+
+import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.toDto
 import com.dozy.mobile.feature.story.domain.model.*

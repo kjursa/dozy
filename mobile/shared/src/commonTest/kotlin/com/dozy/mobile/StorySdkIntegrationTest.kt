@@ -7,7 +7,6 @@ import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.createHttpClient
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
-import com.dozy.mobile.feature.story.data.api.StoryPageDto
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
 import io.ktor.client.HttpClient

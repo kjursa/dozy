@@ -1,24 +1,23 @@
 package fixtures
 
-import com.dozy.api.client.ApiResult
+import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.character.CharactersClients
 import com.dozy.api.client.character.v1.CharactersClient
-import com.dozy.api.client.character.v1.CharactersDeleteError
-import com.dozy.api.client.character.v1.CharactersListError
-import com.dozy.api.client.character.v1.CharactersSaveError
-import com.dozy.api.contracts.v1.character.CharacterDto
+import com.dozy.api.client.character.v1.CharactersDeleteResult
+import com.dozy.api.client.character.v1.CharactersListResult
+import com.dozy.api.client.character.v1.CharactersSaveResult
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
 
 class CharactersClientFixture :
     CharactersClients,
     CharactersClient {
     override val v1: CharactersClient get() = this
-    var onList: suspend () -> ApiResult<List<CharacterDto>, CharactersListError> = { ApiResult.Failure(CharactersListError.Unavailable) }
+    var onList: suspend () -> CharactersListResult = { CharactersListResult.TechnicalError(TechnicalError.Server(503)) }
     var onSave: suspend (
         String,
         SaveCharacterRequest,
-    ) -> ApiResult<Unit, CharactersSaveError> = { _, _ -> ApiResult.Failure(CharactersSaveError.Unavailable) }
-    var onDelete: suspend (String) -> ApiResult<Unit, CharactersDeleteError> = { ApiResult.Failure(CharactersDeleteError.Unavailable) }
+    ) -> CharactersSaveResult = { _, _ -> CharactersSaveResult.TechnicalError(TechnicalError.Server(503)) }
+    var onDelete: suspend (String) -> CharactersDeleteResult = { CharactersDeleteResult.TechnicalError(TechnicalError.Server(503)) }
 
     override suspend fun list() = onList()
 

@@ -1,10 +1,10 @@
 package com.dozy.mobile
 
-import com.dozy.mobile.feature.story.data.api.GenerationAcceptedDto
+import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.feature.story.data.api.GenerationApi
-import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
-import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
-import com.dozy.mobile.feature.story.data.api.StoryDto
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
 import com.dozy.mobile.feature.story.data.testGenerationRepository
@@ -18,9 +18,13 @@ internal class FakeGenerationDao : GenerationDao {
 
     override fun observe() = rows
 
-    override suspend fun clearLibrary() { rows.value = rows.value.filterNot { it.requestKey.startsWith("library:") } }
+    override suspend fun clearLibrary() {
+        rows.value = rows.value.filterNot { it.requestKey.startsWith("library:") }
+    }
 
-    override suspend fun upsertAll(entities: List<GenerationEntity>) { entities.forEach { upsert(it) } }
+    override suspend fun upsertAll(entities: List<GenerationEntity>) {
+        entities.forEach { upsert(it) }
+    }
 
     override suspend fun upsert(entity: GenerationEntity) {
         rows.value = rows.value.filterNot { it.requestKey == entity.requestKey } + entity

@@ -1,9 +1,14 @@
 package com.dozy.mobile.feature.character.data
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.ApiResult
+import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.character.CharactersClients
+import com.dozy.api.client.character.v1.CharactersDeleteResult
+import com.dozy.api.client.character.v1.CharactersListResult
+import com.dozy.api.client.character.v1.CharactersSaveResult
 import com.dozy.api.client.characteravatar.CharacterAvatarsClients
+import com.dozy.api.client.characteravatar.v1.AvatarStartResult
+import com.dozy.api.client.characteravatar.v1.AvatarStatusResult
 import com.dozy.api.contracts.v1.characteravatar.AvatarJobState
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.character.data.database.CharacterDao
@@ -30,15 +35,14 @@ class DefaultCharacterRepository(
     private val mutations = Mutex()
 
     override suspend fun generateAvatar(input: CreateCharacterInput): Character.Avatar? {
-        var job =
-            try {
-                when (val result = avatars.v1.start(input.toAvatarDto())) {
-                    is ApiResult.Success -> result.value
-                    is ApiResult.Failure -> error("Avatar submission failed")
-                }
-            } catch (_: ApiDisabledException) {
-                return null
+        var job = when (val result = avatars.v1.start(input.toAvatarDto())) {
+            is AvatarStartResult.Success -> result.response
+            is AvatarStartResult.ApiError -> error("Avatar submission failed")
+            is AvatarStartResult.TechnicalError -> {
+                if ((result.error as? TechnicalError.Communication)?.exception is ApiDisabledException) return null
+                error("Avatar submission unavailable")
             }
+        }
         val id = job.jobId
         repeat(121) { poll ->
             check(job.jobId == id) { "Mismatched avatar job" }
@@ -52,8 +56,8 @@ class DefaultCharacterRepository(
             delay(1000)
             job =
                 when (val result = avatars.v1.status(id)) {
-                    is ApiResult.Success -> result.value
-                    is ApiResult.Failure -> error("Avatar status unavailable")
+                    is AvatarStatusResult.Success -> result.response
+                    is AvatarStatusResult.ApiError, is AvatarStatusResult.TechnicalError -> error("Avatar status unavailable")
                 }
         }
         error("Avatar generation timed out")
@@ -70,7 +74,7 @@ class DefaultCharacterRepository(
         }
 
     private suspend fun synchronizeDeletion(id: String): CharacterSync =
-        if (runCatchingSuspend { characters.v1.delete(id) is ApiResult.Success }.getOrDefault(false)) {
+        if (characters.v1.delete(id) is CharactersDeleteResult.Success) {
             CharacterSync.SYNCED
         } else {
             CharacterSync.PENDING
@@ -85,16 +89,11 @@ class DefaultCharacterRepository(
                 .first()
                 .filter { it.pendingSync }
                 .forEach { synchronize(it) }
-            val result =
-                try {
-                    characters.v1.list()
-                } catch (_: ApiDisabledException) {
-                    return@withLock false
-                }
+            val result = characters.v1.list()
             val snapshot =
                 when (result) {
-                    is ApiResult.Success -> result.value
-                    is ApiResult.Failure -> return@withLock false
+                    is CharactersListResult.Success -> result.response
+                    is CharactersListResult.ApiError, is CharactersListResult.TechnicalError -> return@withLock false
                 }
             require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Duplicate character IDs" }
             val entities = snapshot.map { it.toDomain(config.allowLocalAssetHttp).toEntity(pendingSync = false) }
@@ -123,10 +122,7 @@ class DefaultCharacterRepository(
         if (row.avatarId?.startsWith("fake:") == true || row.avatarUrl?.startsWith("bundled-avatar:") == true) {
             return CharacterSync.PENDING
         }
-        val acknowledged =
-            runCatchingSuspend {
-                characters.v1.save(row.id, row.toDomain().toSaveRequest()) is ApiResult.Success
-            }.getOrDefault(false)
+        val acknowledged = characters.v1.save(row.id, row.toDomain().toSaveRequest()) is CharactersSaveResult.Success
         if (!acknowledged) return CharacterSync.PENDING
         return if (runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }.isSuccess) {
             CharacterSync.SYNCED

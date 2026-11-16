@@ -1,20 +1,21 @@
 package com.dozy.features.characteravatar.api.v1
 
-import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ValidationReason
-import com.dozy.api.contracts.v1.characteravatar.AvatarField
 import com.dozy.api.contracts.v1.character.AvatarDto
+import com.dozy.api.contracts.v1.characteravatar.AvatarFailureCode
+import com.dozy.api.contracts.v1.characteravatar.AvatarField
 import com.dozy.api.contracts.v1.characteravatar.AvatarJobDto
 import com.dozy.api.contracts.v1.characteravatar.AvatarJobState
-import com.dozy.api.contracts.v1.characteravatar.AvatarFailureCode
 import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
+import com.dozy.api.contracts.v1.characteravatar.AvatarStartError
+import com.dozy.api.contracts.v1.characteravatar.AvatarStatusError
 import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.model.AvatarState
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.characteravatar.domain.repository.AvatarStorage
 import com.dozy.features.installation.api.installationId
-import com.dozy.plugins.ApiException
+import com.dozy.plugins.BusinessApiException
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -34,14 +35,14 @@ fun Route.avatarV1Routes(jobs: AvatarJobs) {
             val request = call.receive<AvatarRequestDto>()
             val input = when (val parsed = AvatarInput.parse(request.type, request.personality, request.appearance)) {
                 is AvatarInput.Result.Valid -> parsed.input
-                is AvatarInput.Result.Invalid -> throw ApiException(HttpStatusCode.UnprocessableEntity, ApiErrorCode.VALIDATION_FAILED,
-                    AvatarField.valueOf(parsed.field.name).value, ValidationReason.valueOf(parsed.reason.name).value)
+                is AvatarInput.Result.Invalid -> throw BusinessApiException(HttpStatusCode.UnprocessableEntity, AvatarStartError.Validation(
+                    AvatarField.valueOf(parsed.field.name), ValidationReason.valueOf(parsed.reason.name)))
             }
             call.respond(HttpStatusCode.Accepted, jobs.create(owner, input).toDto())
         }
         get("/{jobId}") {
             val job = jobs.find(call.installationId(), call.parameters["jobId"].orEmpty())
-                ?: throw ApiException(HttpStatusCode.NotFound, ApiErrorCode.AVATAR_JOB_NOT_FOUND)
+                ?: throw BusinessApiException(HttpStatusCode.NotFound, AvatarStatusError.NotFound)
             call.respond(job.toDto())
         }
     }

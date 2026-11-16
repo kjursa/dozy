@@ -1,9 +1,13 @@
 package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.ApiResult
-import com.dozy.api.client.character.v1.CharactersSaveError
+import com.dozy.api.client.TechnicalError
+import com.dozy.api.client.character.v1.CharactersDeleteResult
+import com.dozy.api.client.character.v1.CharactersListResult
+import com.dozy.api.client.character.v1.CharactersSaveResult
+import com.dozy.api.client.characteravatar.v1.AvatarStartResult
 import com.dozy.api.contracts.v1.character.CharacterDto
+import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.UuidCharacterIdGenerator
 import com.dozy.mobile.feature.character.data.database.CharacterDao
@@ -15,6 +19,12 @@ import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import fixtures.CharactersClientFixture
 import fixtures.avatarClients
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -22,12 +32,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class CharacterDataTest {
     private fun repository(
@@ -37,7 +41,7 @@ class CharacterDataTest {
         dao,
         client,
         avatarClients {
-            throw ApiDisabledException()
+            AvatarStartResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
         },
     )
 
@@ -69,7 +73,7 @@ class CharacterDataTest {
                                 .single()
                                 .pendingSync,
                         )
-                        ApiResult.Success(Unit)
+                        CharactersSaveResult.Success
                     }
                 }
             val repository = repository(dao, client)
@@ -88,7 +92,7 @@ class CharacterDataTest {
                 val dao = FakeDao()
                 val client =
                     CharactersClientFixture().apply {
-                        onSave = { _, _ -> if (failure) error("offline") else ApiResult.Failure(CharactersSaveError.Conflict) }
+                        onSave = { _, _ -> if (failure) CharactersSaveResult.TechnicalError(TechnicalError.Communication(IllegalStateException("offline"))) else CharactersSaveResult.ApiError(CharactersSaveError.Conflict) }
                     }
                 assertEquals(CharacterSync.PENDING, repository(dao, client).save(character()).sync)
                 assertTrue(
@@ -107,7 +111,7 @@ class CharacterDataTest {
                 CharactersClientFixture().apply {
                     onSave = { _, _ ->
                         calls++
-                        ApiResult.Success(Unit)
+                        CharactersSaveResult.Success
                     }
                 }
             assertFailsWith<IllegalStateException> { repository(dao, client).save(character()) }
@@ -143,9 +147,9 @@ class CharacterDataTest {
                 CharactersClientFixture().apply {
                     onSave = { _, _ ->
                         saved++
-                        ApiResult.Success(Unit)
+                        CharactersSaveResult.Success
                     }
-                    onList = { ApiResult.Success(listOf(character().toDto(), character("2", "Luna").toDto())) }
+                    onList = { CharactersListResult.Success(listOf(character().toDto(), character("2", "Luna").toDto())) }
                 }
             assertTrue(repository(dao, client).refresh())
             assertEquals(1, saved)
@@ -156,7 +160,7 @@ class CharacterDataTest {
                     .toSet(),
             )
             assertTrue(dao.rows.value.none { it.pendingSync })
-            client.onList = { ApiResult.Success(emptyList()) }
+            client.onList = { CharactersListResult.Success(emptyList()) }
             assertTrue(repository(dao, client).refresh())
             assertTrue(dao.rows.value.isEmpty())
         }
@@ -168,7 +172,7 @@ class CharacterDataTest {
             dao.upsert(character("removed").toEntity(false))
             val client =
                 CharactersClientFixture().apply {
-                    onList = { ApiResult.Success(listOf(character(name = "Stale").toDto(), character("2", "Luna").toDto())) }
+                    onList = { CharactersListResult.Success(listOf(character(name = "Stale").toDto(), character("2", "Luna").toDto())) }
                 }
             assertTrue(repository(dao, client).refresh())
             assertEquals(
@@ -192,13 +196,13 @@ class CharacterDataTest {
             dao.upsert(character().toEntity(false))
             val client = CharactersClientFixture()
             assertFalse(repository(dao, client).refresh())
-            client.onList = { throw ApiDisabledException() }
+            client.onList = { CharactersListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException())) }
             assertFalse(repository(dao, client).refresh())
             client.onList = { throw CancellationException() }
             assertFailsWith<CancellationException> { repository(dao, client).refresh() }
-            client.onList = { ApiResult.Success(listOf(character().toDto().copy(type = "UNKNOWN"))) }
+            client.onList = { CharactersListResult.Success(listOf(character().toDto().copy(type = "UNKNOWN"))) }
             assertFailsWith<IllegalArgumentException> { repository(dao, client).refresh() }
-            client.onList = { ApiResult.Success(listOf(character().toDto(), character().toDto())) }
+            client.onList = { CharactersListResult.Success(listOf(character().toDto(), character().toDto())) }
             assertFailsWith<IllegalArgumentException> { repository(dao, client).refresh() }
             assertEquals(listOf(character()), repository(dao).observe().first())
         }
@@ -215,9 +219,9 @@ class CharacterDataTest {
                                 .single()
                                 .deleted,
                         )
-                        ApiResult.Success(Unit)
+                        CharactersDeleteResult.Success
                     }
-                    onList = { ApiResult.Success(listOf(character().toDto())) }
+                    onList = { CharactersListResult.Success(listOf(character().toDto())) }
                 }
             val repository = repository(dao, client)
             assertEquals(CharacterSync.SYNCED, repository.delete(character().id))
@@ -235,7 +239,7 @@ class CharacterDataTest {
                 dao.upsert(character().toEntity(false))
                 val client =
                     CharactersClientFixture().apply {
-                        onDelete = { if (cancel) throw CancellationException() else error("offline") }
+                        onDelete = { if (cancel) throw CancellationException() else CharactersDeleteResult.TechnicalError(TechnicalError.Communication(IllegalStateException("offline"))) }
                     }
                 val repository = repository(dao, client)
                 if (cancel) {
@@ -252,7 +256,7 @@ class CharacterDataTest {
         runTest {
             val dao = FakeDao()
             dao.upsert(character().toEntity(false))
-            val client = CharactersClientFixture().apply { onSave = { _, _ -> ApiResult.Success(Unit) } }
+            val client = CharactersClientFixture().apply { onSave = { _, _ -> CharactersSaveResult.Success } }
             val repository = repository(dao, client)
             val edited = character(name = "Edited").copy(avatar = avatar())
             assertEquals(CharacterSync.SYNCED, repository.update(edited)?.sync)
@@ -273,7 +277,7 @@ class CharacterDataTest {
                     onSave = { _, _ ->
                         started.complete(Unit)
                         release.await()
-                        ApiResult.Success(Unit)
+                        CharactersSaveResult.Success
                     }
                 }
             val repository = repository(dao, client)
@@ -297,7 +301,7 @@ class CharacterDataTest {
             val client =
                 CharactersClientFixture().apply {
                     onSave = { _, _ -> error("Bundled avatar must not be sent") }
-                    onList = { ApiResult.Success(emptyList()) }
+                    onList = { CharactersListResult.Success(emptyList()) }
                 }
             val preview =
                 character().copy(
