@@ -1,44 +1,46 @@
 package com.dozy.api.contracts
 
 import com.dozy.api.contracts.v1.ApiErrorResponse
-import com.dozy.api.contracts.v1.ValidationReason
-import com.dozy.api.contracts.v1.place.PlaceField
+import com.dozy.api.contracts.v1.place.PlacesListError
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 class PlaceValidationContractTest {
     @Test
-    fun `field and reason wire values remain stable`() {
-        val fields = mapOf(PlaceField.NAME to "name", PlaceField.DESCRIPTION to "description", PlaceField.INHABITANTS to "inhabitants")
-        fields.forEach { (field, value) ->
-            assertEquals(value, field.value)
-            assertEquals(field, PlaceField.fromValue(value))
-        }
-        val reasons = mapOf(ValidationReason.REQUIRED to "REQUIRED", ValidationReason.TOO_LONG to "TOO_LONG")
-        reasons.forEach { (reason, value) ->
-            assertEquals(value, reason.value)
-            assertEquals(reason, ValidationReason.fromValue(value))
-        }
-    }
-
-    @Test
-    fun `contract defines optional and required field error combinations`() {
-        val required = setOf(ValidationReason.REQUIRED, ValidationReason.TOO_LONG)
-        assertEquals(required, PlaceField.NAME.reasons)
-        assertEquals(required, PlaceField.DESCRIPTION.reasons)
-        assertEquals(setOf(ValidationReason.TOO_LONG), PlaceField.INHABITANTS.reasons)
-    }
-
-    @Test
-    fun `future validation metadata remains decodable as strings`() {
-        val error = Json.decodeFromString<ApiErrorResponse>(
-            """{"code":"VALIDATION_FAILED","field":"newField","reason":"NEW_REASON"}""",
+    fun `every known business error round trips through the shared contract`() {
+        val codes = listOf(
+            "validation.name.required", "validation.name.too_long",
+            "validation.description.required", "validation.description.too_long",
+            "validation.inhabitants.too_long", "place.not_editable", "place.conflict",
         )
-        assertEquals("newField", error.field)
-        assertEquals("NEW_REASON", error.reason)
-        assertNull(PlaceField.fromValue(requireNotNull(error.field)))
-        assertNull(ValidationReason.fromValue(requireNotNull(error.reason)))
+        assertEquals(codes, PlacesSaveError.known.map { it.code })
+        assertEquals(codes.size, codes.toSet().size)
+        PlacesSaveError.known.forEach { error ->
+            val body = Json.encodeToString<PlacesSaveError>(error)
+            assertEquals(error, Json.decodeFromString<PlacesSaveError>(body))
+            assertEquals(error.code, Json.decodeFromString<ApiErrorResponse>(body).code)
+        }
+    }
+
+    @Test
+    fun `future codes deserialize and serialize without losing the original code`() {
+        val code = "validation.new_field.new_rule"
+        val body = """{"code":"$code"}"""
+        assertEquals(PlacesSaveError.Unknown(code), Json.decodeFromString<PlacesSaveError>(body))
+        assertEquals(PlacesListError.Unknown(code), Json.decodeFromString<PlacesListError>(body))
+        assertEquals(body, Json.encodeToString<PlacesSaveError>(PlacesSaveError.Unknown(code)))
+        assertEquals(body, Json.encodeToString<PlacesListError>(PlacesListError.Unknown(code)))
+    }
+
+    @Test
+    fun `malformed envelopes fail decoding instead of becoming unknown business errors`() {
+        for (body in listOf("<html>Error</html>", "{}", """{"code":null}""")) {
+            assertFailsWith<SerializationException> { Json.decodeFromString<PlacesSaveError>(body) }
+            assertFailsWith<SerializationException> { Json.decodeFromString<PlacesListError>(body) }
+        }
     }
 }

@@ -1,23 +1,24 @@
 package com.dozy.features.place.api
 
+import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.PlaceResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
+import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.SavePlaceRequest
+import com.dozy.databaseConfig
+import com.dozy.features.asset.domain.repository.AssetRepository
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.features.character.domain.repository.CharacterRepository
-import com.dozy.api.contracts.v1.ApiErrorResponse
-import com.dozy.api.contracts.v1.place.PlaceResponse
-import com.dozy.api.contracts.v1.place.PlacesResponse
-import com.dozy.api.contracts.v1.place.SavePlaceRequest
-import com.dozy.features.characteravatar.domain.repository.AvatarJobs
-import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.model.AvatarInput
-import com.dozy.databaseConfig
+import com.dozy.features.characteravatar.domain.model.AvatarJob
+import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
-import com.dozy.features.asset.domain.repository.AssetRepository
 import com.dozy.features.story.UnusedGenerationRepository
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.module
@@ -99,7 +100,7 @@ class PlaceRoutesTest {
         assertEquals(HttpStatusCode.Created, client.save(installation = uppercase).status)
         assertEquals(4, client.places(uppercase.lowercase()).size)
         assertEquals(3, client.places(stranger).size)
-        assertError(client.save(installation = stranger), HttpStatusCode.Conflict, "CONFLICT")
+        assertError(client.save(installation = stranger), HttpStatusCode.Conflict, "place.conflict")
         assertEquals(4, client.places(uppercase).size)
     }
 
@@ -107,7 +108,7 @@ class PlaceRoutesTest {
     fun `protects predefined namespace even for unknown IDs`() = testApplication {
         configurePlacesTest()
         for (builtin in listOf("builtin:woods", "builtin:missing")) {
-            assertError(client.save(path = builtin, body = body()), HttpStatusCode.Forbidden, "FORBIDDEN")
+            assertError(client.save(path = builtin, body = body()), HttpStatusCode.Forbidden, "place.not_editable")
         }
         assertEquals("Whispering woods", client.places().single { it.id == "builtin:woods" }.name)
     }
@@ -116,7 +117,7 @@ class PlaceRoutesTest {
     fun `rejects malformed JSON and missing fields`() = testApplication {
         configurePlacesTest()
         val invalidBodies = listOf(
-            "{", "{}", """{"name":"Garden"}""",
+            "abc", "{", "{}", """{"name":"Garden"}""",
             """{"name":"Garden","description":"Quiet","origin":"SYSTEM","editable":true}""",
         )
         for (invalid in invalidBodies) {
@@ -194,6 +195,9 @@ class PlaceRoutesTest {
         assertEquals(status, response.status)
         val error = decodeError(response)
         assertEquals(code, error.code)
+        if (status == HttpStatusCode.Forbidden || status == HttpStatusCode.Conflict) {
+            assertEquals(PlacesSaveError.fromCode(code), Json.decodeFromString<PlacesSaveError>(response.bodyAsText()))
+        }
         assertEquals(null, error.field)
         assertEquals(null, error.reason)
     }
@@ -201,9 +205,10 @@ class PlaceRoutesTest {
     private suspend fun assertFieldError(response: HttpResponse, field: String, reason: String) {
         assertEquals(HttpStatusCode.UnprocessableEntity, response.status)
         val error = decodeError(response)
-        assertEquals("VALIDATION_FAILED", error.code)
-        assertEquals(field, error.field)
-        assertEquals(reason, error.reason)
+        assertEquals("validation.$field.${reason.lowercase()}", error.code)
+        assertEquals(PlacesSaveError.fromCode(error.code), Json.decodeFromString<PlacesSaveError>(response.bodyAsText()))
+        assertNull(error.field)
+        assertNull(error.reason)
     }
 
     private suspend fun decodeError(response: HttpResponse): ApiErrorResponse {

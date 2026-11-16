@@ -243,25 +243,36 @@ custom record; reject writes to the predefined namespace. Responses:
 Repeated identical PUTs replace one resource. A transaction checks ownership and
 writes the replacement atomically. `editable: true` does not bypass permissions.
 
-Implemented place errors use the common error shape. A `422 VALIDATION_FAILED` caused
-by field validation includes the field and reason:
+Implemented place business errors are shared serializable `PlacesSaveError` values
+from `api/contracts`. Backend sends that object and the SDK deserializes the same
+type. Its contract serializer encodes flat codes and preserves future values as
+`Unknown(code)`, without a client-side error mapper.
+The common envelope's `field`/`reason` properties are null and are not parsed for Places:
 
 ```json
-{"code":"VALIDATION_FAILED","field":"name","reason":"TOO_LONG"}
+{"code":"validation.name.too_long","field":null,"reason":null}
 ```
 
-`REQUIRED` means the trimmed value is empty. `TOO_LONG` means the trimmed value
-exceeds its write limit. Lengths use UTF-16 units. Write limits apply to PUT requests; existing stored values remain
-readable even if they exceed a later write limit.
+Validation codes are `validation.name.required`, `validation.name.too_long`,
+`validation.description.required`, `validation.description.too_long`, and
+`validation.inhabitants.too_long`. Required means trimmed empty input; too_long
+means a trimmed value exceeds its write limit (UTF-16 units). Existing records
+remain readable even if write limits change.
 
-| Status | Code | Cause |
+| Status | Code | Meaning |
 | --- | --- | --- |
-| 400 | `INVALID_INSTALLATION_ID` | Missing, duplicated, or non-canonical UUID header |
-| 400 | `INVALID_REQUEST` | Malformed/missing JSON fields or a blank path ID |
-| 422 | `VALIDATION_FAILED` | Invalid trimmed name, description, or inhabitants; response identifies the field and reason |
-| 403 | `FORBIDDEN` | Attempt to write any `builtin:` ID, including unknown ones |
-| 409 | `CONFLICT` | Custom ID already belongs to another installation |
+| 400 | `INVALID_REQUEST` / `INVALID_INSTALLATION_ID` | Invalid request structure or installation header |
+| 422 | Flat validation code above | Invalid user input |
+| 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
+| 409 | `place.conflict` | Custom ID belongs to another installation |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
+
+Places SDK operations expose their own Success/ApiError/TechnicalError result.
+Shared `TechnicalError.Server` represents every 5xx regardless of body;
+`TechnicalError.Communication` holds all other Exceptions, including invalid
+requests/responses, transport failures and local argument errors. Future decoded
+business codes remain operation-specific `Unknown`. Cancellation propagates. Other features retain their current
+field/reason and exception contracts.
 
 GET can return the installation-header and database errors above. Rate limiting
 and authentication are not implemented. Edits cannot rewrite existing story

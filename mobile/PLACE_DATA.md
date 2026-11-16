@@ -48,8 +48,13 @@ cache mutation.
 Any non-200 status is a failed refresh, including 401/403 (authorization), 404
 (endpoint unavailable), 429 (rate limited), and 5xx (server unavailable). The
 client displays a resource-backed error and retains available places. Error
-bodies are not displayed or interpreted as user-facing text. A future backend
-may define structured error DTOs before authentication or mutation is enabled.
+bodies are not displayed or interpreted as user-facing text. The shared SDK returns operation-specific `PlacesListResult`/`PlacesSaveResult`
+with Success, ApiError and TechnicalError branches. Shared technical errors are
+`TechnicalError.Server(status)` for 5xx and `TechnicalError.Communication(exception)`
+for all other Exceptions, including request/response/transport and argument errors.
+Cancellation propagates; clients need no exception handling around these calls. Places validation uses shared serializable `contracts.v1.place.PlacesSaveError`
+values with flat codes such as `validation.name.too_long`; backend and SDK use the
+same error type. Future codes decode as `Unknown(code)`.
 Network/decoding/storage failures have the same retry behavior. Coroutine
 cancellation propagates. A null base URL makes no requests and explicitly returns
 an offline result rather than claiming a remote refresh succeeded.
