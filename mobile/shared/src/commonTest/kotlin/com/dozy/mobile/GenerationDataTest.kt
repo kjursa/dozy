@@ -1,5 +1,9 @@
 package com.dozy.mobile
 
+import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.*
 import com.dozy.mobile.feature.story.data.api.*
@@ -11,11 +15,11 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.http.content.TextContent
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.test.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.*
-import kotlin.test.*
 
 class GenerationDataTest {
     private fun input(automatic: Boolean = false) =

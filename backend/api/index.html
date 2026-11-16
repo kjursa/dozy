@@ -49,10 +49,10 @@
   }
 }</code></pre></details><h3>Contract rules</h3><ul><li>type: CHILD, ANIMAL, FANTASY, OTHER.</li><li>Trim input: name required, single line, max 50 UTF-16 units; personality and appearance required, max 2000 each.</li><li>New mobile saves require a ready avatar; historical records may have avatar: null. Asset ID/URL must match an owned READY asset with exactly matching ID and URL.</li><li>Editing descriptions may retain an older avatar. No version token is currently submitted.</li><li>Deleted character IDs cannot be revived.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">201</span> Created</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status ok">204</span> Updated</summary><p class="muted">Empty response body.</p></details><details class="response"><summary><span class="status error">400</span> INVALID_REQUEST</summary><p>Invalid request structure or resource ID.</p><pre><code>{
   &quot;code&quot;: &quot;INVALID_REQUEST&quot;
-}</code></pre></details><details class="response"><summary><span class="status error">422</span> VALIDATION_FAILED</summary><p>Field and reason use contract-owned CharacterField and ValidationReason values.</p><pre><code>{
-  &quot;code&quot;: &quot;VALIDATION_FAILED&quot;,
-  &quot;field&quot;: &quot;name&quot;,
-  &quot;reason&quot;: &quot;REQUIRED&quot;
+}</code></pre></details><details class="response"><summary><span class="status error">422</span> validation.name.required</summary><p>The shared operation error contract uses a flat code and decodes future codes as Unknown.</p><pre><code>{
+  &quot;code&quot;: &quot;validation.name.required&quot;,
+  &quot;field&quot;: null,
+  &quot;reason&quot;: null
 }</code></pre></details><details class="response"><summary><span class="status error">422</span> REFERENCE_UNAVAILABLE</summary><pre><code>{
   &quot;code&quot;: &quot;REFERENCE_UNAVAILABLE&quot;
 }</code></pre></details><details class="response"><summary><span class="status error">409</span> CONFLICT</summary><p>The ID belongs to another installation or is permanently deleted.</p><pre><code>{

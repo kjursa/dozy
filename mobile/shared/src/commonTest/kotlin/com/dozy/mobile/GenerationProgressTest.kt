@@ -1,6 +1,8 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.ViewModelStore
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.testGenerationRepository
@@ -13,11 +15,11 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
+import kotlin.test.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.Json
-import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GenerationProgressTest {

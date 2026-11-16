@@ -1,7 +1,7 @@
 package com.dozy.mobile.feature.story.data
 
-import com.dozy.mobile.feature.story.data.api.StoryDto
-import com.dozy.mobile.feature.story.data.api.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.domain.model.StorySummary
 import kotlin.math.ceil

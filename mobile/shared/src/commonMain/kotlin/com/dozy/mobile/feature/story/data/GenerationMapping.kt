@@ -1,12 +1,12 @@
 package com.dozy.mobile.feature.story.data
 
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.feature.character.data.toDomain
 import com.dozy.mobile.feature.character.data.toDto
 import com.dozy.mobile.feature.place.data.toDomain
 import com.dozy.mobile.feature.place.data.toDto
 import com.dozy.mobile.feature.place.data.toEntity
-import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
-import com.dozy.mobile.feature.story.data.api.StoryDto
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
 import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
 import com.dozy.mobile.feature.story.domain.model.GenerationJob

@@ -1,15 +1,20 @@
 package com.dozy.mobile.feature.story.data
 
 import com.dozy.api.client.ApiDisabledException
-import com.dozy.api.client.ApiResult
+import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.story.StoriesClients
-import com.dozy.api.client.story.v1.StoryReadError
+import com.dozy.api.client.story.v1.StoryListResult
+import com.dozy.api.client.story.v1.StoryReadResult
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
+import com.dozy.api.client.storygeneration.v1.GenerationRetryResult
+import com.dozy.api.client.storygeneration.v1.GenerationStartResult
+import com.dozy.api.client.storygeneration.v1.GenerationStatusResult
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationRetryError
 import com.dozy.api.contracts.v1.story.ListStoriesRequest
-import com.dozy.api.client.storygeneration.v1.GenerationRetryError
-import com.dozy.mobile.feature.story.data.api.GenerationRequestDto
-import com.dozy.mobile.feature.story.data.api.StoryDto
-import com.dozy.mobile.feature.story.data.api.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StoryReadError
+import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
 import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
@@ -57,16 +62,15 @@ class DefaultGenerationRepository(
             val cursors = mutableSetOf<String>()
             var cursor: String? = null
             do {
-                val response =
-                    try {
-                        reader.v1.list(ListStoriesRequest(cursor = cursor))
-                    } catch (_: ApiDisabledException) {
-                        return@withLock false
-                    }
+                val response = reader.v1.list(ListStoriesRequest(cursor = cursor))
                 val page =
                     when (response) {
-                        is ApiResult.Success -> response.value
-                        is ApiResult.Failure -> error("Library unavailable")
+                        is StoryListResult.Success -> response.response
+                        is StoryListResult.ApiError -> error("Library unavailable")
+                        is StoryListResult.TechnicalError -> {
+                            if ((response.error as? TechnicalError.Communication)?.exception is ApiDisabledException) return@withLock false
+                            error("Library unavailable")
+                        }
                     }
                 require(page.stories.isNotEmpty() || page.nextCursor == null)
                 page.stories.forEach { it.toDomain(allowDevelopmentHttp = true) }
@@ -88,8 +92,9 @@ class DefaultGenerationRepository(
             stories().first().find { it.id == id }?.let { return@withLock it }
             val dto =
                 when (val response = reader.v1.read(id.value)) {
-                    is ApiResult.Success -> response.value
-                    is ApiResult.Failure ->
+                    is StoryReadResult.Success -> response.response
+                    is StoryReadResult.TechnicalError -> error("Story unavailable")
+                    is StoryReadResult.ApiError ->
                         if (response.error ==
                             StoryReadError.NotFound
                         ) {
@@ -119,16 +124,16 @@ class DefaultGenerationRepository(
             runCatchingSuspend {
                 val remote =
                     when (val response = generations.v1.status(id.value)) {
-                        is ApiResult.Success -> response.value
-                        is ApiResult.Failure -> error("Status unavailable")
+                        is GenerationStatusResult.Success -> response.response
+                        is GenerationStatusResult.ApiError, is GenerationStatusResult.TechnicalError -> error("Status unavailable")
                     }
                 require(remote.jobId == id.value)
                 val result =
                     if (remote.status == "READY") {
                         val story =
                             when (val response = reader.v1.read(requireNotNull(remote.storyId))) {
-                                is ApiResult.Success -> response.value
-                                is ApiResult.Failure -> error("Story unavailable")
+                                is StoryReadResult.Success -> response.response
+                                is StoryReadResult.ApiError, is StoryReadResult.TechnicalError -> error("Story unavailable")
                             }
                         require(story.id == remote.storyId)
                         // Validate snapshots before committing READY. One row stores status and result atomically.
@@ -164,9 +169,10 @@ class DefaultGenerationRepository(
             dao.upsert(pending)
             val response =
                 when (val result = generations.v1.retry(id.value, requireNotNull(pending.retryKey))) {
-                    is ApiResult.Success -> result.value
-                    is ApiResult.Failure -> {
-                        if (result.error != GenerationRetryError.Unavailable && result.error !is GenerationRetryError.Unknown) {
+                    is GenerationRetryResult.Success -> result.response
+                    is GenerationRetryResult.TechnicalError -> return@withLock null
+                    is GenerationRetryResult.ApiError -> {
+                        if (result.error !is GenerationRetryError.Unknown) {
                             dao.upsert(pending.copy(retryKey = null, statusUnknown = true))
                         }
                         return@withLock null
@@ -221,8 +227,12 @@ class DefaultGenerationRepository(
             check(dao.observe().first().none { it.requestKey != key.value && (it.status in activeStatuses || it.retryKey != null) })
             val response =
                 when (val response = generations.v1.start(key.value, Json.decodeFromString<GenerationRequestDto>(row.configuration))) {
-                    is ApiResult.Success -> response.value
-                    is ApiResult.Failure -> return@withLock null
+                    is GenerationStartResult.Success -> response.response
+                    is GenerationStartResult.ApiError -> return@withLock null
+                    is GenerationStartResult.TechnicalError -> {
+                        if ((response.error as? TechnicalError.Communication)?.exception is ApiDisabledException) return@withLock null
+                        error("Story submission unavailable")
+                    }
                 }
             val accepted = row.copy(jobId = response.jobId, status = response.status)
             dao.upsert(accepted)

@@ -1,5 +1,11 @@
 package com.dozy.mobile.feature.story.data.api
 
+import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
+import com.dozy.api.contracts.v1.story.GenerationRequestDto
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StoryPageDto
+
 interface GenerationApi {
     suspend fun stories(cursor: String?): StoryPageDto? = null
 

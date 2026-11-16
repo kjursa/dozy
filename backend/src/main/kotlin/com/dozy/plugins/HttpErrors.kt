@@ -1,9 +1,8 @@
 package com.dozy.plugins
 
+import com.dozy.api.contracts.v1.ApiBusinessError
 import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.ApiErrorResponse
-import com.dozy.api.contracts.v1.place.PlacesSaveError
-import com.dozy.features.place.api.v1.PlaceApiException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -20,10 +19,12 @@ class ApiException(
     val reason: String? = null,
 ) : RuntimeException()
 
+class BusinessApiException(val status: HttpStatusCode, val error: ApiBusinessError) : RuntimeException()
+
 fun Application.configureErrors() {
     install(StatusPages) {
-        exception<PlaceApiException> { call, failure ->
-            call.respond<PlacesSaveError>(failure.status, failure.error)
+        exception<BusinessApiException> { call, failure ->
+            call.respond<ApiBusinessError>(failure.status, failure.error)
         }
         exception<ApiException> { call, failure ->
             call.respond(

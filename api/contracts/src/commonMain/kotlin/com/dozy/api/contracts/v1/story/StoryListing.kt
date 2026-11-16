@@ -3,6 +3,7 @@ package com.dozy.api.contracts.v1.story
 import com.dozy.api.contracts.v1.ValidationReason
 import kotlinx.serialization.Serializable
 
+@Serializable
 data class ListStoriesRequest(val limit: Int = 100, val cursor: String? = null)
 
 @Serializable

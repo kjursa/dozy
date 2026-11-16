@@ -1,6 +1,8 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.ViewModelStore
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
@@ -10,8 +12,6 @@ import com.dozy.mobile.feature.home.presentation.HomeSection
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
 import com.dozy.mobile.feature.place.domain.usecase.RefreshPlaces
-import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
-import com.dozy.mobile.feature.story.data.api.StorySummaryDto
 import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.data.toDomain
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
@@ -24,6 +24,9 @@ import com.dozy.mobile.feature.story.domain.usecase.RefreshGeneration
 import com.dozy.mobile.feature.story.domain.usecase.RefreshStories
 import com.dozy.mobile.feature.story.domain.usecase.RetryGeneration
 import com.dozy.mobile.feature.story.presentation.generation.GenerationAction
+import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,9 +41,6 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.test.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {

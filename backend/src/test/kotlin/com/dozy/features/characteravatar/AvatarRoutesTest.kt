@@ -1,33 +1,35 @@
 package com.dozy.features.characteravatar
 
-import com.dozy.databaseConfig
-import com.dozy.module
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.ValidationReason
+import com.dozy.api.contracts.v1.characteravatar.AvatarField
 import com.dozy.api.contracts.v1.characteravatar.AvatarJobDto
-import com.dozy.api.contracts.v1.character.AvatarDto
+import com.dozy.api.contracts.v1.characteravatar.AvatarStartError
 import com.dozy.config.AvatarConfig
 import com.dozy.config.FakeAvatarMode
+import com.dozy.databaseConfig
+import com.dozy.module
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
-import io.ktor.client.request.header
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.testing.testApplication
-import java.nio.file.Path
 import java.io.ByteArrayInputStream
+import java.nio.file.Path
 import javax.imageio.ImageIO
-import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlinx.coroutines.delay
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.io.TempDir
 
 class AvatarRoutesTest {
@@ -76,7 +78,7 @@ class AvatarRoutesTest {
             header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request.replace("Kind", ""))
         }
         assertEquals(HttpStatusCode.UnprocessableEntity, invalid.status)
-        assertEquals("personality", Json.decodeFromString<ApiErrorResponse>(invalid.bodyAsText()).field)
+        assertEquals(AvatarStartError.Validation(AvatarField.PERSONALITY, ValidationReason.REQUIRED), Json.decodeFromString<AvatarStartError>(invalid.bodyAsText()))
     }
 
     @Test fun failedJobIsSuccessfulStatusWithContractError() = testApplication {

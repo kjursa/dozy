@@ -1,12 +1,12 @@
 package com.dozy.mobile
 
+import com.dozy.api.contracts.v1.story.GenerationStatusDto
+import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StoryPageDto
+import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.api.GenerationApi
-import com.dozy.mobile.feature.story.data.api.GenerationStatusDto
 import com.dozy.mobile.feature.story.data.api.KtorGenerationApi
-import com.dozy.mobile.feature.story.data.api.StoryDto
-import com.dozy.mobile.feature.story.data.api.StoryPageDto
-import com.dozy.mobile.feature.story.data.api.StorySummaryDto
 import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.data.toDomain
 import com.dozy.mobile.feature.story.data.toDto
