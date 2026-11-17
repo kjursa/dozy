@@ -3,6 +3,7 @@ package com.dozy.mobile.di
 import coil3.PlatformContext
 import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.home.di.homeModule
+import com.dozy.mobile.feature.login.di.loginModule
 import com.dozy.mobile.feature.place.di.placeModule
 import com.dozy.mobile.feature.story.data.notification.UnsupportedStoryCompletionNotifier
 import com.dozy.mobile.feature.story.di.storyModule
@@ -12,7 +13,7 @@ import org.koin.dsl.module
 /** Navigation supplies each ViewModel's SavedStateHandle and route arguments. */
 val iosPresentationModule =
     module {
-        includes(characterModule, homeModule, placeModule, storyModule, imageModule)
+        includes(characterModule, homeModule, loginModule, placeModule, storyModule, imageModule)
         single<PlatformContext> { PlatformContext.INSTANCE }
         single<StoryCompletionNotifier> { UnsupportedStoryCompletionNotifier() }
     }

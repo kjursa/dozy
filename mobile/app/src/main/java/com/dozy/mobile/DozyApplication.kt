@@ -5,6 +5,7 @@ import androidx.work.Configuration
 import com.dozy.mobile.di.androidModule
 import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.home.di.homeModule
+import com.dozy.mobile.feature.login.di.loginModule
 import com.dozy.mobile.feature.place.di.placeModule
 import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
 import com.dozy.mobile.feature.story.data.background.GenerationWorkerFactory
@@ -26,7 +27,7 @@ class DozyApplication :
         super.onCreate()
         startKoin {
             androidContext(this@DozyApplication)
-            modules(placeModule, characterModule, homeModule, storyModule, androidModule)
+            modules(placeModule, characterModule, homeModule, loginModule, storyModule, androidModule)
         }
         val scheduler = get<GenerationWorkScheduler>()
         scheduler.resume()

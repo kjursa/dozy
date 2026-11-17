@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="login_tutorial_kicker">GOOD EVENING, LET’S BEGIN</string>
+    <string name="login_tutorial_title">Your world. Your story.</string>
+    <string name="login_tutorial_subtitle">Swipe to discover Dozy</string>
+    <string name="login_tutorial_story_title">Make up bedtime stories</string>
+    <string name="login_tutorial_story_description">A new little adventure every night.</string>
+    <string name="login_tutorial_avatar_title">Add your own characters</string>
+    <string name="login_tutorial_avatar_description">Your child, a pet, or a friendly dragon.</string>
+    <string name="login_tutorial_place_title">Imagine new places</string>
+    <string name="login_tutorial_place_description">Where will tonight’s story take you?</string>
+    <string name="login_tutorial_continue">Let’s begin</string>
+    <string name="login_email_title">Welcome to Dozy!</string>
+    <string name="login_email_intro">Sign in to keep your stories close, wherever you go.</string>
+    <string name="login_email_label">Email address</string>
+    <string name="login_email_placeholder">you@example.com</string>
+    <string name="login_email_error">Enter a valid email address.</string>
+    <string name="login_send_pin">Send code</string>
+    <string name="login_sending">Sending…</string>
+    <string name="login_continue_as_guest">Continue as guest</string>
+    <string name="login_pin_check_mail">CHECK YOUR INBOX</string>
+    <string name="login_pin_title">Enter your code</string>
+    <string name="login_pin_intro">We sent a code to %1$s.</string>
+    <string name="login_pin_resend">Didn’t get it? Send again</string>
+    <string name="login_pin_back">Back to email</string>
+    <string name="login_pin_clear">Clear</string>
+    <string name="login_pin_delete_description">Delete the last digit</string>
+
     <string name="character_name_required">Enter a character name.</string>
     <string name="character_name_too_long">Use at most %1$d characters for the name.</string>
     <string name="character_name_single_line">Use a single line for the name.</string>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="login_tutorial_kicker">DOBRY WIECZÓR, ZACZYNAMY</string>
+    <string name="login_tutorial_title">Wasz świat. Wasza bajka.</string>
+    <string name="login_tutorial_subtitle">Przesuń, by poznać Dozy</string>
+    <string name="login_tutorial_story_title">Twórzcie bajki</string>
+    <string name="login_tutorial_story_description">Nowa mała przygoda każdej nocy.</string>
+    <string name="login_tutorial_avatar_title">Dodajcie własnych bohaterów</string>
+    <string name="login_tutorial_avatar_description">Dziecko, pupil albo przyjazny smok.</string>
+    <string name="login_tutorial_place_title">Wymyślajcie miejsca</string>
+    <string name="login_tutorial_place_description">Dokąd zaprowadzi Was dzisiejsza bajka?</string>
+    <string name="login_tutorial_continue">Zaczynamy</string>
+    <string name="login_email_title">Witaj w Dozy!</string>
+    <string name="login_email_intro">Zaloguj się, aby mieć swoje bajki zawsze przy sobie.</string>
+    <string name="login_email_label">Adres email</string>
+    <string name="login_email_placeholder">ola@example.com</string>
+    <string name="login_email_error">Wpisz prawidłowy adres email.</string>
+    <string name="login_send_pin">Wyślij kod</string>
+    <string name="login_sending">Wysyłanie…</string>
+    <string name="login_continue_as_guest">Kontynuuj jako gość</string>
+    <string name="login_pin_check_mail">SPRAWDŹ SKRZYNKĘ</string>
+    <string name="login_pin_title">Wpisz kod</string>
+    <string name="login_pin_intro">Wysłaliśmy kod na adres %1$s.</string>
+    <string name="login_pin_resend">Nie doszedł PIN? Wyślij ponownie</string>
+    <string name="login_pin_back">Wróć do emaila</string>
+    <string name="login_pin_clear">Wyczyść</string>
+    <string name="login_pin_delete_description">Usuń ostatnią cyfrę</string>
+</resources>
