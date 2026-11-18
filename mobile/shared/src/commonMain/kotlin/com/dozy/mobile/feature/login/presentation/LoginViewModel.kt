@@ -20,13 +20,12 @@ class LoginViewModel(
                 updateState { copy(tutorialSeen = true) }
                 navigateTo(LoginDestination.OpenEmail)
             }
-            is LoginAction.EmailChanged -> updateState { copy(email = action.value, emailError = false) }
+            is LoginAction.EmailChanged -> updateState { copy(email = action.value, emailError = false, loginError = false) }
             LoginAction.EmailSubmitted -> submitEmail()
             LoginAction.ContinueAsGuest -> {
                 updateState { copy(tutorialSeen = true) }
                 viewModelScope.launch {
-                    repository.continueAsGuest()
-                    navigateTo(LoginDestination.OpenMain)
+                    if (repository.continueAsGuest()) navigateTo(LoginDestination.OpenMain)
                 }
             }
             LoginAction.BackToEmail -> navigateTo(LoginDestination.ReturnToEmail)
@@ -46,9 +45,9 @@ class LoginViewModel(
         if (uiState.value.sendingPin) return
         updateState { copy(email = email, emailError = false, sendingPin = true, pin = "") }
         viewModelScope.launch {
-            repository.sendPin(email)
-            updateState { copy(sendingPin = false) }
-            navigateTo(LoginDestination.OpenPin)
+            val sent = repository.sendPin(email)
+            updateState { copy(sendingPin = false, loginError = !sent) }
+            if (sent) navigateTo(LoginDestination.OpenPin)
         }
     }
 
@@ -57,8 +56,8 @@ class LoginViewModel(
         if (email.isBlank() || uiState.value.sendingPin) return
         updateState { copy(sendingPin = true) }
         viewModelScope.launch {
-            repository.sendPin(email)
-            updateState { copy(sendingPin = false) }
+            val sent = repository.sendPin(email)
+            updateState { copy(sendingPin = false, loginError = !sent) }
         }
     }
 
@@ -75,7 +74,7 @@ class LoginViewModel(
         updateState { copy(verifyingPin = true) }
         viewModelScope.launch {
             val verified = repository.verifyPin(email, pin)
-            updateState { copy(verifyingPin = false, pin = if (verified) pin else "") }
+            updateState { copy(verifyingPin = false, pin = if (verified) pin else "", loginError = !verified) }
             if (verified) navigateTo(LoginDestination.OpenMain)
         }
     }

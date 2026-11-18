@@ -5,12 +5,12 @@ interface LoginRepository {
 
     fun markTutorialSeen()
 
-    suspend fun sendPin(email: String)
+    suspend fun sendPin(email: String): Boolean
 
     suspend fun verifyPin(
         email: String,
         pin: String,
     ): Boolean
 
-    suspend fun continueAsGuest()
+    suspend fun continueAsGuest(): Boolean
 }

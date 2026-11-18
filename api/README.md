@@ -12,7 +12,7 @@ launch or E2E suite is included.
   envelopes, and API version paths. Depends on Kotlin serialization, not Ktor,
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
-  `PlacesClients`, `CharactersClients`, `CharacterAvatarsClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
+  `AuthClients`, `PlacesClients`, `CharactersClients`, `CharacterAvatarsClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
   authentication/installation identity storage, and the HTTP client lifetime belong
   to the caller.
 
@@ -37,13 +37,27 @@ val dozy = DozyClient(
     httpClient = httpClient,
     config = DozyClientConfig(baseUrl = "http://localhost:8080"),
     installationIdProvider = InstallationIdProvider { persistedInstallationUuid },
+    sessionStorage = platformAuthSessionStorage,
 )
 val places = dozy.places.v1.list()
 dozy.places.v1.save(
     id = placeId,
     request = SavePlaceRequest("Garden", "Quiet garden", "Bees"),
 )
+dozy.close()
 ```
+
+`sessionStorage` is a platform-provided `AuthSessionStorage`; persist its account
+tokens in platform storage. `dozy.auth.v1` provides anonymous identity creation,
+email-code requests and verification, refresh, and logout. `dozy.sessionManager`
+persists successful login/refresh responses through that storage and exposes a
+`StateFlow<SessionState>`. The client attaches bearer tokens to feature requests and
+uses the refresh endpoint to retry after `401`; a rejected refresh clears the stored
+account session and emits `SessionState.Expired`. The three-argument constructor
+uses in-memory storage and does not add bearer authentication to feature requests;
+pass platform storage when authentication is enabled. Close `DozyClient` before
+the caller-owned `HttpClient`. In-memory storage is intended for tests and
+short-lived clients only.
 
 Inject `client.place.PlacesClients` into consumers rather than the entire `DozyClient` when only
 Places is needed. The container exposes singular version interfaces (`places.v1.list()`,

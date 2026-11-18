@@ -2,6 +2,7 @@ package com.dozy.mobile.di
 
 import androidx.work.WorkManager
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.auth.AuthSessionStorage
 import com.dozy.mobile.BuildConfig
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
@@ -47,6 +48,7 @@ internal val androidModule =
         single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL, allowLocalAssetHttp = BuildConfig.ALLOW_LOCAL_ASSET_HTTP) }
         includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
         single<InstallationIdProvider> { AndroidInstallationIdProvider(androidContext()) }
+        single<AuthSessionStorage> { AndroidAuthSessionStorage(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }
         single<HttpEngineFactory> { HttpEngineFactory { Android.create() } }
         single<GenerationKeyGenerator> {

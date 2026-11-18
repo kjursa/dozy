@@ -14,6 +14,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
 import com.dozy.mobile.feature.login.presentation.LoginViewModel
+import com.dozy.api.client.auth.AuthSessionManager
+import com.dozy.api.client.auth.SessionState
 import com.dozy.mobile.navigation.AppNavigator
 import com.dozy.mobile.navigation.AppScreens
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
@@ -55,6 +57,26 @@ fun DozyApp(
                 }
             }
         val navigator: AppNavigator = koinInject()
+        val sessionManager: AuthSessionManager = koinInject()
+        LaunchedEffect(sessionManager, navController) {
+            sessionManager.initialize()
+            when (sessionManager.state.value) {
+                is SessionState.Authenticated, is SessionState.Anonymous -> navController.navigate(MAIN_ROUTE) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                    launchSingleTop = true
+                }
+                else -> Unit
+            }
+            sessionManager.state.collect { state ->
+                when (state) {
+                    SessionState.Expired -> navController.navigate(LOGIN_EMAIL_ROUTE) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                    else -> Unit
+                }
+            }
+        }
         LaunchedEffect(navigator, navController) {
             navigator.commands.collect { command ->
                 navController.handleNavigation(command)

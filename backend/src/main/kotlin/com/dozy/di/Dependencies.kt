@@ -28,6 +28,7 @@ import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.data.repository.SqlitePlaceRepository
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.features.auth.application.AuthService
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
 
@@ -49,6 +50,7 @@ fun Application.configureDependencies() {
         provide<AvatarWorker> { AvatarWorker(resolve(), resolve(), resolve(), resolve()) }
         provide<DatabaseConfig> { resolve<AppConfig>().database }
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
+        provide<AuthService> { AuthService(resolve(), configuration.propertyOrNull("dozy.auth.secret")?.getString() ?: "local-development-auth-secret-change-before-deployment") }
         provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }
         provide<CharacterService> { CharacterService(resolve()) }
         provide<PlaceRepository> { SqlitePlaceRepository(resolve()) }

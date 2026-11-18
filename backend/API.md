@@ -51,7 +51,7 @@ For example, characters now support deletion, and full story responses include
   category independently of HTTP status; it is not display-ready text. Mobile should
   localize known codes/reasons and use a localized generic fallback for unknown ones.
   Other proposed feature payloads do not yet define field-level error details.
-- `401` is reserved for future authentication (and appears in mobile proposals);
+- Authentication endpoints use `401` for invalid/expired code sessions and refresh tokens. Existing feature routes still use installation-scoped ownership and do not yet require bearer authentication;
   `403` means forbidden, `429` throttled, and `503` temporarily
   unavailable. For owner-scoped ID reads, use `404` for missing or inaccessible
   resources to avoid disclosing another installation's records. Collection reads include
@@ -82,12 +82,28 @@ For example, characters now support deletion, and full story responses include
 | GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
 | GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through a persistent, installation-owned snapshot of story summaries |
 | GET | `/api/v1/assets/{assetId}` | 200 | Read an owned durable PNG cover |
+| POST | `/api/v1/auth/anonymous` | 201 | Create an anonymous owner identity |
+| POST | `/api/v1/auth/email` | 202 | Create a nine-digit code session for an email |
+| POST | `/api/v1/auth/email/code` | 200 | Verify a code and create an account session |
+| POST | `/api/v1/auth/refresh` | 200 | Rotate a refresh token |
+| POST | `/api/v1/auth/logout` | 204 | Revoke all refresh tokens for an owner |
 
-There are **13 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
+There are **18 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
 future extension described in mobile documents, not a current client requirement.
 Home, character details, place editing, and reader settings introduce no additional
 endpoints. There is no place/story deletion, story editing, device-token registration,
-payment, balance, subscription, or authentication endpoint proposed by these clients.
+payment, balance, or subscription endpoint proposed by these clients.
+
+## Authentication (Auth v1)
+
+The implemented operations are `POST /api/v1/auth/anonymous`, `POST /api/v1/auth/email`,
+`POST /api/v1/auth/email/code`, `POST /api/v1/auth/refresh`, and `POST /api/v1/auth/logout`.
+Request and response bodies are defined in `contracts.v1.auth`. Codes are fixed to
+`123456789` in the fake email sender; they expire after ten minutes, permit three
+attempts per session, and are limited to five requests per email per hour. Refresh
+tokens last six months and rotate on use. Logout revokes every refresh token for the
+supplied owner ID; access JWTs remain valid until their 20-minute expiry. See
+[login scope](login.md) for the account and library boundaries.
 
 ## Characters
 

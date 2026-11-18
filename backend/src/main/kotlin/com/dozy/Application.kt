@@ -1,6 +1,7 @@
 package com.dozy
 
 import com.dozy.features.asset.api.v1.assetV1Routes
+import com.dozy.features.auth.api.v1.authV1Routes
 import com.dozy.features.asset.domain.repository.AssetRepository
 import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.application.StoryService
@@ -52,6 +53,7 @@ fun Application.module() {
         get("/hello") { call.respond(HelloResponse("Hello world from Dozy")) }
         route(ApiVersion.V1.path) {
             assetV1Routes(assets)
+            authV1Routes()
             storyV1Routes(stories)
             placeV1Routes(places)
             characterV1Routes()

@@ -11,4 +11,5 @@ data class LoginUiState(
     @Transient val emailError: Boolean = false,
     @Transient val sendingPin: Boolean = false,
     @Transient val verifyingPin: Boolean = false,
+    @Transient val loginError: Boolean = false,
 )

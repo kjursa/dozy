@@ -68,6 +68,7 @@ import com.dozy.mobile.resources.login_pin_clear
 import com.dozy.mobile.resources.login_pin_delete_description
 import com.dozy.mobile.resources.login_pin_intro
 import com.dozy.mobile.resources.login_pin_resend
+import com.dozy.mobile.resources.login_request_error
 import com.dozy.mobile.resources.login_pin_title
 import com.dozy.mobile.resources.login_place
 import com.dozy.mobile.resources.login_send_pin
@@ -299,6 +300,9 @@ internal fun LoginEmailScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        if (state.loginError) {
+            Text(stringResource(Res.string.login_request_error), modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
         Text(
             stringResource(Res.string.login_account_note),
             style = MaterialTheme.typography.bodySmall,
@@ -363,6 +367,9 @@ internal fun LoginPinScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (state.loginError) {
+            Text(stringResource(Res.string.login_request_error), modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
         PinIndicator(state.pin, state.verifyingPin, Modifier.padding(top = 28.dp))
         TextButton(
             onClick = onResend,

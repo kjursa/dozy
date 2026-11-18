@@ -1,6 +1,8 @@
 package com.dozy.mobile.di
 
 import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.auth.AuthSessionStorage
+import com.dozy.api.client.auth.StoredAuthSession
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.dozyClientModule
@@ -31,7 +33,32 @@ fun iosDataModule(
         }
         InstallationIdProvider { id }
     }
+    single<AuthSessionStorage> { IosAuthSessionStorage() }
     single { places }
     single<DatabaseBuilderFactory> { DatabaseBuilderFactory { iosDatabaseBuilder() } }
     single<HttpEngineFactory> { HttpEngineFactory { Darwin.create() } }
+}
+
+private class IosAuthSessionStorage : AuthSessionStorage {
+    private val defaults = NSUserDefaults.standardUserDefaults
+    override suspend fun load(): StoredAuthSession? {
+        val owner = defaults.stringForKey("dozy-auth-owner") ?: return null
+        val access = defaults.stringForKey("dozy-auth-access") ?: return null
+        val refresh = defaults.stringForKey("dozy-auth-refresh") ?: return null
+        return StoredAuthSession(owner, access, refresh)
+    }
+    override suspend fun save(session: StoredAuthSession) {
+        defaults.setObject(session.ownerId, "dozy-auth-owner")
+        defaults.setObject(session.accessToken, "dozy-auth-access")
+        defaults.setObject(session.refreshToken, "dozy-auth-refresh")
+    }
+    override suspend fun clear() {
+        defaults.removeObjectForKey("dozy-auth-owner")
+        defaults.removeObjectForKey("dozy-auth-access")
+        defaults.removeObjectForKey("dozy-auth-refresh")
+        defaults.removeObjectForKey("dozy-auth-anonymous")
+    }
+    override suspend fun anonymousOwnerId(): String? = defaults.stringForKey("dozy-auth-anonymous")
+    override suspend fun saveAnonymousOwnerId(ownerId: String) { defaults.setObject(ownerId, "dozy-auth-anonymous") }
+    override suspend fun clearAnonymousOwnerId() { defaults.removeObjectForKey("dozy-auth-anonymous") }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="login_request_error">We couldn’t complete that request. Please try again.</string>
     <string name="login_use_email">Use email</string>
     <string name="login_or">OR</string>
     <string name="login_account_note">We’ll create your account without a password. All you need to sign in is a code sent to your email.</string>
