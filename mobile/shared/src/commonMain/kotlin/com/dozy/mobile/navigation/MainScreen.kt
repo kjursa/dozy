@@ -197,14 +197,14 @@ private fun MainBottomItem(
             modifier
                 .clip(RoundedCornerShape(32.dp))
                 .background(
-                    if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = .10f) else Color.Transparent,
+                    if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
                     RoundedCornerShape(32.dp),
                 ).clickable { onSelect(route) }
                 .padding(vertical = UiSpacing.x2),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(28.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall, color = tint)
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(21.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = tint)
     }
 }

@@ -97,6 +97,7 @@ internal fun StoryWideCard(
             Column(Modifier.weight(1f).padding(end = UiSpacing.x1), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                 Text(story.title.resolve(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 ReadTime(story.minutes)
+                Text(stringResource(Res.string.story_open), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
             }
         }
     }
