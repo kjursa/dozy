@@ -9,6 +9,7 @@ import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import com.dozy.mobile.feature.story.presentation.reader.ReaderUiState
 import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
 import com.dozy.mobile.feature.story.presentation.reader.SavedStoryViewModel
+import com.dozy.mobile.navigation.navigationModule
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.viewModel
@@ -17,12 +18,14 @@ import org.koin.dsl.module
 
 val storyModule =
     module {
+        includes(navigationModule)
         includes(storyDataModule)
         viewModelOf(::GenerationViewModel)
         viewModelOf(::SavedStoryViewModel)
         viewModel {
             val handle: SavedStateHandle = get()
             ReaderViewModel(
+                get(),
                 Story
                     .Id(requireNotNull(handle.get<String>("storyId"))),
                 get(),
@@ -37,6 +40,7 @@ val storyModule =
         viewModel {
             val handle: SavedStateHandle = get()
             CreateStoryViewModel(
+                get(),
                 SavedStatePersistence(handle, CreateStoryUiState.serializer()),
                 handle.get<String>("place"),
                 get(),

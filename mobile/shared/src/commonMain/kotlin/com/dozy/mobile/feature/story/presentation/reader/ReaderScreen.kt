@@ -25,11 +25,9 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun ReaderScreen(onEffect: (ReaderEffect) -> Unit) {
+internal fun ReaderScreen() {
     val vm: ReaderViewModel = koinViewModel()
     val state by vm.uiState.collectAsStateWithLifecycle()
-    val currentEffect by rememberUpdatedState(onEffect)
-    LaunchedEffect(vm) { vm.effects.collect { currentEffect(it) } }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.resumed() }
     BackHandler { vm.dispatch(ReaderAction.Back) }
     ReaderContent(state, vm::dispatch)

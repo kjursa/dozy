@@ -10,6 +10,7 @@ import com.dozy.mobile.feature.character.domain.usecase.*
 import com.dozy.mobile.feature.character.presentation.create.*
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.*
@@ -66,6 +67,7 @@ internal open class CreateCharacterViewModelFixture {
         handle: SavedStateHandle = SavedStateHandle(),
         id: String? = null,
     ) = CreateCharacterViewModel(
+        Navigator(),
         SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
         SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
         GenerateCharacterAvatar(repository),

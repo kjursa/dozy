@@ -1,7 +1,6 @@
 package com.dozy.mobile.feature.home.presentation
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -32,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -40,9 +38,7 @@ import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.presentation.list.PlaceCard
-import com.dozy.mobile.feature.story.presentation.components.StoryCard
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.generation.GenerationCard
 import com.dozy.mobile.feature.story.presentation.list.Story
@@ -50,40 +46,15 @@ import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun HomeScreen(
-    onStories: () -> Unit,
-    onCharacters: () -> Unit,
-    onCreateStory: () -> Unit,
-    onAddCharacter: () -> Unit,
-    onCharacter: (String) -> Unit,
-    onPlaces: () -> Unit,
-    onPlaceSelected: (Place.Id?) -> Unit,
-    onGeneration: (String) -> Unit,
-    onRead: (String) -> Unit,
-) {
+internal fun HomeScreen() {
     val homeViewModel: HomeViewModel = koinViewModel()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { homeViewModel.resumed() }
     MviScreen(
         viewModel = homeViewModel,
-        onEffect = { effect ->
-            when (effect) {
-                HomeEffect.CreateStoryRequested -> onCreateStory()
-                HomeEffect.AddCharacterRequested -> onAddCharacter()
-                is HomeEffect.OpenCharacter -> onCharacter(effect.character.id)
-                is HomeEffect.OpenStory -> onRead(effect.story.id)
-                HomeEffect.SeeAllStoriesRequested -> onStories()
-                HomeEffect.SeeAllCharactersRequested -> onCharacters()
-                HomeEffect.SeeAllPlacesRequested -> onPlaces()
-                is HomeEffect.CreateStoryAtPlace -> onPlaceSelected(effect.id)
-                is HomeEffect.OpenProgress -> onGeneration(effect.id)
-                is HomeEffect.ReadStory -> onRead(effect.id)
-            }
-        },
     ) { state, dispatch ->
         HomeContent(state, dispatch)
     }
@@ -152,7 +123,11 @@ private fun HomeHeader() {
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
-        Text(stringResource(Res.string.tuesday_14_october), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+        Text(
+            stringResource(Res.string.tuesday_14_october),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary,
+        )
         Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineLarge)
         Text(stringResource(Res.string.home_header_subtitle), style = MaterialTheme.typography.bodyLarge)
     }
@@ -167,12 +142,29 @@ private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
     ) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(145.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(56.dp))
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(56.dp),
+                )
             }
         }
-        Text(stringResource(Res.string.home_first_visit_eyebrow), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-        Text(stringResource(Res.string.home_first_visit_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
-        Text(stringResource(Res.string.home_first_visit), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(Res.string.home_first_visit_eyebrow),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        Text(
+            stringResource(Res.string.home_first_visit_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Text(
+            stringResource(Res.string.home_first_visit),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         androidx.compose.material3.Button(onClick = onCreateCharacter) {
             Text(stringResource(Res.string.home_first_character))
         }
@@ -193,36 +185,40 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
                 Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(stringResource(Res.string.home_banner_eyebrow), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
-                Text(
-                    stringResource(Res.string.home_banner_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-                Text(
-                    stringResource(Res.string.home_banner_body),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
-                )
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
-                    Row(
-                        Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-                    ) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            stringResource(Res.string.create_story),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                    Text(
+                        stringResource(Res.string.home_banner_eyebrow),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        stringResource(Res.string.home_banner_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        stringResource(Res.string.home_banner_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
+                    )
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
+                        Row(
+                            Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                stringResource(Res.string.create_story),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
-                }
                 }
             }
         }

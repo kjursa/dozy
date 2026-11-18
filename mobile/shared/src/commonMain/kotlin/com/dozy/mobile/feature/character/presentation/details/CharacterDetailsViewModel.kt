@@ -4,6 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.usecase.DeleteCharacter
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.presentation.text.UiText
@@ -13,10 +15,11 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class CharacterDetailsViewModel(
+    val navigator: AppNavigator,
     private val observeCharacter: ObserveCharacter,
     private val deleteCharacter: DeleteCharacter,
     private val id: Character.Id,
-) : MviViewModel<CharacterDetailsUiState, CharacterDetailsAction, CharacterDetailsEffect>(CharacterDetailsUiState()) {
+) : MviViewModel<CharacterDetailsUiState, CharacterDetailsAction, Nothing>(CharacterDetailsUiState()) {
     private var observation: Job? = null
     private var leaving = false
 
@@ -51,11 +54,21 @@ class CharacterDetailsViewModel(
                 if (state.deleteDialog) {
                     updateState { copy(deleteDialog = false, deleteError = null) }
                 } else {
-                    navigate(CharacterDetailsEffect.Back)
+                    navigate(CharacterDetailsDestination.Back)
                 }
             }
-            CharacterDetailsAction.Edit -> if (state.character != null && !state.deleteDialog) navigate(CharacterDetailsEffect.Edit(id))
-            CharacterDetailsAction.Story -> if (state.character != null && !state.deleteDialog) navigate(CharacterDetailsEffect.Story(id))
+            CharacterDetailsAction.Edit ->
+                if (state.character != null &&
+                    !state.deleteDialog
+                ) {
+                    navigate(CharacterDetailsDestination.Edit(id))
+                }
+            CharacterDetailsAction.Story ->
+                if (state.character != null &&
+                    !state.deleteDialog
+                ) {
+                    navigate(CharacterDetailsDestination.Story(id))
+                }
             CharacterDetailsAction.Retry -> observe()
             CharacterDetailsAction.Delete -> if (state.character != null) updateState { copy(deleteDialog = true, deleteError = null) }
             CharacterDetailsAction.CancelDelete -> updateState { copy(deleteDialog = false, deleteError = null) }
@@ -64,7 +77,7 @@ class CharacterDetailsViewModel(
                 updateState { copy(deleting = true, deleteError = null) }
                 viewModelScope.launch {
                     when (deleteCharacter(id)) {
-                        is DeleteCharacter.Result.Deleted -> navigate(CharacterDetailsEffect.Deleted)
+                        is DeleteCharacter.Result.Deleted -> navigate(CharacterDetailsDestination.Deleted)
                         DeleteCharacter.Result.Failure ->
                             updateState {
                                 copy(deleting = false, deleteError = UiText.Resource(Res.string.character_delete_failed))
@@ -75,8 +88,12 @@ class CharacterDetailsViewModel(
         }
     }
 
-    private fun navigate(effect: CharacterDetailsEffect) {
+    private fun navigate(effect: CharacterDetailsDestination) {
         leaving = true
-        sendEffect(effect)
+        navigateTo(effect)
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

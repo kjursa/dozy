@@ -3,8 +3,8 @@ package com.dozy.mobile.feature.story.presentation.list
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,20 +34,11 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun StoriesTabScreen(
-    onRead: (String) -> Unit,
-    onCreateStory: () -> Unit,
-) {
+internal fun StoriesTabScreen() {
     val storiesViewModel: StoriesViewModel = koinViewModel()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { storiesViewModel.navigationHandled() }
     MviScreen(
         viewModel = storiesViewModel,
-        onEffect = { effect ->
-            when (effect) {
-                is StoriesEffect.OpenStory -> onRead(effect.story.id)
-                StoriesEffect.CreateStory -> onCreateStory()
-            }
-        },
     ) { state, dispatch ->
         StoriesTabContent(state, dispatch)
     }
@@ -101,7 +92,8 @@ internal fun StoriesTabContent(
                     }
                 }
             }
-            androidx.compose.foundation.layout.Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+            androidx.compose.foundation.layout
+                .Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
     }
 }

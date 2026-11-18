@@ -14,6 +14,8 @@ import com.dozy.mobile.feature.story.domain.usecase.RetryGeneration
 import com.dozy.mobile.feature.story.presentation.generation.GenerationAction
 import com.dozy.mobile.feature.story.presentation.generation.GenerationUiState
 import com.dozy.mobile.feature.story.presentation.list.toUiStory
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.coroutines.runCatchingSuspend
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
+    val navigator: AppNavigator,
     private val observeCharacters: ObserveCharacters,
     private val observeStories: ObserveStoryLibrary,
     private val observePlaces: ObservePlaces,
@@ -34,7 +37,7 @@ class HomeViewModel(
     private val refreshPlaces: RefreshPlaces,
     private val refreshGeneration: RefreshGeneration,
     private val retryGeneration: RetryGeneration,
-) : MviViewModel<HomeUiState, HomeAction, HomeEffect>(HomeUiState()) {
+) : MviViewModel<HomeUiState, HomeAction, Nothing>(HomeUiState()) {
     private val observations = mutableMapOf<HomeSection, Job>()
 
     init {
@@ -123,31 +126,31 @@ class HomeViewModel(
         when (action) {
             is HomeAction.RetrySection -> load(action.section)
             is HomeAction.Generation -> generationAction(action.action)
-            HomeAction.CreateStoryClicked -> navigate(HomeEffect.CreateStoryRequested)
+            HomeAction.CreateStoryClicked -> navigate(HomeDestination.CreateStoryRequested)
             is HomeAction.StorySelected ->
                 if (uiState.value.stories.any { it.id == action.story.id }) {
                     navigate(
-                        HomeEffect.OpenStory(action.story),
+                        HomeDestination.OpenStory(action.story),
                     )
                 }
-            HomeAction.SeeAllStoriesClicked -> navigate(HomeEffect.SeeAllStoriesRequested)
+            HomeAction.SeeAllStoriesClicked -> navigate(HomeDestination.SeeAllStoriesRequested)
             is HomeAction.CharacterSelected ->
                 if (uiState.value.characters.any {
                         it.id == action.character.id
                     }
                 ) {
-                    navigate(HomeEffect.OpenCharacter(action.character))
+                    navigate(HomeDestination.OpenCharacter(action.character))
                 }
-            HomeAction.AddCharacterClicked -> navigate(HomeEffect.AddCharacterRequested)
-            HomeAction.SeeAllCharactersClicked -> navigate(HomeEffect.SeeAllCharactersRequested)
-            HomeAction.SeeAllPlacesClicked -> navigate(HomeEffect.SeeAllPlacesRequested)
+            HomeAction.AddCharacterClicked -> navigate(HomeDestination.AddCharacterRequested)
+            HomeAction.SeeAllCharactersClicked -> navigate(HomeDestination.SeeAllCharactersRequested)
+            HomeAction.SeeAllPlacesClicked -> navigate(HomeDestination.SeeAllPlacesRequested)
             is HomeAction.PlaceSelected ->
                 if (uiState.value.places.any { it.id == action.id }) {
                     navigate(
-                        HomeEffect.CreateStoryAtPlace(action.id),
+                        HomeDestination.CreateStoryAtPlace(action.id),
                     )
                 }
-            is HomeAction.ProgressClicked -> navigate(HomeEffect.OpenProgress(action.id))
+            is HomeAction.ProgressClicked -> navigate(HomeDestination.OpenProgress(action.id))
         }
     }
 
@@ -155,7 +158,7 @@ class HomeViewModel(
         if (uiState.value.generation.busy) return
         val job = uiState.value.generation.homeJob ?: return
         when (action) {
-            is GenerationAction.Open -> if (job.id == action.id) job.storyId?.let { navigate(HomeEffect.ReadStory(it.value)) }
+            is GenerationAction.Open -> if (job.id == action.id) job.storyId?.let { navigate(HomeDestination.ReadStory(it.value)) }
             is GenerationAction.Refresh -> load(HomeSection.GENERATION)
             is GenerationAction.Retry -> {
                 if (job.id != action.id ||
@@ -176,9 +179,13 @@ class HomeViewModel(
         }
     }
 
-    private fun navigate(effect: HomeEffect) {
+    private fun navigate(effect: HomeDestination) {
         if (uiState.value.navigating) return
         updateState { copy(navigating = true) }
-        sendEffect(effect)
+        navigateTo(effect)
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

@@ -14,7 +14,7 @@ import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
-import com.dozy.mobile.feature.character.presentation.create.CreateCharacterEffect
+import com.dozy.mobile.feature.character.presentation.create.CreateCharacterDestination
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
@@ -129,7 +129,7 @@ class CharacterModuleTest {
                 resolveViewModel(StoriesViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
                 form.dispatch(CreateCharacterAction.SaveClicked)
                 advanceUntilIdle()
-                assertEquals(CreateCharacterEffect.Saved(Character.Id("injected-id")), form.effects.first())
+                assertEquals(CreateCharacterDestination.Saved(Character.Id("injected-id")), form.navigator.commands.first())
                 assertEquals(
                     "injected-id",
                     dao.rows.value

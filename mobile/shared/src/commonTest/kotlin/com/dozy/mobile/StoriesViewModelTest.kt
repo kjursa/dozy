@@ -7,12 +7,13 @@ import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.list.*
-import kotlin.test.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
+import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StoriesViewModelTest {
@@ -42,7 +43,7 @@ class StoriesViewModelTest {
                     }
                 }
             val repo = testGenerationRepository(FakeGenerationDao(), api)
-            val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
+            val vm = StoriesViewModel(Navigator(), ObserveStoryLibrary(repo), RefreshStories(repo))
             assertTrue(vm.uiState.value.loading)
             runCurrent()
             assertFalse(vm.uiState.value.loading)
@@ -78,7 +79,7 @@ class StoriesViewModelTest {
         runTest(dispatcher) {
             val api = ProgressApi()
             val repo = testGenerationRepository(FakeGenerationDao(), api)
-            val vm = StoriesViewModel(ObserveStoryLibrary(repo), RefreshStories(repo))
+            val vm = StoriesViewModel(Navigator(), ObserveStoryLibrary(repo), RefreshStories(repo))
             advanceUntilIdle()
             repo.start(
                 GenerationJob
@@ -96,10 +97,10 @@ class StoriesViewModelTest {
                     .single()
             assertEquals("story", story.id)
             repeat(3) { vm.dispatch(StoriesAction.StorySelected(story)) }
-            assertEquals(StoriesEffect.OpenStory(story), vm.effects.first())
+            assertEquals(StoriesDestination.OpenStory(story), vm.navigator.commands.first())
             assertTrue(vm.uiState.value.navigating)
             vm.navigationHandled()
             vm.dispatch(StoriesAction.Create)
-            assertEquals(StoriesEffect.CreateStory, vm.effects.first())
+            assertEquals(StoriesDestination.CreateStory, vm.navigator.commands.first())
         }
 }

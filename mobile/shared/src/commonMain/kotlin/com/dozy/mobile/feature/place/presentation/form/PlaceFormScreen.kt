@@ -27,11 +27,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun PlaceFormScreen(
-    viewModel: PlaceFormViewModel,
-    onEffect: (PlaceFormEffect) -> Unit,
-) {
-    MviScreen(viewModel, onEffect = { onEffect(it) }) { state, dispatch ->
+internal fun PlaceFormScreen(viewModel: PlaceFormViewModel) {
+    MviScreen(viewModel) { state, dispatch ->
         Column(
             Modifier
                 .fillMaxSize()

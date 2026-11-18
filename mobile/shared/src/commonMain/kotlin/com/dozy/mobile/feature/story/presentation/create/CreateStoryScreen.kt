@@ -73,17 +73,10 @@ import org.jetbrains.compose.resources.stringResource
 internal fun CreateStoryScreen(
     onBack: () -> Unit,
     onNewHero: () -> Unit,
-    onGenerate: (String) -> Unit,
-    onChoosePlace: () -> Unit,
     viewModel: CreateStoryViewModel,
 ) {
     LaunchedEffect(viewModel) { viewModel.resumed() }
-    MviScreen(viewModel, onEffect = { effect ->
-        when (effect) {
-            CreateStoryEffect.OpenPlaces -> onChoosePlace()
-            is CreateStoryEffect.Accepted -> onGenerate(effect.jobId)
-        }
-    }) { state, dispatch ->
+    MviScreen(viewModel) { state, dispatch ->
         CreateStoryContent(state, dispatch, onBack, onNewHero)
     }
 }
