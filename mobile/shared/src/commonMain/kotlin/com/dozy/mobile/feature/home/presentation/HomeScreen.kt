@@ -103,17 +103,16 @@ private fun HomeContent(
                 .verticalScroll(rememberScrollState()),
         ) {
             HomeHeader()
+            if (state.firstVisit) {
+                FirstVisitHome(onCreateCharacter = { onAction(HomeAction.AddCharacterClicked) })
+                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+                return@Column
+            }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
             ) {
                 HomeJob(state, onAction)
-                if (state.firstVisit) {
-                    Text(stringResource(Res.string.home_first_visit), style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = { onAction(HomeAction.AddCharacterClicked) }) {
-                        Text(stringResource(Res.string.home_first_character))
-                    }
-                }
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
                 Column {
                     HomeSectionStatus(state, HomeSection.STORIES, onAction)
@@ -153,8 +152,30 @@ private fun HomeHeader() {
         Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
+        Text(stringResource(Res.string.tuesday_14_october), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
         Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(Res.string.ready_for_a_new_adventure), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(Res.string.home_header_subtitle), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x4),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+    ) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(145.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(56.dp))
+            }
+        }
+        Text(stringResource(Res.string.home_first_visit_eyebrow), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+        Text(stringResource(Res.string.home_first_visit_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+        Text(stringResource(Res.string.home_first_visit), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.material3.Button(onClick = onCreateCharacter) {
+            Text(stringResource(Res.string.home_first_character))
+        }
     }
 }
 
@@ -171,13 +192,15 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
+                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
+                Text(stringResource(Res.string.home_banner_eyebrow), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
                 Text(
-                    stringResource(Res.string.create_a_new_story),
+                    stringResource(Res.string.home_banner_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
                 Text(
-                    stringResource(Res.string.tell_us_who_the_heroes_are_and_we_ll),
+                    stringResource(Res.string.home_banner_body),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
                 )
@@ -200,13 +223,8 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                         )
                     }
                 }
+                }
             }
-            Image(
-                painterResource(Res.drawable.story_moon),
-                contentDescription = stringResource(Res.string.open_magical_book),
-                modifier = Modifier.size(92.dp),
-                contentScale = ContentScale.Crop,
-            )
         }
     }
 }
@@ -219,10 +237,7 @@ private fun StoriesSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading(stringResource(Res.string.library), stringResource(Res.string.your_stories), onSeeAll)
-        Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            stories.take(2).forEach { story -> StoryCard(story, Modifier.weight(1f), onStorySelected) }
-        }
-        stories.getOrNull(2)?.let { StoryWideCard(it, onStorySelected) }
+        stories.forEach { story -> StoryWideCard(story, onStorySelected) }
     }
 }
 

@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,7 +24,7 @@ import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.Eyebrow
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.dozy.mobile.feature.story.presentation.components.StoryCard
+import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
@@ -97,17 +95,12 @@ internal fun StoriesTabContent(
                     if (!state.loading && !state.refreshing && state.error == null && state.stories.isEmpty()) {
                         Text(stringResource(Res.string.stories_empty))
                     }
-                    state.stories.chunked(2).forEach { pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                            pair.forEach { story ->
-                                StoryCard(story, Modifier.weight(1f)) { dispatch(StoriesAction.StorySelected(it)) }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    state.stories.forEach { story ->
+                        StoryWideCard(story) { dispatch(StoriesAction.StorySelected(it)) }
                     }
                 }
             }
-            Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+            androidx.compose.foundation.layout.Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
     }
 }
