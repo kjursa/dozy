@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#faf5eb"><title>Poznaj Dozy · Logowanie</title><link rel="stylesheet" href="../design/screens/styles.css"><link rel="stylesheet" href="../design/brand.css"><link rel="stylesheet" href="login.css"></head>
+<body>
+  <aside class="review"><a class="wordmark" href="login-tutorial.html"><img class="brand-icon" src="../design/images/dozy-sleepy-cloud.png" alt="">dozy</a><p class="eyebrow">PROPOZYCJA 02</p><h1>Samouczek na dobry początek</h1><p>Pokazuje się raz. Przy kolejnych otwarciach aplikacja przechodzi prosto do ekranu powitalnego.</p><nav class="review-controls" aria-label="Ekrany logowania"><h2>Ekrany</h2><div class="preview-switch"><a class="active" href="login-tutorial.html">Samouczek</a><a href="login-welcome.html">Powitanie</a><a href="login-email.html">Email</a><a href="login-code.html">Kod PIN</a></div></nav></aside>
+  <main class="device"><div class="statusbar"><span>9:41</span><span aria-hidden="true">◒ ▰</span></div><section class="screen welcome"><header class="topline"><a class="wordmark" href="login-tutorial.html"><img class="brand-icon" src="../design/images/dozy-sleepy-cloud.png" alt="">dozy</a></header>
+    <div class="eyebrow">BAJKI ZACZYNAJĄ SIĘ OD WAS</div><h1>Wasz świat.<br>Wasza bajka.</h1><p class="lead">Przesuń, by poznać Dozy</p>
+    <div class="story-carousel" aria-label="Co można robić w Dozy">
+      <article class="story-card"><img src="../design/images/569WALKk8Im.jpeg" alt="Ilustracja bajkowego lasu"><div><span>01 · WIECZORNE OPOWIEŚCI</span><h2>Twórzcie bajki</h2><p>Nowa przygoda na dobranoc.</p></div></article>
+      <article class="story-card"><div class="avatar-art"><img src="../design/images/KHLJYBWmykU.png" alt="Ilustracja bohatera bajki"></div><div><span>02 · WYJĄTKOWI BOHATEROWIE</span><h2>Dodajcie avatary</h2><p>Dziecko, zwierzak lub smok.</p></div></article>
+      <article class="story-card"><img src="../design/images/1GfniYCqpbP.jpeg" alt="Ilustracja niezwykłego miejsca"><div><span>03 · WASZA WYOBRAŹNIA</span><h2>Wymyślajcie miejsca</h2><p>Gdzie dziś poniesie Was bajka?</p></div></article>
+    </div>
+    <nav class="carousel-indicator" aria-label="Wybierz ilustrację"><button class="current" type="button" aria-label="Pokaż bajki"></button><button type="button" aria-label="Pokaż avatary"></button><button type="button" aria-label="Pokaż miejsca"></button></nav>
+    <a class="button primary full" href="login-welcome.html">Zaczynamy <span>→</span></a><p class="fine-print">Dla rodziców i małych marzycieli</p>
+  </section></main><script>
+(() => {
+  const carousel = document.querySelector('.story-carousel');
+  const cards = [...carousel.querySelectorAll('.story-card')];
+  const indicators = [...document.querySelectorAll('.carousel-indicator button')];
+  const activate = (index) => indicators.forEach((indicator, i) => {
+    indicator.classList.toggle('current', i === index);
+    indicator.setAttribute('aria-current', i === index ? 'true' : 'false');
+  });
+  indicators.forEach((indicator, index) => indicator.addEventListener('click', () => {
+    carousel.scrollTo({ left: cards[index].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' });
+    activate(index);
+  }));
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible) activate(cards.indexOf(visible.target));
+  }, { root: carousel, threshold: [0.55, 0.75] });
+  cards.forEach((card) => observer.observe(card));
+})();
+</script>
+</body></html>
