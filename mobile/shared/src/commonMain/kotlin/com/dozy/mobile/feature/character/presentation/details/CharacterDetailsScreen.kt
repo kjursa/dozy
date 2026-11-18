@@ -29,25 +29,12 @@ import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun CharacterDetailsScreen(
-    viewModel: CharacterDetailsViewModel,
-    onBack: () -> Unit,
-    onDeleted: () -> Unit,
-    onEdit: (Character.Id) -> Unit,
-    onStory: (Character.Id) -> Unit,
-) {
+internal fun CharacterDetailsScreen(viewModel: CharacterDetailsViewModel) {
     LifecycleResumeEffect(viewModel) {
         viewModel.resumed()
         onPauseOrDispose { }
     }
-    MviScreen(viewModel, onEffect = { effect ->
-        when (effect) {
-            CharacterDetailsEffect.Back -> onBack()
-            CharacterDetailsEffect.Deleted -> onDeleted()
-            is CharacterDetailsEffect.Edit -> onEdit(effect.id)
-            is CharacterDetailsEffect.Story -> onStory(effect.id)
-        }
-    }) { state, dispatch ->
+    MviScreen(viewModel) { state, dispatch ->
         CharacterDetailsContent(state, dispatch)
     }
 }

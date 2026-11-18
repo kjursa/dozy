@@ -7,6 +7,8 @@ import com.dozy.mobile.feature.character.domain.model.EditCharacterInput
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -17,12 +19,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class CreateCharacterViewModel(
+    val navigator: AppNavigator,
     statePersistence: StatePersistence<CreateCharacterUiState>,
     private val saveCharacter: SaveCharacter,
     private val generateAvatar: GenerateCharacterAvatar,
     private val observeCharacter: ObserveCharacter,
     private val initialId: String? = null,
-) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, CreateCharacterEffect>(
+) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, Nothing>(
         initialState = CreateCharacterUiState(),
         statePersistence = statePersistence,
     ) {
@@ -59,7 +62,7 @@ class CreateCharacterViewModel(
     override fun onAction(action: CreateCharacterAction) {
         if (action == CreateCharacterAction.BackClicked) {
             abandon()
-            sendEffect(CreateCharacterEffect.NavigateBack)
+            navigateTo(CreateCharacterDestination.NavigateBack)
             return
         }
         if (action == CreateCharacterAction.RetryLoadClicked) {
@@ -148,7 +151,7 @@ class CreateCharacterViewModel(
             when (result) {
                 is SaveCharacter.Result.Success -> {
                     saved = true
-                    if (!abandoned) sendEffect(CreateCharacterEffect.Saved(result.saved.character.id))
+                    if (!abandoned) navigateTo(CreateCharacterDestination.Saved(result.saved.character.id))
                 }
                 SaveCharacter.Result.Unavailable -> updateState { copy(saveStatus = SaveStatus.EDITING, unavailable = true) }
                 SaveCharacter.Result.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
@@ -164,5 +167,9 @@ class CreateCharacterViewModel(
                 is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
         updateState { validated.copy(saveStatus = SaveStatus.EDITING, generationError = null) }
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

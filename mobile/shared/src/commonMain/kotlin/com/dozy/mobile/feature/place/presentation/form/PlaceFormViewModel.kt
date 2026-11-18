@@ -5,6 +5,8 @@ import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceInput
 import com.dozy.mobile.feature.place.domain.usecase.SavePlace
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -12,11 +14,12 @@ import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.launch
 
 class PlaceFormViewModel(
+    val navigator: AppNavigator,
     persistence: StatePersistence<PlaceFormUiState>,
     private val savePlace: SavePlace,
     private val selectPlace: SelectPlace,
     private val editId: String?,
-) : MviViewModel<PlaceFormUiState, PlaceFormAction, PlaceFormEffect>(PlaceFormUiState(id = editId), persistence) {
+) : MviViewModel<PlaceFormUiState, PlaceFormAction, Nothing>(PlaceFormUiState(id = editId), persistence) {
     init {
         initialize()
     }
@@ -63,7 +66,7 @@ class PlaceFormViewModel(
         when (action) {
             PlaceFormAction.Back -> {
                 updateState { copy(navigating = true) }
-                sendEffect(PlaceFormEffect.Back)
+                navigateTo(PlaceFormDestination.Back)
             }
             PlaceFormAction.Retry -> initialize()
             is PlaceFormAction.Name -> updateState { copy(name = action.value, nameError = null) }
@@ -93,11 +96,15 @@ class PlaceFormViewModel(
         updateState { copy(saving = true, error = null, nameError = null, descriptionError = null, inhabitantsError = null) }
         viewModelScope.launch {
             when (val result = savePlace(input, editId?.let(Place::Id))) {
-                is SavePlace.Result.Saved -> sendEffect(PlaceFormEffect.Saved(result.place.id))
+                is SavePlace.Result.Saved -> navigateTo(PlaceFormDestination.Saved(result.place.id))
                 SavePlace.Result.Unavailable -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_unavailable)) }
                 SavePlace.Result.NotEditable -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_not_editable)) }
                 SavePlace.Result.Failure -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_save_error)) }
             }
         }
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

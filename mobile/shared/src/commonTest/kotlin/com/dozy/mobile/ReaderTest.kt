@@ -14,16 +14,17 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.reader.*
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import com.kjursa.foundation.presentation.navigation.Navigator
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
-import kotlin.test.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.Json
+import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderTest {
@@ -88,6 +89,7 @@ class ReaderTest {
             try {
                 val vm =
                     CreateStoryViewModel(
+                        Navigator(),
                         SavedStatePersistence(
                             SavedStateHandle(),
                             CreateStoryUiState

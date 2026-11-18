@@ -2,20 +2,23 @@ package com.dozy.mobile.feature.login.presentation
 
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
 import kotlinx.coroutines.launch
 
 class LoginViewModel(
+    val navigator: AppNavigator,
     persistence: StatePersistence<LoginUiState>,
     private val repository: LoginRepository,
-) : MviViewModel<LoginUiState, LoginAction, LoginEffect>(LoginUiState(), persistence) {
+) : MviViewModel<LoginUiState, LoginAction, Nothing>(LoginUiState(), persistence) {
     override fun onAction(action: LoginAction) {
         when (action) {
             LoginAction.TutorialContinued -> {
                 repository.markTutorialSeen()
                 updateState { copy(tutorialSeen = true) }
-                sendEffect(LoginEffect.OpenEmail)
+                navigateTo(LoginDestination.OpenEmail)
             }
             is LoginAction.EmailChanged -> updateState { copy(email = action.value, emailError = false) }
             LoginAction.EmailSubmitted -> submitEmail()
@@ -23,10 +26,10 @@ class LoginViewModel(
                 updateState { copy(tutorialSeen = true) }
                 viewModelScope.launch {
                     repository.continueAsGuest()
-                    sendEffect(LoginEffect.OpenMain)
+                    navigateTo(LoginDestination.OpenMain)
                 }
             }
-            LoginAction.BackToEmail -> sendEffect(LoginEffect.ReturnToEmail)
+            LoginAction.BackToEmail -> navigateTo(LoginDestination.ReturnToEmail)
             LoginAction.ResendPin -> resendPin()
             is LoginAction.PinDigit -> appendPinDigit(action.value)
             LoginAction.DeletePinDigit -> updateState { copy(pin = pin.dropLast(1)) }
@@ -45,7 +48,7 @@ class LoginViewModel(
         viewModelScope.launch {
             repository.sendPin(email)
             updateState { copy(sendingPin = false) }
-            sendEffect(LoginEffect.OpenPin)
+            navigateTo(LoginDestination.OpenPin)
         }
     }
 
@@ -73,12 +76,16 @@ class LoginViewModel(
         viewModelScope.launch {
             val verified = repository.verifyPin(email, pin)
             updateState { copy(verifyingPin = false, pin = if (verified) pin else "") }
-            if (verified) sendEffect(LoginEffect.OpenMain)
+            if (verified) navigateTo(LoginDestination.OpenMain)
         }
     }
 
     private companion object {
         const val PIN_LENGTH = 9
         val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

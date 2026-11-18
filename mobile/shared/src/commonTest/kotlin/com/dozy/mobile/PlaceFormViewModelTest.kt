@@ -2,7 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormAction
-import com.dozy.mobile.feature.place.presentation.form.PlaceFormEffect
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormDestination
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,11 +28,11 @@ internal class PlaceFormViewModelTest : PlaceFormViewModelFixture() {
             assertEquals("Bees", viewModel.uiState.value.inhabitants)
             viewModel.dispatch(PlaceFormAction.Inhabitants("  "))
             viewModel.dispatch(PlaceFormAction.Name("New garden"))
-            val effect = async { viewModel.effects.first() }
+            val effect = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(PlaceFormAction.Save)
             viewModel.dispatch(PlaceFormAction.Save)
             advanceUntilIdle()
-            assertEquals(PlaceFormEffect.Saved(original.id), effect.await())
+            assertEquals(PlaceFormDestination.Saved(original.id), effect.await())
             viewModel.dispatch(PlaceFormAction.Save)
             assertEquals(1, repository.saves)
             val updated = repository.places.value.single()

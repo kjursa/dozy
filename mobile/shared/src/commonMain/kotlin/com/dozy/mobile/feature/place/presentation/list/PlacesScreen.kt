@@ -25,6 +25,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
@@ -32,14 +34,9 @@ import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun PlacesScreen(
-    viewModel: PlacesViewModel,
-    onEffect: (PlacesEffect) -> Unit,
-) {
-    MviScreen(viewModel, onEffect = {
-        onEffect(it)
-        viewModel.navigationHandled()
-    }) { state, dispatch ->
+internal fun PlacesScreen(viewModel: PlacesViewModel) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.navigationHandled() }
+    MviScreen(viewModel) { state, dispatch ->
         Column(
             Modifier
                 .fillMaxSize()

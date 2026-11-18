@@ -44,19 +44,10 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun CharactersTabScreen(
-    onAddCharacter: () -> Unit,
-    onCharacter: (String) -> Unit,
-) {
+internal fun CharactersTabScreen() {
     val charactersViewModel: CharactersViewModel = koinViewModel()
     MviScreen(
         viewModel = charactersViewModel,
-        onEffect = { effect ->
-            when (effect) {
-                is CharactersEffect.OpenCharacter -> onCharacter(effect.character.id)
-                CharactersEffect.NavigateToAddCharacter -> onAddCharacter()
-            }
-        },
     ) { state, dispatch ->
         CharactersTabContent(state, dispatch)
     }

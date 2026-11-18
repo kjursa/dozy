@@ -37,13 +37,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.dozy.mobile.feature.character.presentation.list.CharactersTabScreen
-import com.dozy.mobile.feature.home.presentation.HomeScreen
-import com.dozy.mobile.feature.place.domain.model.Place
-import com.dozy.mobile.feature.story.presentation.list.StoriesTabScreen
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.characters
+import com.dozy.mobile.resources.home
+import com.dozy.mobile.resources.my_stories
 import com.kjursa.foundation.compose.theme.UiSpacing
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 private const val HOME_TAB = "home"
 private const val STORIES_TAB = "stories"
@@ -55,14 +55,10 @@ fun MainScreen(
     onStoriesShown: () -> Unit = {},
     showCharacters: Boolean = false,
     onCharactersShown: () -> Unit = {},
-    onCreateStory: () -> Unit,
-    onCreateCharacter: () -> Unit,
-    onCharacter: (String) -> Unit,
-    onPlaces: () -> Unit,
-    onPlaceSelected: (Place.Id?) -> Unit,
-    onGeneration: (String) -> Unit,
-    onRead: (String) -> Unit,
 ) {
+    val homeScreen: HomeTabScreen = koinInject()
+    val storiesScreen: StoriesTabEntry = koinInject()
+    val charactersScreen: CharactersTabEntry = koinInject()
     val tabController = rememberNavController()
     LaunchedEffect(showCharacters) {
         if (showCharacters) {
@@ -93,35 +89,9 @@ fun MainScreen(
             startDestination = HOME_TAB,
             modifier = Modifier.fillMaxSize(),
         ) {
-            composable(HOME_TAB) {
-                HomeScreen(
-                    onStories = {
-                        tabController.navigate(STORIES_TAB) {
-                            popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onCharacters = {
-                        tabController.navigate(CHARACTERS_TAB) {
-                            popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onCreateStory = onCreateStory,
-                    onGeneration = onGeneration,
-                    onRead = onRead,
-                    onAddCharacter = onCreateCharacter,
-                    onPlaces = onPlaces,
-                    onCharacter = onCharacter,
-                    onPlaceSelected = onPlaceSelected,
-                )
-            }
-            composable(STORIES_TAB) {
-                StoriesTabScreen(onRead, onCreateStory)
-            }
-            composable(CHARACTERS_TAB) { CharactersTabScreen(onAddCharacter = onCreateCharacter, onCharacter = onCharacter) }
+            composable(HOME_TAB) { homeScreen.Content() }
+            composable(STORIES_TAB) { storiesScreen.Content() }
+            composable(CHARACTERS_TAB) { charactersScreen.Content() }
         }
 
         MainBottomPanel(

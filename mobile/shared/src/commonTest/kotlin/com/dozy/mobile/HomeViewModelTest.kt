@@ -7,7 +7,7 @@ import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
 import com.dozy.mobile.feature.home.presentation.HomeAction
-import com.dozy.mobile.feature.home.presentation.HomeEffect
+import com.dozy.mobile.feature.home.presentation.HomeDestination
 import com.dozy.mobile.feature.home.presentation.HomeSection
 import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
@@ -24,9 +24,7 @@ import com.dozy.mobile.feature.story.domain.usecase.RefreshGeneration
 import com.dozy.mobile.feature.story.domain.usecase.RefreshStories
 import com.dozy.mobile.feature.story.domain.usecase.RetryGeneration
 import com.dozy.mobile.feature.story.presentation.generation.GenerationAction
-import kotlin.test.*
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,6 +39,9 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -65,6 +66,7 @@ class HomeViewModelTest {
         heroes: CharacterRepository = characters,
         stories: GenerationRepository = repository,
     ) = HomeViewModel(
+        Navigator(),
         ObserveCharacters(heroes),
         ObserveStoryLibrary(stories),
         ObservePlaces(places),
@@ -144,7 +146,7 @@ class HomeViewModelTest {
                 vm.uiState.value.stories
                     .first()
             vm.dispatch(HomeAction.StorySelected(story))
-            assertEquals(HomeEffect.OpenStory(story), vm.effects.first())
+            assertEquals(HomeDestination.OpenStory(story), vm.navigator.commands.first())
         }
 
     @Test fun refreshFailuresAreIndependentRetainContentAndRetryIsGuarded() =
@@ -262,7 +264,7 @@ class HomeViewModelTest {
                     .id,
             )
             vm.dispatch(HomeAction.Generation(GenerationAction.Open(jobId)))
-            assertEquals(HomeEffect.ReadStory("story"), vm.effects.first())
+            assertEquals(HomeDestination.ReadStory("story"), vm.navigator.commands.first())
         }
 
     @Test fun failedJobRetryRetainsContentAndBlocksRepeatedClicks() =
@@ -346,21 +348,21 @@ class HomeViewModelTest {
                     .id
             val actions =
                 listOf(
-                    HomeAction.CreateStoryClicked to HomeEffect.CreateStoryRequested,
-                    HomeAction.SeeAllStoriesClicked to HomeEffect.SeeAllStoriesRequested,
-                    HomeAction.SeeAllCharactersClicked to HomeEffect.SeeAllCharactersRequested,
-                    HomeAction.SeeAllPlacesClicked to HomeEffect.SeeAllPlacesRequested,
-                    HomeAction.AddCharacterClicked to HomeEffect.AddCharacterRequested,
-                    HomeAction.CharacterSelected(hero) to HomeEffect.OpenCharacter(hero),
-                    HomeAction.PlaceSelected(setting) to HomeEffect.CreateStoryAtPlace(setting),
-                    HomeAction.ProgressClicked("job") to HomeEffect.OpenProgress("job"),
+                    HomeAction.CreateStoryClicked to HomeDestination.CreateStoryRequested,
+                    HomeAction.SeeAllStoriesClicked to HomeDestination.SeeAllStoriesRequested,
+                    HomeAction.SeeAllCharactersClicked to HomeDestination.SeeAllCharactersRequested,
+                    HomeAction.SeeAllPlacesClicked to HomeDestination.SeeAllPlacesRequested,
+                    HomeAction.AddCharacterClicked to HomeDestination.AddCharacterRequested,
+                    HomeAction.CharacterSelected(hero) to HomeDestination.OpenCharacter(hero),
+                    HomeAction.PlaceSelected(setting) to HomeDestination.CreateStoryAtPlace(setting),
+                    HomeAction.ProgressClicked("job") to HomeDestination.OpenProgress("job"),
                 )
             for ((action, expected) in actions) {
                 vm.resumed()
                 advanceUntilIdle()
                 repeat(3) { vm.dispatch(action) }
-                assertEquals(expected, vm.effects.first())
-                assertNull(withTimeoutOrNull(1) { vm.effects.first() })
+                assertEquals(expected, vm.navigator.commands.first())
+                assertNull(withTimeoutOrNull(1) { vm.navigator.commands.first() })
             }
         }
 }

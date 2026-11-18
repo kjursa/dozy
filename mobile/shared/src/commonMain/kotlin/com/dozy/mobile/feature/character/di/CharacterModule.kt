@@ -6,6 +6,7 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiSt
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
+import com.dozy.mobile.navigation.navigationModule
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -14,10 +15,12 @@ import org.koin.dsl.module
 /** Shared presentation registrations compose the shared character data graph. */
 val characterModule =
     module {
+        includes(navigationModule)
         includes(characterDataModule)
         viewModel {
             val handle: SavedStateHandle = get()
             CreateCharacterViewModel(
+                get(),
                 statePersistence = SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
                 saveCharacter = get(),
                 generateAvatar = get(),
@@ -28,6 +31,7 @@ val characterModule =
         viewModelOf(::CharactersViewModel)
         viewModel {
             CharacterDetailsViewModel(
+                get(),
                 get(),
                 get(),
                 Character.Id(requireNotNull(get<SavedStateHandle>().get<String>("id"))),

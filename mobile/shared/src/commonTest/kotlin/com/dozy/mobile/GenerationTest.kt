@@ -11,6 +11,7 @@ import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.create.*
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import com.kjursa.foundation.presentation.navigation.Navigator
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -42,6 +43,7 @@ class GenerationTest {
                     }
                 val vm =
                     CreateStoryViewModel(
+                        Navigator(),
                         SavedStatePersistence(SavedStateHandle(), CreateStoryUiState.serializer()),
                         null,
                         SelectPlace(FakePlaceRepository()),

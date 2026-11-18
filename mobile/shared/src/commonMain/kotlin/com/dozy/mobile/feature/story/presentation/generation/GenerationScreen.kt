@@ -18,12 +18,11 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun GenerationScreen(
     jobId: String,
     onHome: () -> Unit,
-    onRead: (String) -> Unit,
     requestNotifications: (() -> Unit)? = null,
     backgroundCompletionSupported: Boolean = false,
 ) {
     val vm: GenerationViewModel = koinViewModel()
-    MviScreen(vm, onEffect = { if (it is GenerationEffect.Read) onRead(it.id.value) }) { state, dispatch ->
+    MviScreen(vm) { state, dispatch ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -80,23 +79,6 @@ internal fun GenerationCard(
                     onClick = { dispatch(GenerationAction.Refresh(job.id)) },
                     enabled = !busy,
                 ) { Text(stringResource(Res.string.generation_refresh)) }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun HomeGeneration(
-    onProgress: (String) -> Unit,
-    onRead: (String) -> Unit,
-) {
-    val vm: GenerationViewModel = koinViewModel()
-    MviScreen(vm, onEffect = { if (it is GenerationEffect.Read) onRead(it.id.value) }) { state, dispatch ->
-        state.homeJob?.let { job ->
-            Column {
-                GenerationCard(job, state.busy, dispatch)
-                TextButton(onClick = { onProgress(job.id.value) }) { Text(stringResource(Res.string.generation_progress)) }
-                state.error?.let { Text(it.resolve()) }
             }
         }
     }

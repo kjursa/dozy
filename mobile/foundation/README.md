@@ -143,3 +143,20 @@ navigation owner and retains existing process-death wiring. On iOS a future host
 can inject `SavedStatePersistence(SavedStateHandle(), State.serializer())` and
 retain that handle with its owner. This is only an in-memory adapter: no iOS
 process-death or cross-relaunch persistence is promised.
+
+## Screens and navigation
+
+`com.kjursa.foundation.compose.navigation.Screen` is a route entry point with a
+Composable `Content()` method. Resolve ViewModels inside Content using the current
+back-stack owner; screen instances must not retain route ViewModels.
+
+`com.kjursa.foundation.presentation.navigation.Navigator<Command>` transports typed,
+data-only commands through a buffered single-consumer channel. Inject the same
+instance into ViewModels and its host. `navigate` suspends if the buffer is full;
+call it from the ViewModel scope so cancellation stops pending sends. A command is
+consumed once and is not replayed to a replacement collector. Commands queued while
+the host is absent wait in memory; nothing is persisted across process death.
+Use exactly one collector per navigator, and a separate instance for each independent
+navigation host. The library has no dependency on a navigation framework.
+
+MviScreen's optional effect handler remains available for non-navigation UI events.

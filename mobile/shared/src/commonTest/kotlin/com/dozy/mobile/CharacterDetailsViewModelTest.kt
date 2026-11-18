@@ -5,8 +5,9 @@ import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.DeleteCharacter
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacter
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsAction
-import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsEffect
+import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsDestination
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +38,7 @@ class CharacterDetailsViewModelTest {
     }
 
     private fun vm(id: String = "2") =
-        CharacterDetailsViewModel(ObserveCharacter(repository), DeleteCharacter(repository), Character.Id(id))
+        CharacterDetailsViewModel(Navigator(), ObserveCharacter(repository), DeleteCharacter(repository), Character.Id(id))
 
     @Test fun deleteUseCaseMapsFailureAndPreservesCancellation() =
         runTest(dispatcher) {
@@ -101,7 +102,7 @@ class CharacterDetailsViewModelTest {
             val details = vm()
             advanceUntilIdle()
             details.dispatch(CharacterDetailsAction.Delete)
-            val effect = async { details.effects.first() }
+            val effect = async { details.navigator.commands.first() }
             repeat(3) { details.dispatch(CharacterDetailsAction.ConfirmDelete) }
             advanceUntilIdle()
             assertTrue(details.uiState.value.deleting)
@@ -111,7 +112,7 @@ class CharacterDetailsViewModelTest {
             assertEquals(1, repository.deletes)
             gate.complete(Unit)
             advanceUntilIdle()
-            assertEquals(CharacterDetailsEffect.Deleted, effect.await())
+            assertEquals(CharacterDetailsDestination.Deleted, effect.await())
             assertEquals(listOf("1", "3"), repository.characters.value.map { it.id.value })
         }
 
@@ -129,7 +130,7 @@ class CharacterDetailsViewModelTest {
             repository.failure = null
             details.dispatch(CharacterDetailsAction.ConfirmDelete)
             advanceUntilIdle()
-            assertEquals(CharacterDetailsEffect.Deleted, details.effects.first())
+            assertEquals(CharacterDetailsDestination.Deleted, details.navigator.commands.first())
             assertEquals(2, repository.deletes)
         }
 
@@ -140,15 +141,15 @@ class CharacterDetailsViewModelTest {
             details.dispatch(CharacterDetailsAction.Story)
             details.dispatch(CharacterDetailsAction.Story)
             advanceUntilIdle()
-            assertEquals(CharacterDetailsEffect.Story(Character.Id("2")), details.effects.first())
+            assertEquals(CharacterDetailsDestination.Story(Character.Id("2")), details.navigator.commands.first())
             details.resumed()
             details.dispatch(CharacterDetailsAction.Edit)
             advanceUntilIdle()
-            assertEquals(CharacterDetailsEffect.Edit(Character.Id("2")), details.effects.first())
+            assertEquals(CharacterDetailsDestination.Edit(Character.Id("2")), details.navigator.commands.first())
             details.resumed()
             details.dispatch(CharacterDetailsAction.Back)
             advanceUntilIdle()
-            assertEquals(CharacterDetailsEffect.Back, details.effects.first())
+            assertEquals(CharacterDetailsDestination.Back, details.navigator.commands.first())
         }
 
     @Test fun readFailureIsDistinctFromMissingAndRetryResubscribes() =
@@ -162,7 +163,7 @@ class CharacterDetailsViewModelTest {
                             emit(character(id.value))
                         }
                 }
-            val details = CharacterDetailsViewModel(ObserveCharacter(source), DeleteCharacter(source), Character.Id("1"))
+            val details = CharacterDetailsViewModel(Navigator(), ObserveCharacter(source), DeleteCharacter(source), Character.Id("1"))
             advanceUntilIdle()
             assertNotNull(details.uiState.value.readError)
             fail = false

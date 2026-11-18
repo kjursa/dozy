@@ -9,6 +9,7 @@ import com.dozy.mobile.feature.place.presentation.form.PlaceFormUiState
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -35,6 +36,7 @@ internal open class PlaceFormViewModelFixture {
         handle: SavedStateHandle = SavedStateHandle(),
         id: String? = null,
     ) = PlaceFormViewModel(
+        Navigator(),
         SavedStatePersistence(handle, PlaceFormUiState.serializer()),
         SavePlace(
             repository,

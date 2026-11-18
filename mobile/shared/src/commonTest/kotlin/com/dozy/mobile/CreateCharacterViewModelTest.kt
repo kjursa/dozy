@@ -88,7 +88,7 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
             assertEquals("Blue coat", saved.details.appearance.value)
             assertEquals(Character.Type.FANTASY, saved.details.type)
             assertEquals(avatar(), saved.avatar)
-            assertEquals(CreateCharacterEffect.Saved(Character.Id("new")), vm.effects.first())
+            assertEquals(CreateCharacterDestination.Saved(Character.Id("new")), vm.navigator.commands.first())
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
             assertEquals(1, stored.saves)
@@ -127,7 +127,7 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
             vm.dispatch(CreateCharacterAction.PreviewClicked)
             runCurrent()
             vm.dispatch(CreateCharacterAction.BackClicked)
-            assertEquals(CreateCharacterEffect.NavigateBack, vm.effects.first())
+            assertEquals(CreateCharacterDestination.NavigateBack, vm.navigator.commands.first())
             gate.complete(avatar())
             advanceUntilIdle()
             assertNull(vm.uiState.value.avatarId)
@@ -168,7 +168,7 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
             stored.failure = null
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertEquals(CreateCharacterEffect.Saved(Character.Id("new")), vm.effects.first())
+            assertEquals(CreateCharacterDestination.Saved(Character.Id("new")), vm.navigator.commands.first())
         }
 
     @Test fun editingReusesAvatarAndDoesNotWriteUntilSave() =
@@ -187,7 +187,7 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
             )
             vm.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertEquals(CreateCharacterEffect.Saved(Character.Id("1")), vm.effects.first())
+            assertEquals(CreateCharacterDestination.Saved(Character.Id("1")), vm.navigator.commands.first())
             assertEquals(
                 "Edited",
                 stored.characters.value
@@ -295,6 +295,6 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
                     ?.id
                     ?.value,
             )
-            assertEquals(CreateCharacterEffect.Saved(original.id), vm.effects.first())
+            assertEquals(CreateCharacterDestination.Saved(original.id), vm.navigator.commands.first())
         }
 }

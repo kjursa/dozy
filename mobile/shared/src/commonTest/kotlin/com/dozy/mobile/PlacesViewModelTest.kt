@@ -5,8 +5,9 @@ import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
 import com.dozy.mobile.feature.place.domain.usecase.RefreshPlaces
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.place.presentation.list.PlacesAction
-import com.dozy.mobile.feature.place.presentation.list.PlacesEffect
+import com.dozy.mobile.feature.place.presentation.list.PlacesDestination
 import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
+import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,7 +35,7 @@ class PlacesViewModelTest {
     }
 
     private fun vm(repository: FakePlaceRepository) =
-        PlacesViewModel(ObservePlaces(repository), RefreshPlaces(repository), SelectPlace(repository))
+        PlacesViewModel(Navigator(), ObservePlaces(repository), RefreshPlaces(repository), SelectPlace(repository))
 
     @Test fun loadingFailureRetainsPlacesRetryIsSingleFlightAndCanRecover() =
         runTest(dispatcher) {
@@ -82,18 +83,18 @@ class PlacesViewModelTest {
             advanceUntilIdle()
             viewModel.dispatch(PlacesAction.Edit(Place.Id("builtin:woods")))
             assertFalse(viewModel.uiState.value.navigating)
-            val effect = async { viewModel.effects.first() }
+            val effect = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(PlacesAction.Select(Place.Id("custom")))
             viewModel.dispatch(PlacesAction.Select(Place.Id("custom")))
             viewModel.dispatch(PlacesAction.Add)
             advanceUntilIdle()
-            assertEquals(PlacesEffect.Selected(Place.Id("custom")), effect.await())
+            assertEquals(PlacesDestination.Selected(Place.Id("custom")), effect.await())
             assertTrue(viewModel.uiState.value.navigating)
             viewModel.navigationHandled()
-            val back = async { viewModel.effects.first() }
+            val back = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(PlacesAction.Back)
             advanceUntilIdle()
-            assertEquals(PlacesEffect.Back, back.await())
+            assertEquals(PlacesDestination.Back, back.await())
         }
 
     @Test fun formSurpriseAndUnavailableSelectionHaveExplicitOutcomes() =
@@ -105,12 +106,12 @@ class PlacesViewModelTest {
             assertNotNull(viewModel.uiState.value.error)
             assertFalse(viewModel.uiState.value.navigating)
             for ((action, expected) in listOf(
-                PlacesAction.Add to PlacesEffect.Form(null),
-                PlacesAction.Edit(Place.Id("custom")) to PlacesEffect.Form(Place.Id("custom")),
-                PlacesAction.Surprise to PlacesEffect.Selected(null),
+                PlacesAction.Add to PlacesDestination.Form(null),
+                PlacesAction.Edit(Place.Id("custom")) to PlacesDestination.Form(Place.Id("custom")),
+                PlacesAction.Surprise to PlacesDestination.Selected(null),
             )) {
                 viewModel.navigationHandled()
-                val result = async { viewModel.effects.first() }
+                val result = async { viewModel.navigator.commands.first() }
                 viewModel.dispatch(action)
                 advanceUntilIdle()
                 assertEquals(expected, result.await())

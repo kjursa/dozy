@@ -1,15 +1,16 @@
 package com.dozy.mobile.feature.place.presentation.list
 
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.navigation.NavigationCommand
 
-sealed interface PlacesEffect {
-    data object Back : PlacesEffect
+sealed interface PlacesDestination : NavigationCommand {
+    data object Back : PlacesDestination
 
     data class Selected(
         val id: Place.Id?,
-    ) : PlacesEffect
+    ) : PlacesDestination
 
     data class Form(
         val id: Place.Id?,
-    ) : PlacesEffect
+    ) : PlacesDestination
 }

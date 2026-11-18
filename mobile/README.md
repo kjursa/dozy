@@ -172,3 +172,24 @@ Without this property, remote APIs remain disabled. Debug builds allow cleartext
 for local development; release builds retain Android's HTTPS-only default.
 
 API2 uses shared `CharacterAvatarsClients` and repository polling. See [character data](CHARACTER_DATA.md) and the root README for local development URLs and debug build configuration.
+
+## Navigation and screen bindings
+
+Foundation provides `Screen.Content()` and a typed `Navigator<Command>` queue.
+Dozy registers concrete route entries and one `AppNavigator` in `navigationModule`.
+`DozyApp` injects `AppScreens`, registers their Content methods with NavHost, and
+runs the single navigation command collector. `NavigationHandler` owns routes,
+back-stack changes and navigation results. The nested tab host owns tab selection;
+it does not consume the application navigator.
+
+Feature ViewModels receive AppNavigator through their constructors and emit
+feature-specific Destination values from viewModelScope. They do not hold a
+NavController or emit navigation through MVI effects. The latter remain available
+for other transient UI events. Route entries resolve ViewModels in Content, where
+the current back-stack owner supplies lifecycle and SavedStateHandle. Login uses
+the existing host-owned ViewModel shared across its four screens.
+
+New character and selected place results return to the story draft through its
+SavedStateHandle and are cleared after consumption. Notification entry continues
+to open Home and the requested reader. This in-memory navigator has one consumer
+per application host; independent hosts must receive independent navigators.

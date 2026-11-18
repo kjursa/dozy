@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun <State : Any, Action : Any, Effect : Any> MviScreen(
     viewModel: MviViewModel<State, Action, Effect>,
-    onEffect: suspend (Effect) -> Unit,
+    onEffect: suspend (Effect) -> Unit = {},
     content: @Composable (state: State, dispatch: (Action) -> Unit) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

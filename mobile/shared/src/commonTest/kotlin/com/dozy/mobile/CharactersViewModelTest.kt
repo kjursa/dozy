@@ -4,9 +4,10 @@ import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.RefreshCharacters
 import com.dozy.mobile.feature.character.presentation.list.CharactersAction
-import com.dozy.mobile.feature.character.presentation.list.CharactersEffect
+import com.dozy.mobile.feature.character.presentation.list.CharactersDestination
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
 import com.dozy.mobile.resources.*
+import com.kjursa.foundation.presentation.navigation.Navigator
 import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -42,6 +43,7 @@ class CharactersViewModelTest {
             val repository = FakeCharacterRepository().apply { characters.value = emptyList() }
             val viewModel =
                 CharactersViewModel(
+                    Navigator(),
                     ObserveCharacters(repository),
                     RefreshCharacters(repository),
                 )
@@ -77,6 +79,7 @@ class CharactersViewModelTest {
             val repository = FakeCharacterRepository().apply { beforeRefresh = { gate.await() } }
             val viewModel =
                 CharactersViewModel(
+                    Navigator(),
                     ObserveCharacters(repository),
                     RefreshCharacters(repository),
                 )
@@ -110,7 +113,7 @@ class CharactersViewModelTest {
                 }
             val refresh =
                 RefreshCharacters(repository)
-            val viewModel = CharactersViewModel(ObserveCharacters(repository), refresh)
+            val viewModel = CharactersViewModel(Navigator(), ObserveCharacters(repository), refresh)
             advanceUntilIdle()
             assertEquals(false, viewModel.uiState.value.loading)
             assertEquals(true, viewModel.uiState.value.characterLoadError)
@@ -130,6 +133,7 @@ class CharactersViewModelTest {
     @Test fun initialStateExposesPersistedCharacters() {
         val viewModel =
             CharactersViewModel(
+                Navigator(),
                 ObserveCharacters(FakeCharacterRepository()),
                 RefreshCharacters(FakeCharacterRepository()),
             )
@@ -143,6 +147,7 @@ class CharactersViewModelTest {
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
+                    Navigator(),
                     ObserveCharacters(FakeCharacterRepository()),
                     RefreshCharacters(FakeCharacterRepository()),
                 )
@@ -150,22 +155,23 @@ class CharactersViewModelTest {
             val character =
                 viewModel.uiState.value.characters
                     .first()
-            val effect = async { viewModel.effects.first() }
+            val effect = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(CharactersAction.CharacterSelected(character))
             advanceUntilIdle()
-            assertEquals(CharactersEffect.OpenCharacter(character), effect.await())
+            assertEquals(CharactersDestination.OpenCharacter(character), effect.await())
         }
 
     @Test fun addingCharacterEmitsNavigationEffect() =
         runTest(dispatcher) {
             val viewModel =
                 CharactersViewModel(
+                    Navigator(),
                     ObserveCharacters(FakeCharacterRepository()),
                     RefreshCharacters(FakeCharacterRepository()),
                 )
-            val effect = async { viewModel.effects.first() }
+            val effect = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(CharactersAction.AddCharacterClicked)
             advanceUntilIdle()
-            assertEquals(CharactersEffect.NavigateToAddCharacter, effect.await())
+            assertEquals(CharactersDestination.NavigateToAddCharacter, effect.await())
         }
 }

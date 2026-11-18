@@ -8,6 +8,8 @@ import com.dozy.mobile.feature.story.domain.model.GenerationInput
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
+import com.dozy.mobile.navigation.AppNavigator
+import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class CreateStoryViewModel(
+    val navigator: AppNavigator,
     persistence: StatePersistence<CreateStoryUiState>,
     initialPlaceId: String?,
     private val selectPlace: SelectPlace,
@@ -24,7 +27,7 @@ class CreateStoryViewModel(
     private val startGeneration: StartGeneration,
     private val keyGenerator: GenerationKeyGenerator,
     initialCast: List<String> = emptyList(),
-) : MviViewModel<CreateStoryUiState, CreateStoryAction, CreateStoryEffect>(
+) : MviViewModel<CreateStoryUiState, CreateStoryAction, Nothing>(
         CreateStoryUiState(placeId = initialPlaceId, randomSetting = initialPlaceId == null, selectedHeroes = initialCast),
         persistence,
     ) {
@@ -77,7 +80,7 @@ class CreateStoryViewModel(
                     when (result) {
                         is StartGeneration.Result.Accepted -> {
                             updateState { copy(submitting = false, acceptedJobId = result.job.id.value) }
-                            sendEffect(CreateStoryEffect.Accepted(result.job.id.value))
+                            navigateTo(CreateStoryDestination.Accepted(result.job.id.value))
                         }
                         else ->
                             updateState {
@@ -103,7 +106,7 @@ class CreateStoryViewModel(
 
     fun resumed() {
         openingPlaces = false
-        uiState.value.acceptedJobId?.let { sendEffect(CreateStoryEffect.Accepted(it)) }
+        uiState.value.acceptedJobId?.let { navigateTo(CreateStoryDestination.Accepted(it)) }
     }
 
     override fun onAction(action: CreateStoryAction) {
@@ -160,8 +163,12 @@ class CreateStoryViewModel(
             CreateStoryAction.ChoosePlace ->
                 if (!openingPlaces) {
                     openingPlaces = true
-                    sendEffect(CreateStoryEffect.OpenPlaces)
+                    navigateTo(CreateStoryDestination.OpenPlaces)
                 }
         }
+    }
+
+    private fun navigateTo(command: NavigationCommand) {
+        viewModelScope.launch { navigator.navigate(command) }
     }
 }

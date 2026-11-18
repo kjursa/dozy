@@ -10,16 +10,17 @@ import com.dozy.mobile.feature.story.data.toDto
 import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.generation.*
+import com.kjursa.foundation.presentation.navigation.Navigator
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
-import kotlin.test.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import kotlinx.serialization.json.Json
+import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GenerationProgressTest {
@@ -183,7 +184,12 @@ class GenerationProgressTest {
                 api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
                 repository.refresh(id)
                 val vm =
-                    GenerationViewModel(ObserveGenerations(repository), RefreshGeneration(repository), RetryGeneration(repository, keys))
+                    GenerationViewModel(
+                        Navigator(),
+                        ObserveGenerations(repository),
+                        RefreshGeneration(repository),
+                        RetryGeneration(repository, keys),
+                    )
                 scope.put("progress", vm)
                 runCurrent()
                 api.loseRetryResponse = true
@@ -218,7 +224,7 @@ class GenerationProgressTest {
             }
         }
 
-    @Test fun viewModelBlocksRepeatedRetryAndEmitsSpecificReaderEffect() =
+    @Test fun viewModelBlocksRepeatedRetryAndEmitsSpecificReaderDestination() =
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             val scope = ViewModelStore()
@@ -229,7 +235,12 @@ class GenerationProgressTest {
                 api.remote = GenerationStatusDto("job", "FAILED", errorCode = "GENERATION_FAILED")
                 repository.refresh(id)
                 val vm =
-                    GenerationViewModel(ObserveGenerations(repository), RefreshGeneration(repository), RetryGeneration(repository, keys))
+                    GenerationViewModel(
+                        Navigator(),
+                        ObserveGenerations(repository),
+                        RefreshGeneration(repository),
+                        RetryGeneration(repository, keys),
+                    )
                 scope.put("progress", vm)
                 runCurrent()
                 api.retryGate = CompletableDeferred()
@@ -266,7 +277,7 @@ class GenerationProgressTest {
                 vm.dispatch(GenerationAction.Refresh(id))
                 runCurrent()
                 vm.dispatch(GenerationAction.Open(id))
-                assertEquals(GenerationEffect.Read(Story.Id("story")), vm.effects.first())
+                assertEquals(GenerationDestination.Read(Story.Id("story")), vm.navigator.commands.first())
             } finally {
                 scope.clear()
                 Dispatchers.resetMain()

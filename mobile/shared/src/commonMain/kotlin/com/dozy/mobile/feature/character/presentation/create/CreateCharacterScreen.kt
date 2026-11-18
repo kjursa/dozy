@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
@@ -80,11 +79,7 @@ private val heroTypes =
     )
 
 @Composable
-internal fun CreateCharacterScreen(
-    viewModel: CreateCharacterViewModel,
-    onBack: () -> Unit,
-    onSaved: (Character.Id) -> Unit,
-) {
+internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
     BackHandler { viewModel.dispatch(CreateCharacterAction.BackClicked) }
     DisposableEffect(viewModel) {
         viewModel.resume()
@@ -92,12 +87,6 @@ internal fun CreateCharacterScreen(
     }
     MviScreen(
         viewModel = viewModel,
-        onEffect = { effect ->
-            when (effect) {
-                CreateCharacterEffect.NavigateBack -> onBack()
-                is CreateCharacterEffect.Saved -> onSaved(effect.id)
-            }
-        },
     ) { state, dispatch ->
         val name = state.displayName.resolve()
         val personality = state.displayPersonality.resolve()
