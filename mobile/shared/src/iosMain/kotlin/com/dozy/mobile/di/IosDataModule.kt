@@ -1,6 +1,5 @@
 package com.dozy.mobile.di
 
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.auth.AuthSessionStorage
 import com.dozy.api.client.auth.StoredAuthSession
 import com.dozy.mobile.core.config.ApiConfig
@@ -16,7 +15,6 @@ import com.dozy.mobile.feature.place.di.placeDataModule
 import com.dozy.mobile.feature.story.di.storyDataModule
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.dsl.module
-import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 
 /** The host supplies configuration and its localized catalog; no notification delivery is registered. */
@@ -26,13 +24,6 @@ fun iosDataModule(
 ) = module {
     includes(databaseModule, httpClientModule, dozyClientModule, characterDataModule, placeDataModule, storyDataModule)
     single { config }
-    single<InstallationIdProvider> {
-        val defaults = NSUserDefaults.standardUserDefaults
-        val id = defaults.stringForKey("dozy-installation-id") ?: NSUUID().UUIDString.lowercase().also {
-            defaults.setObject(it, "dozy-installation-id")
-        }
-        InstallationIdProvider { id }
-    }
     single<AuthSessionStorage> { IosAuthSessionStorage() }
     single { places }
     single<DatabaseBuilderFactory> { DatabaseBuilderFactory { iosDatabaseBuilder() } }

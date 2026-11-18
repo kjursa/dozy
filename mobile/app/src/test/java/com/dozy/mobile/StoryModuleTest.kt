@@ -1,7 +1,6 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
@@ -33,7 +32,7 @@ class StoryModuleTest {
             val platform =
                 module {
                     single { ApiConfig(null) }
-                    single<InstallationIdProvider> { InstallationIdProvider { "installation" } }
+
                     single { client }
                     single<GenerationDao> { FakeGenerationDao() }
                     single<CharacterRepository> { FakeCharacterRepository() }

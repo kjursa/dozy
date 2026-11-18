@@ -2,7 +2,6 @@ package com.dozy.mobile.core.data.api
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.auth.AuthSessionManager
 import com.dozy.api.client.auth.AuthSessionStorage
 import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.mobile.core.config.ApiConfig
@@ -16,6 +15,6 @@ val dozyClientModule =
         single { get<DozyClient>().stories }
         single { get<DozyClient>().sessionManager }
         single {
-            DozyClient(get(), DozyClientConfig(get<ApiConfig>().baseUrl), get(), get<AuthSessionStorage>())
+            DozyClient(get(), DozyClientConfig(get<ApiConfig>().baseUrl), get<AuthSessionStorage>())
         } onClose { it?.close() }
     }

@@ -4,7 +4,7 @@ import com.dozy.features.auth.data.database.AuthEmailCodes
 import com.dozy.features.auth.data.database.AuthRefreshTokens
 import com.dozy.features.auth.data.database.AuthUsers
 import com.dozy.infrastructure.database.SqliteDatabase
-import java.util.Base64
+import com.dozy.config.AuthSecretProvider
 import java.util.UUID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.and
@@ -14,8 +14,11 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-class AuthService(private val database: SqliteDatabase, private val secret: String, private val accessTokens: AccessTokens) {
-    init { require(secret.length >= 32) { "Auth secret must contain at least 32 characters" } }
+class AuthService(
+    private val database: SqliteDatabase,
+    private val secrets: AuthSecretProvider,
+    private val accessTokens: AccessTokens,
+) {
 
     suspend fun anonymous(): TokenResult.Valid = database.write {
         val ownerId = uuidV7()
@@ -61,7 +64,7 @@ class AuthService(private val database: SqliteDatabase, private val secret: Stri
     }
 
     suspend fun refresh(ownerId: String, refreshToken: String): TokenResult = database.write {
-        val hash = refreshHash(refreshToken)
+        val hash = secrets.hashRefreshToken(refreshToken)
         val row = AuthRefreshTokens.selectAll().where { AuthRefreshTokens.tokenHash eq hash }.singleOrNull()
         if (row == null || row[AuthRefreshTokens.ownerId] != ownerId || row[AuthRefreshTokens.revoked] || row[AuthRefreshTokens.expiresAt] <= System.currentTimeMillis()) return@write TokenResult.Invalid
         AuthRefreshTokens.update({ AuthRefreshTokens.tokenHash eq hash }) { it[revoked] = true }
@@ -76,16 +79,13 @@ class AuthService(private val database: SqliteDatabase, private val secret: Stri
         val now = System.currentTimeMillis()
         val refresh = UUID.randomUUID().toString()
         AuthRefreshTokens.insert {
-            it[AuthRefreshTokens.tokenHash] = refreshHash(refresh)
+            it[AuthRefreshTokens.tokenHash] = secrets.hashRefreshToken(refresh)
             it[AuthRefreshTokens.ownerId] = ownerId
             it[AuthRefreshTokens.expiresAt] = now + REFRESH_LIFETIME
             it[AuthRefreshTokens.revoked] = false
         }
         return TokenResult.Valid(ownerId, accessTokens.issue(ownerId), refresh)
     }
-
-    private fun refreshHash(token: String) =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(hmac(secret.encodeToByteArray(), "v1:refresh"), token))
 
     private companion object {
         const val FAKE_CODE = "123456789"

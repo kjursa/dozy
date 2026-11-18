@@ -13,7 +13,7 @@ launch or E2E suite is included.
   server code, database code, or either application's domain models.
 - `client` (`com.dozy.api:client:0.1.0`): Ktor Client-based `DozyClient` and
   `AuthClients`, `PlacesClients`, `CharactersClients`, `CharacterAvatarsClients`, `StoryGenerationsClients`, and `StoriesClients` version containers, with its contracts dependency exposed to consumers. Engines,
-  authentication/installation identity storage, and the HTTP client lifetime belong
+  session storage, and the HTTP client lifetime belong
   to the caller.
 
 Places, Characters, story submission/status/retry and immutable story reading are implemented in the shared contracts/client and backend. Story wire models live in `contracts.v1.story`; explicit retry uses `storyGenerations.v1.retry(jobId, idempotencyKey)`; listing uses `stories.v1.list(ListStoriesRequest)`. Avatar jobs are implemented by API2.
@@ -25,8 +25,8 @@ character asset reference and description validation contracts.
 `DozyClient.characterAvatars.v1.start(request)` performs one POST (202), and
 `status(jobId)` performs one GET (200). They return `AvatarStartResult` and `AvatarStatusResult`.
 FAILED jobs are successful payloads with `error`; unknown error codes and validation
-details remain Unknown. Invalid request structure, invalid installation identity,
-malformed responses and transport failures are `TechnicalError.Communication`; cancellation propagates.
+details remain Unknown. Invalid request structure, malformed responses and transport
+failures are `TechnicalError.Communication`; cancellation propagates.
 Polling belongs to consumers. Every explicit POST creates an independent job.
 
 
@@ -36,7 +36,6 @@ Polling belongs to consumers. Every explicit POST creates an independent job.
 val dozy = DozyClient(
     httpClient = httpClient,
     config = DozyClientConfig(baseUrl = "http://localhost:8080"),
-    installationIdProvider = InstallationIdProvider { persistedInstallationUuid },
     sessionStorage = platformAuthSessionStorage,
 )
 val places = dozy.places.v1.list()
@@ -53,18 +52,16 @@ email-code requests and verification, refresh, and logout. `dozy.sessionManager`
 persists successful login/refresh responses through that storage and exposes a
 `StateFlow<SessionState>`. The client attaches bearer tokens to feature and asset requests for the configured API origin and
 uses the refresh endpoint to retry after `401`; a rejected refresh clears the stored
-account session and emits `SessionState.Expired`. The three-argument constructor
-uses in-memory storage and does not add bearer authentication to feature requests;
-pass platform storage when authentication is enabled. Close `DozyClient` before
-the caller-owned `HttpClient`. Use `dozy.assetHttpClient` for protected images.
-In-memory storage is intended for tests and
-short-lived clients only.
+session and emits `SessionState.Expired`. The default in-memory session storage suits
+tests and short-lived clients. Pass platform storage to persist sessions across restarts.
+Close `DozyClient` before the caller-owned `HttpClient`. Use `dozy.assetHttpClient`
+for protected images.
 
 Inject `client.place.PlacesClients` into consumers rather than the entire `DozyClient` when only
 Places is needed. The container exposes singular version interfaces (`places.v1.list()`,
 `places.v1.save(...)`) through a public interface. Internal implementations receive version clients through
 constructors; tests provide interface stubs without constructing production implementations. Mobile registers the root client in Koin and exposes its Places
-container to `DefaultPlaceRepository`. The legacy installation ID provider is retained for clients using the three-argument constructor.
+container to `DefaultPlaceRepository`.
 Authenticated requests use the JWT subject for resource ownership.
 
 `contracts.v1.ApiErrorCode` defines common request/server and reusable machine codes.
@@ -89,7 +86,7 @@ live in `api.client.TechnicalError`, not the transport contracts.
 - `TechnicalError(TechnicalError.Server(status))`: every HTTP 5xx, before reading or decoding its body,
   including HTML or an empty proxy response.
 - `TechnicalError(TechnicalError.Communication(exception))`: transport/timeout/TLS failures, invalid request
-  or installation identity, malformed JSON/missing response fields, unexpected
+  or malformed JSON/missing response fields, unexpected
   response status, disabled API configuration, or any other `Exception`, including
   local argument/programming errors. The exception is diagnostic,
   never user-facing text. A failure does not prove a write was not committed.
@@ -160,8 +157,8 @@ malformed terminal combinations and transport failures are communication results
 cancellation propagates.
 A missing story never triggers generation. HTTP covers require an explicitly HTTP
 API base URL and the same origin; otherwise the SDK requires HTTPS. Story cover
-bytes are fetched through the caller-owned image client using the installation
-header, scoped to the configured backend origin.
+bytes are fetched with `dozy.assetHttpClient`, which adds bearer credentials on the
+configured API origin.
 
 ## Versioning
 
@@ -191,11 +188,11 @@ From the repository root:
 ```
 
 Contracts tests assert the JSON shape. Client unit tests use Ktor MockEngine to
-check versioned paths, installation headers, serialization, acknowledgements,
+check versioned paths, bearer credentials, serialization, acknowledgements,
 structured/non-JSON errors, disabled configuration, additive fields, cancellation,
 and malformed payloads. Backend route tests retain raw HTTP/JSON coverage. These
 are unit/component tests, not E2E.
 
 ## Story library listing (API4)
 
-`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Cursors are opaque, URL-encoded by the client, and bound to a persistent installation-owned snapshot, request limit and position. The final page returns nextCursor null.
+`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Cursors are opaque, URL-encoded by the client, and bound to a persistent owner-scoped snapshot, request limit and position. The final page returns nextCursor null.

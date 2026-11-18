@@ -31,7 +31,7 @@ class AuthClientTest {
             respond("""{"sessionId":"session-1"}""", HttpStatusCode.Accepted, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
         })
         try {
-            val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" })
+            val client = DozyClient(http, DozyClientConfig("https://api.example"))
             val result = client.auth.v1.requestEmailCode("parent@example.com")
             assertEquals("session-1", assertIs<RequestEmailCodeResult.Success>(result).sessionId)
         } finally { http.close() }
@@ -43,7 +43,7 @@ class AuthClientTest {
         val http = HttpClient(MockEngine {
             respond("""{"ownerId":"owner-1","accessToken":"access-1","refreshToken":"refresh-1"}""", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
         })
-        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), storage)
         try {
             val result = client.auth.v1.verifyEmailCode("session-1", "123456789")
             assertIs<VerifyEmailCodeResult.Success>(result)
@@ -81,7 +81,7 @@ class AuthClientTest {
                 else -> error("Unexpected path ${request.url.encodedPath}")
             }
         })
-        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), storage)
         try {
             assertIs<PlacesListResult.Success>(client.places.v1.list())
             assertEquals(2, placesCalls)
@@ -107,7 +107,7 @@ class AuthClientTest {
                 }
             }
         })
-        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), storage)
         try {
             client.auth.v1.anonymous()
             client.sessionManager.initialize()
@@ -128,7 +128,7 @@ class AuthClientTest {
         val http = HttpClient(MockEngine {
             respond("""{"code":"INVALID_REFRESH_TOKEN"}""", HttpStatusCode.Unauthorized)
         })
-        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), storage)
         try {
             client.sessionManager.initialize()
             assertEquals(null, client.sessionManager.refreshForRequest(expired))

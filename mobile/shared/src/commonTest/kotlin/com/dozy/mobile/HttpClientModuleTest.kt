@@ -1,7 +1,7 @@
 package com.dozy.mobile
 
-import com.dozy.api.client.InstallationIdProvider
-import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.api.client.DozyClient
+import com.dozy.api.client.DozyClientConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.httpClientModule
 import io.ktor.client.HttpClient
@@ -34,8 +34,6 @@ class HttpClientModuleTest {
                     modules(
                         httpClientModule,
                         module {
-                            single { ApiConfig("https://example.test") }
-                            single<InstallationIdProvider> { InstallationIdProvider { "installation" } }
                             single<HttpEngineFactory> {
                                 HttpEngineFactory {
                                     engines++
@@ -48,8 +46,9 @@ class HttpClientModuleTest {
             val client = graph.koin.get<HttpClient>()
             try {
                 assertSame(client, graph.koin.get<HttpClient>())
-                assertEquals(emptyList(), apiValue(placesClient(client, ApiConfig("https://example.test")).list()).places)
-                assertEquals(emptyList(), apiValue(placesClient(client, ApiConfig("https://example.test")).list()).places)
+                DozyClient(client, DozyClientConfig("https://example.test")).use { sdk ->
+                    repeat(2) { assertEquals(emptyList(), apiValue(sdk.places.v1.list()).places) }
+                }
                 assertEquals(1, engines)
             } finally {
                 graph.close()

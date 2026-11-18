@@ -25,12 +25,12 @@ import kotlinx.serialization.json.jsonObject
 
 class StoryClientsTest {
     private val input = GenerationRequestDto(listOf(CharacterDto("hero", "Luna", "Kind", "Coat", "ANIMAL")), "AUTOMATIC", "SHORT", idea = "hidden", ending = "hidden")
-    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/service"), InstallationIdProvider { "installation" })
+    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/service"))
 
     @Test fun `listing encodes opaque cursor sends identity and maps error codes independent of status`() = runTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("/service/api/v1/stories", request.url.encodedPath)
-            assertEquals("installation", request.headers["X-Installation-Id"])
+
             assertEquals("a /+?&", request.url.parameters["cursor"])
             assertEquals("2", request.url.parameters["limit"])
             respond("""{"stories":[],"nextCursor":null}""")
@@ -42,7 +42,7 @@ class StoryClientsTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("/service/api/v1/story-generations/job/retry", request.url.encodedPath)
             assertEquals("POST", request.method.value)
-            assertEquals("installation", request.headers["X-Installation-Id"])
+
             assertEquals("retry-key", request.headers["Idempotency-Key"])
             assertEquals(0L, request.body.contentLength)
             respond("""{"jobId":"job","status":"FAILED"}""", HttpStatusCode.Accepted)
@@ -55,7 +55,7 @@ class StoryClientsTest {
     @Test fun `versioned containers submit snapshot omission key identity and retrieve status and story`() = runTest {
         var calls = 0
         val http = HttpClient(MockEngine { request ->
-            assertEquals("installation", request.headers["X-Installation-Id"])
+
             when (calls++) {
                 0 -> {
                     assertEquals("/service/api/v1/story-generations", request.url.encodedPath)

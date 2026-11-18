@@ -36,13 +36,13 @@ The HTML report remains in `e2e/build/reports/tests/test/index.html`.
 
 ## Places coverage
 
-- A fresh installation sees shared, non-editable system places.
+- A new guest sees shared, non-editable system places.
 - Create, normalize, replay and replace a custom place; clear inhabitants on replacement.
 - Reject edits to system places and preserve their original data.
 - Return shared validation errors for invalid fields without creating records.
-- Isolate installations and reject attempts to replace another installation's place.
+- Isolate guest accounts and reject attempts to replace another guest's place.
 
-Each scenario generates its own installation UUID and UUIDv7 resource IDs.
+Each scenario creates its own guest session and generates UUIDv7 resource IDs.
 
 ## Use an already running backend
 
@@ -55,7 +55,7 @@ DOZY_E2E_BASE_URL=http://127.0.0.1:8080 \
 
 Without the runner, the caller owns backend startup/shutdown and database cleanup.
 The default URL is `http://127.0.0.1:8080`; these scenarios persist data under fresh
-installation identities. The runner always overrides the URL with its isolated backend.
+guest accounts. The runner always overrides the URL with its isolated backend.
 
 ## Compile without running E2E
 

@@ -57,7 +57,7 @@ class ClientResultsTest {
         Operation("StoryList", { it.stories.v1.list(ListStoriesRequest()) }, { (it as StoryListResult.TechnicalError).error }, { (it as StoryListResult.ApiError).error }, StoryListError.known),
         Operation("StoryRead", { it.stories.v1.read("story") }, { (it as StoryReadResult.TechnicalError).error }, { (it as StoryReadResult.ApiError).error }, StoryReadError.known),
     )
-    private fun sdk(http: HttpClient, baseUrl: String? = "https://example.test") = DozyClient(http, DozyClientConfig(baseUrl), InstallationIdProvider { "installation" })
+    private fun sdk(http: HttpClient, baseUrl: String? = "https://example.test") = DozyClient(http, DozyClientConfig(baseUrl))
 
     @Test fun `every operation classifies 5xx before reading HTML empty or business bodies`() = runTest {
         for (operation in operations) for (status in listOf(500, 503, 504)) for (body in listOf("", "<html>Error</html>", """{"code":"JOB_NOT_FOUND"}""")) {

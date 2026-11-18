@@ -2,8 +2,8 @@ package com.dozy.mobile
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
-import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.api.client.auth.InMemoryAuthSessionStorage
+import com.dozy.api.client.auth.StoredAuthSession
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.createHttpClient
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
@@ -13,19 +13,19 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.get
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 
 class StorySdkIntegrationTest {
-
     @Test fun `SDK retry reconciles persisted key before polling and later failure gets a fresh key`() =
         runTest {
             val dao = FakeGenerationDao()
@@ -36,7 +36,6 @@ class StorySdkIntegrationTest {
             val http =
                 HttpClient(
                     MockEngine { request ->
-                        assertEquals("installation", request.headers["X-Installation-Id"])
                         when (request.url.encodedPath) {
                             "/api/v1/story-generations" -> respond("""{"jobId":"job","status":"QUEUED"}""", HttpStatusCode.Accepted)
                             "/api/v1/story-generations/job/retry" -> {
@@ -51,7 +50,7 @@ class StorySdkIntegrationTest {
                         }
                     },
                 )
-            val sdk = DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "installation" })
+            val sdk = DozyClient(http, DozyClientConfig("https://example.test"))
 
             fun repository() = DefaultGenerationRepository(dao, sdk.storyGenerations, sdk.stories)
             val id = GenerationJob.Id("job")
@@ -114,27 +113,34 @@ class StorySdkIntegrationTest {
             }
         }
 
-    @Test fun `shared listing traverses pages with identity and accepts configured local covers without generation`() = runTest {
-        val cursors = mutableListOf<String?>()
-        val http = HttpClient(MockEngine { request ->
-            assertEquals(HttpMethod.Get, request.method)
-            assertEquals("installation", request.headers["X-Installation-Id"])
-            assertEquals("/api/v1/stories", request.url.encodedPath)
-            assertEquals("100", request.url.parameters["limit"])
-            val cursor = request.url.parameters["cursor"]
-            cursors += cursor
-            val id = if (cursor == null) "a" else "b"
-            val next = if (cursor == null) "\"opaque /+\"" else "null"
-            respond("""{"stories":[{"id":"$id","title":"Title","coverUrl":"http://localhost:8080/api/v1/assets/$id","readingMinutes":1,"createdAt":123}],"nextCursor":$next}""")
-        })
-        try {
-            val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"), InstallationIdProvider { "installation" })
-            val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories)
-            assertTrue(repo.refreshStories())
-            assertEquals(listOf(null, "opaque /+"), cursors)
-            assertEquals(listOf("a", "b"), repo.summaries().first().map { it.id.value })
-        } finally { http.close() }
-    }
+    @Test fun `shared listing traverses pages and accepts configured local covers without generation`() =
+        runTest {
+            val cursors = mutableListOf<String?>()
+            val http =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals(HttpMethod.Get, request.method)
+                        assertEquals("/api/v1/stories", request.url.encodedPath)
+                        assertEquals("100", request.url.parameters["limit"])
+                        val cursor = request.url.parameters["cursor"]
+                        cursors += cursor
+                        val id = if (cursor == null) "a" else "b"
+                        val next = if (cursor == null) "\"opaque /+\"" else "null"
+                        respond(
+                            """{"stories":[{"id":"$id","title":"Title","coverUrl":"http://localhost:8080/api/v1/assets/$id","readingMinutes":1,"createdAt":123}],"nextCursor":$next}""",
+                        )
+                    },
+                )
+            try {
+                val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"))
+                val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories)
+                assertTrue(repo.refreshStories())
+                assertEquals(listOf(null, "opaque /+"), cursors)
+                assertEquals(listOf("a", "b"), repo.summaries().first().map { it.id.value })
+            } finally {
+                http.close()
+            }
+        }
 
     @Test fun `SDK polling persists result before ready and recreated repository reads immutable cache`() =
         runTest {
@@ -148,7 +154,6 @@ class StorySdkIntegrationTest {
             val http =
                 HttpClient(
                     MockEngine { request ->
-                        assertEquals("installation", request.headers["X-Installation-Id"])
                         when (request.url.encodedPath) {
                             "/api/v1/story-generations" -> {
                                 assertEquals("stable", request.headers["Idempotency-Key"])
@@ -171,7 +176,7 @@ class StorySdkIntegrationTest {
                         }
                     },
                 )
-            val sdk = DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "installation" })
+            val sdk = DozyClient(http, DozyClientConfig("https://example.test"))
 
             fun repository() = DefaultGenerationRepository(dao, sdk.storyGenerations, sdk.stories)
             val key = GenerationJob.RequestKey("stable")
@@ -210,26 +215,25 @@ class StorySdkIntegrationTest {
             }
         }
 
-    @Test fun `image requests send installation header only to configured asset origin and path`() =
+    @Test fun `image requests send bearer credentials only to the configured API origin and path`() =
         runTest {
             var calls = 0
             val engine =
                 MockEngine { request ->
-                    assertEquals(if (calls++ == 0) "installation" else null, request.headers["X-Installation-Id"])
+                    assertEquals(if (calls++ == 0) "Bearer access" else null, request.headers[HttpHeaders.Authorization])
                     respond("bytes")
                 }
-            val http =
-                createHttpClient(
-                    HttpEngineFactory { engine },
-                    ApiConfig("http://localhost:8080/service"),
-                    InstallationIdProvider { "installation" },
-                )
+            val http = createHttpClient(HttpEngineFactory { engine })
+            val storage = InMemoryAuthSessionStorage()
+            storage.save(StoredAuthSession("owner", "access", "refresh"))
             try {
-                http.get("http://localhost:8080/service/api/v1/assets/cover")
-                http.get("https://third-party.test/service/api/v1/assets/cover")
-                http.get("http://localhost:8080/unrelated/cover")
-                http.get("http://localhost:8081/service/api/v1/assets/cover")
-                http.get("https://localhost:8080/service/api/v1/assets/cover")
+                DozyClient(http, DozyClientConfig("http://localhost:8080/service"), storage).use { client ->
+                    client.assetHttpClient.get("http://localhost:8080/service/api/v1/assets/cover")
+                    client.assetHttpClient.get("https://third-party.test/service/api/v1/assets/cover")
+                    client.assetHttpClient.get("http://localhost:8080/unrelated/cover")
+                    client.assetHttpClient.get("http://localhost:8081/service/api/v1/assets/cover")
+                    client.assetHttpClient.get("https://localhost:8080/service/api/v1/assets/cover")
+                }
             } finally {
                 http.close()
             }

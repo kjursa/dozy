@@ -20,7 +20,6 @@ internal fun ownerAuthorization(baseUrl: String, sessions: AuthSessionManager) =
                     !url.encodedPath.startsWith("$prefix/assets/"))
             ) return@on proceed(request)
 
-            request.headers.remove("X-Installation-Id")
             val sent = sessions.currentTokens() ?: return@on proceed(request)
             request.headers.remove(HttpHeaders.Authorization)
             request.bearerAuth(sent.accessToken)
