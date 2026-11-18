@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.login.data
 
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
+import kotlinx.coroutines.delay
 
 /** In-memory auth placeholder for the UI flow; it performs no persistence or network requests. */
 class FakeLoginRepository : LoginRepository {
@@ -20,7 +21,10 @@ class FakeLoginRepository : LoginRepository {
     override suspend fun verifyPin(
         email: String,
         pin: String,
-    ): Boolean = pendingEmail == email && pin.length == PIN_LENGTH
+    ): Boolean {
+        delay(3_000)
+        return pendingEmail == email && pin.length == PIN_LENGTH
+    }
 
     override suspend fun continueAsGuest() {
         tutorialSeen = true
