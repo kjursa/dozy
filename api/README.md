@@ -51,21 +51,21 @@ dozy.close()
 tokens in platform storage. `dozy.auth.v1` provides anonymous identity creation,
 email-code requests and verification, refresh, and logout. `dozy.sessionManager`
 persists successful login/refresh responses through that storage and exposes a
-`StateFlow<SessionState>`. The client attaches bearer tokens to feature requests and
+`StateFlow<SessionState>`. The client attaches bearer tokens to feature and asset requests for the configured API origin and
 uses the refresh endpoint to retry after `401`; a rejected refresh clears the stored
 account session and emits `SessionState.Expired`. The three-argument constructor
 uses in-memory storage and does not add bearer authentication to feature requests;
 pass platform storage when authentication is enabled. Close `DozyClient` before
-the caller-owned `HttpClient`. In-memory storage is intended for tests and
+the caller-owned `HttpClient`. Use `dozy.assetHttpClient` for protected images.
+In-memory storage is intended for tests and
 short-lived clients only.
 
 Inject `client.place.PlacesClients` into consumers rather than the entire `DozyClient` when only
 Places is needed. The container exposes singular version interfaces (`places.v1.list()`,
 `places.v1.save(...)`) through a public interface. Internal implementations receive version clients through
 constructors; tests provide interface stubs without constructing production implementations. Mobile registers the root client in Koin and exposes its Places
-container to `DefaultPlaceRepository`. Android stores the UUID in installation
-preferences; the iOS boundary uses `NSUserDefaults`. These IDs are a namespace,
-not authentication credentials. Clearing application data can lose the namespace.
+container to `DefaultPlaceRepository`. The legacy installation ID provider is retained for clients using the three-argument constructor.
+Authenticated requests use the JWT subject for resource ownership.
 
 `contracts.v1.ApiErrorCode` defines common request/server and reusable machine codes.
 Operation error contracts define their known business cases and flat validation
@@ -135,7 +135,7 @@ known `CHARACTER_NOT_FOUND` business code. Unknown 404 codes remain ApiError.Unk
 5xx never acknowledges deletion even if its body contains a not-found code.
 
 The write request has name, personality, appearance, type and an optional avatar;
-ID is supplied only in the path. All operations send `X-Installation-Id`.
+ID is supplied only in the path. A bearer access token identifies the owner.
 `CharacterField.reasons` defines allowed validation combinations, including
 SINGLE_LINE and INVALID_VALUE. Save also classifies CONFLICT and
 REFERENCE_UNAVAILABLE. All failure categories follow the shared result policy above. See [character integration](../mobile/CHARACTER_DATA.md)
@@ -145,7 +145,7 @@ and [backend API](../backend/API.md) for limits, ownership and deletion semantic
 
 Inject `client.storygeneration.StoryGenerationsClients` and `client.story.StoriesClients`.
 Call `storyGenerations.v1.start(idempotencyKey, request)`, `.status(jobId)` and
-`stories.v1.read(storyId)`. Every operation sends `X-Installation-Id`; start also
+`stories.v1.read(storyId)`. Every operation requires a bearer access token. Start also
 sends the persisted UUIDv4 `Idempotency-Key`. The client owns serialization and
 omits `place`/`idea`/`ending` in AUTOMATIC mode even if a local draft retains them.
 Cast and place are complete immutable snapshots, with nullable character avatars.

@@ -3,7 +3,6 @@ package com.dozy.features.auth.api.v1
 import com.dozy.api.contracts.v1.auth.AuthError
 import com.dozy.api.contracts.v1.auth.AnonymousOwnerResponse
 import com.dozy.api.contracts.v1.auth.AuthTokensResponse
-import com.dozy.api.contracts.v1.auth.LogoutRequest
 import com.dozy.api.contracts.v1.auth.RefreshTokensRequest
 import com.dozy.api.contracts.v1.auth.RefreshTokensResponse
 import com.dozy.api.contracts.v1.auth.RequestEmailCodeRequest
@@ -14,8 +13,11 @@ import com.dozy.features.auth.application.EmailRequest
 import com.dozy.features.auth.application.TokenResult
 import com.dozy.features.auth.application.VerifyResult
 import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.OWNER_AUTH
+import com.dozy.plugins.ownerId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
+import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.plugins.di.resolve
 import io.ktor.server.request.receive
@@ -26,7 +28,8 @@ import io.ktor.server.routing.post
 fun Route.authV1Routes() {
     post("/auth/anonymous") {
         val service = call.application.dependencies.resolve<AuthService>()
-        call.respond(HttpStatusCode.Created, AnonymousOwnerResponse(service.anonymous()))
+        val tokens = service.anonymous()
+        call.respond(HttpStatusCode.Created, AnonymousOwnerResponse(tokens.ownerId, tokens.accessToken, tokens.refreshToken))
     }
     post("/auth/email") {
         val service = call.application.dependencies.resolve<AuthService>()
@@ -54,9 +57,11 @@ fun Route.authV1Routes() {
             TokenResult.Invalid -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
         }
     }
-    post("/auth/logout") {
-        val service = call.application.dependencies.resolve<AuthService>()
-        service.logout(call.receive<LogoutRequest>().ownerId)
-        call.respond(HttpStatusCode.NoContent)
+    authenticate(OWNER_AUTH) {
+        post("/auth/logout") {
+            val service = call.application.dependencies.resolve<AuthService>()
+            service.logout(call.ownerId())
+            call.respond(HttpStatusCode.NoContent)
+        }
     }
 }

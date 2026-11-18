@@ -1,5 +1,6 @@
 package com.dozy.features.character.api
 
+import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.CharactersSaveError
@@ -32,12 +33,12 @@ class CharacterRoutesTest {
     private val path get() = "/api/v1/characters/$id"
     private val input = SaveCharacterRequest("  Oliver  ", "Curious", "Green eyes", "CHILD")
     private suspend fun HttpClient.save(body: String = Json.encodeToString(input), installation: String = owner) = put(path) {
-        header("X-Installation-Id", installation)
+        asOwner(installation)
         contentType(ContentType.Application.Json)
         setBody(body)
     }
     private suspend fun HttpClient.list(installation: String = owner): List<CharacterDto> {
-        val response = get("/api/v1/characters") { header("X-Installation-Id", installation) }
+        val response = get("/api/v1/characters") { asOwner(installation) }
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(response.bodyAsText().startsWith("["))
         return Json.decodeFromString(response.bodyAsText())
@@ -63,17 +64,17 @@ class CharacterRoutesTest {
         val conflict = client.save(installation = stranger)
         assertEquals(HttpStatusCode.Conflict, conflict.status)
         assertEquals("CONFLICT", Json.decodeFromString<ApiErrorResponse>(conflict.bodyAsText()).code)
-        val foreignDelete = client.delete(path) { header("X-Installation-Id", stranger) }
+        val foreignDelete = client.delete(path) { asOwner(stranger) }
         assertEquals(HttpStatusCode.NotFound, foreignDelete.status)
         assertEquals("CHARACTER_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(foreignDelete.bodyAsText()).code)
         repeat(2) {
-            val deleted = client.delete(path) { header("X-Installation-Id", owner) }
+            val deleted = client.delete(path) { asOwner(owner) }
             assertEquals(HttpStatusCode.NoContent, deleted.status)
             assertEquals("", deleted.bodyAsText())
         }
         assertTrue(client.list().isEmpty())
         assertEquals(HttpStatusCode.Conflict, client.save().status)
-        val missing = client.delete("/api/v1/characters/019a0000-0000-7000-8000-000000000009") { header("X-Installation-Id", owner) }
+        val missing = client.delete("/api/v1/characters/019a0000-0000-7000-8000-000000000009") { asOwner(owner) }
         assertEquals("CHARACTER_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(missing.bodyAsText()).code)
     }
 
@@ -110,9 +111,9 @@ class CharacterRoutesTest {
         assertTrue(client.list().isEmpty())
         for (header in listOf(null, "invalid")) {
             val response = client.get("/api/v1/characters") { header?.let { header("X-Installation-Id", it) } }
-            assertEquals("INVALID_INSTALLATION_ID", Json.decodeFromString<ApiErrorResponse>(response.bodyAsText()).code)
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
-        val badId = client.put("/api/v1/characters/not-a-uuid") { header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(Json.encodeToString(input)) }
+        val badId = client.put("/api/v1/characters/not-a-uuid") { asOwner(owner); contentType(ContentType.Application.Json); setBody(Json.encodeToString(input)) }
         assertEquals("INVALID_REQUEST", Json.decodeFromString<ApiErrorResponse>(badId.bodyAsText()).code)
     }
 }

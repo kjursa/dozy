@@ -4,16 +4,12 @@ import com.dozy.api.client.auth.v1.RequestEmailCodeResult
 import com.dozy.api.client.auth.v1.VerifyEmailCodeResult
 import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.api.client.auth.StoredAuthSession
-import com.dozy.api.client.auth.AuthSessionManager
 import com.dozy.api.client.auth.SessionState
-import com.dozy.api.client.auth.v1.AuthClient
-import com.dozy.api.client.auth.v1.LogoutResult
-import com.dozy.api.client.auth.v1.RefreshResult
-import com.dozy.api.contracts.v1.auth.AuthError
 import com.dozy.api.client.place.v1.PlacesListResult
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.request.get
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -68,6 +64,9 @@ class AuthClientTest {
             when (request.url.encodedPath) {
                 "/api/v1/places" -> {
                     placesCalls++
+                    if (placesCalls == 1) {
+                        assertEquals("Bearer old-access", request.headers[HttpHeaders.Authorization])
+                    }
                     if (placesCalls == 1) respond("""{"code":"UNAUTHORIZED"}""", HttpStatusCode.Unauthorized)
                     else {
                         assertEquals("Bearer new-access", request.headers[HttpHeaders.Authorization])
@@ -92,22 +91,52 @@ class AuthClientTest {
     }
 
     @Test
-    fun rejectedRefreshClearsSessionAndEmitsExpiredState() = runTest {
+    fun guestSessionAuthorizesOnlyAssetsOnTheApiOrigin() = runTest {
         val storage = InMemoryAuthSessionStorage()
-        storage.save(StoredAuthSession("owner-1", "expired-access", "revoked-refresh"))
-        val manager = AuthSessionManager(RevokedRefreshClient, storage)
-        manager.initialize()
-
-        assertEquals(null, manager.refreshForRequest())
-        assertEquals(SessionState.Expired, manager.state.value)
-        assertEquals(null, storage.load())
+        val http = HttpClient(MockEngine { request ->
+            when {
+                request.url.encodedPath.endsWith("/auth/anonymous") ->
+                    respond("""{"ownerId":"guest","accessToken":"guest-access","refreshToken":"guest-refresh"}""", HttpStatusCode.Created)
+                request.url.host == "api.example" -> {
+                    assertEquals("Bearer guest-access", request.headers[HttpHeaders.Authorization])
+                    respond("image")
+                }
+                else -> {
+                    assertEquals(null, request.headers[HttpHeaders.Authorization])
+                    respond("unauthorized", HttpStatusCode.Unauthorized)
+                }
+            }
+        })
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        try {
+            client.auth.v1.anonymous()
+            client.sessionManager.initialize()
+            assertEquals(SessionState.Anonymous("guest"), client.sessionManager.state.value)
+            assertEquals(HttpStatusCode.OK, client.assetHttpClient.get("https://api.example/assets/avatar").status)
+            assertEquals(HttpStatusCode.Unauthorized, client.assetHttpClient.get("https://other.example/assets/avatar").status)
+        } finally {
+            client.close()
+            http.close()
+        }
     }
 
-    private object RevokedRefreshClient : AuthClient {
-        override suspend fun anonymous() = error("Unused")
-        override suspend fun requestEmailCode(email: String) = error("Unused")
-        override suspend fun verifyEmailCode(sessionId: String, code: String) = error("Unused")
-        override suspend fun refresh(ownerId: String, refreshToken: String) = RefreshResult.ApiError(AuthError.InvalidRefreshToken)
-        override suspend fun logout(ownerId: String) = LogoutResult.Success
+    @Test
+    fun rejectedRefreshClearsSessionAndEmitsExpiredState() = runTest {
+        val storage = InMemoryAuthSessionStorage()
+        val expired = StoredAuthSession("owner-1", "expired-access", "revoked-refresh")
+        storage.save(expired)
+        val http = HttpClient(MockEngine {
+            respond("""{"code":"INVALID_REFRESH_TOKEN"}""", HttpStatusCode.Unauthorized)
+        })
+        val client = DozyClient(http, DozyClientConfig("https://api.example"), InstallationIdProvider { "installation" }, storage)
+        try {
+            client.sessionManager.initialize()
+            assertEquals(null, client.sessionManager.refreshForRequest(expired))
+            assertEquals(SessionState.Expired, client.sessionManager.state.value)
+            assertEquals(null, storage.load())
+        } finally {
+            client.close()
+            http.close()
+        }
     }
 }

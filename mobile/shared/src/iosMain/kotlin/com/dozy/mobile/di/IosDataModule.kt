@@ -45,20 +45,19 @@ private class IosAuthSessionStorage : AuthSessionStorage {
         val owner = defaults.stringForKey("dozy-auth-owner") ?: return null
         val access = defaults.stringForKey("dozy-auth-access") ?: return null
         val refresh = defaults.stringForKey("dozy-auth-refresh") ?: return null
-        return StoredAuthSession(owner, access, refresh)
+        return StoredAuthSession(owner, access, refresh, defaults.boolForKey("dozy-auth-guest"))
     }
     override suspend fun save(session: StoredAuthSession) {
         defaults.setObject(session.ownerId, "dozy-auth-owner")
         defaults.setObject(session.accessToken, "dozy-auth-access")
         defaults.setObject(session.refreshToken, "dozy-auth-refresh")
+        defaults.setBool(session.anonymous, "dozy-auth-guest")
     }
     override suspend fun clear() {
         defaults.removeObjectForKey("dozy-auth-owner")
         defaults.removeObjectForKey("dozy-auth-access")
         defaults.removeObjectForKey("dozy-auth-refresh")
         defaults.removeObjectForKey("dozy-auth-anonymous")
+        defaults.removeObjectForKey("dozy-auth-guest")
     }
-    override suspend fun anonymousOwnerId(): String? = defaults.stringForKey("dozy-auth-anonymous")
-    override suspend fun saveAnonymousOwnerId(ownerId: String) { defaults.setObject(ownerId, "dozy-auth-anonymous") }
-    override suspend fun clearAnonymousOwnerId() { defaults.removeObjectForKey("dozy-auth-anonymous") }
 }

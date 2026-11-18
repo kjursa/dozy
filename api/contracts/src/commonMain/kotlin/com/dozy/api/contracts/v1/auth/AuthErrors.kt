@@ -12,11 +12,12 @@ sealed interface AuthError : ApiBusinessError {
     data object SessionExpired : AuthError { override val code = "AUTH_SESSION_EXPIRED" }
     data object TooManyAttempts : AuthError { override val code = "AUTH_TOO_MANY_ATTEMPTS" }
     data object RateLimited : AuthError { override val code = "AUTH_RATE_LIMITED" }
+    data object InvalidAccessToken : AuthError { override val code = "INVALID_ACCESS_TOKEN" }
     data object InvalidRefreshToken : AuthError { override val code = "INVALID_REFRESH_TOKEN" }
     data class Unknown(override val code: String) : AuthError
 
     companion object {
-        val known: List<AuthError> = listOf(InvalidEmail, InvalidCode, SessionExpired, TooManyAttempts, RateLimited, InvalidRefreshToken)
+        val known: List<AuthError> = listOf(InvalidEmail, InvalidCode, SessionExpired, TooManyAttempts, RateLimited, InvalidAccessToken, InvalidRefreshToken)
     }
 }
 

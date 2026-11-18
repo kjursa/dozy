@@ -10,7 +10,6 @@ kotlin {
         commonMain.dependencies {
             api(project(":contracts"))
             api("io.ktor:ktor-client-core:3.6.0")
-            api("io.ktor:ktor-client-auth:3.6.0")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

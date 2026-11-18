@@ -4,7 +4,7 @@ import com.dozy.api.contracts.v1.ApiErrorCode
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
-import com.dozy.features.installation.api.installationId
+import com.dozy.plugins.ownerPartition
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.domain.model.ParseResult
 import com.dozy.features.place.domain.model.Place
@@ -24,11 +24,11 @@ import io.ktor.server.routing.route
 fun Route.placeV1Routes(service: PlaceService) {
     route("/places") {
         get {
-            val places = service.list(call.installationId())
+            val places = service.list(call.ownerPartition())
             call.respond(PlacesResponse(places.map { it.toResponse() }))
         }
         put("/{id}") {
-            val installation = call.installationId()
+            val installation = call.ownerPartition()
             val request = call.receive<SavePlaceRequest>()
             val id = requirePlaceId(call.parameters["id"])
             val command = when (val result = SavePlace.parse(request.name, request.description, request.inhabitants)) {

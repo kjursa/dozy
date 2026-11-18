@@ -1,35 +1,38 @@
 package com.dozy.api.client.auth
 
 import com.dozy.api.client.auth.v1.AnonymousResult
-import com.dozy.api.client.auth.v1.AuthClient
+import com.dozy.api.client.auth.v1.KtorAuthClient
 import com.dozy.api.client.auth.v1.LogoutResult
 import com.dozy.api.client.auth.v1.RefreshResult
 import com.dozy.api.client.auth.v1.VerifyEmailCodeResult
 import com.dozy.api.contracts.v1.auth.AuthError
+import com.dozy.api.client.communicate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-data class StoredAuthSession(val ownerId: String, val accessToken: String, val refreshToken: String)
+data class StoredAuthSession(
+    val ownerId: String,
+    val accessToken: String,
+    val refreshToken: String,
+    val anonymous: Boolean = false,
+) {
+    override fun toString(): String = "StoredAuthSession(anonymous=$anonymous)"
+}
 
 interface AuthSessionStorage {
     suspend fun load(): StoredAuthSession?
     suspend fun save(session: StoredAuthSession)
     suspend fun clear()
-    suspend fun anonymousOwnerId(): String?
-    suspend fun saveAnonymousOwnerId(ownerId: String)
-    suspend fun clearAnonymousOwnerId()
 }
 
 class InMemoryAuthSessionStorage : AuthSessionStorage {
     private var session: StoredAuthSession? = null
-    private var anonymousId: String? = null
     override suspend fun load() = session
     override suspend fun save(session: StoredAuthSession) { this.session = session }
-    override suspend fun clear() { session = null; anonymousId = null }
-    override suspend fun anonymousOwnerId() = anonymousId
-    override suspend fun saveAnonymousOwnerId(ownerId: String) { anonymousId = ownerId }
-    override suspend fun clearAnonymousOwnerId() { anonymousId = null }
+    override suspend fun clear() { session = null }
 }
 
 sealed interface SessionState {
@@ -40,79 +43,101 @@ sealed interface SessionState {
 }
 
 class AuthSessionManager internal constructor(
-    private val auth: AuthClient,
+    private val auth: KtorAuthClient,
     private val storage: AuthSessionStorage,
 ) {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.SignedOut)
     val state: StateFlow<SessionState> = mutableState.asStateFlow()
 
-    suspend fun initialize() {
-        val session = storage.load()
-        mutableState.value = session?.let { SessionState.Authenticated(it.ownerId) }
-            ?: storage.anonymousOwnerId()?.let { SessionState.Anonymous(it) }
-            ?: SessionState.SignedOut
+    private val mutex = Mutex()
+
+    suspend fun initialize() = mutex.withLock {
+        mutableState.value = storage.load()?.state() ?: SessionState.SignedOut
     }
 
-    suspend fun ensureAnonymous(): AnonymousResult {
-        storage.anonymousOwnerId()?.let {
-            mutableState.value = SessionState.Anonymous(it)
-            return AnonymousResult.Success(it)
-        }
-        return when (val result = auth.anonymous()) {
-            is AnonymousResult.Success -> {
-                storage.saveAnonymousOwnerId(result.ownerId)
-                mutableState.value = SessionState.Anonymous(result.ownerId)
-                result
+    internal suspend fun ensureAnonymous(): AnonymousResult = communicate(AnonymousResult::TechnicalError) {
+        mutex.withLock {
+            val current = storage.load()
+            if (current?.anonymous == true) {
+                return@withLock AnonymousResult.Success(current.ownerId, current.accessToken, current.refreshToken)
             }
-            else -> result
-        }
-    }
-
-    suspend fun requestEmailCode(email: String) = auth.requestEmailCode(email)
-
-    suspend fun verifyEmailCode(sessionId: String, code: String): VerifyEmailCodeResult = when (val result = auth.verifyEmailCode(sessionId, code)) {
-        is VerifyEmailCodeResult.Success -> {
-            storage.save(StoredAuthSession(result.ownerId, result.accessToken, result.refreshToken))
-            storage.clearAnonymousOwnerId()
-            mutableState.value = SessionState.Authenticated(result.ownerId)
-            result
-        }
-        else -> result
-    }
-
-    suspend fun refreshForRequest(): String? {
-        val current = storage.load() ?: return null
-        return when (val result = refresh(current.ownerId, current.refreshToken)) {
-            is RefreshResult.Success -> {
-                result.accessToken
+            when (val result = auth.anonymous()) {
+                is AnonymousResult.Success -> {
+                    save(StoredAuthSession(result.ownerId, result.accessToken, result.refreshToken, anonymous = true))
+                    result
+                }
+                else -> result
             }
-            else -> null
         }
     }
 
-    suspend fun refresh(ownerId: String, refreshToken: String): RefreshResult = when (val result = auth.refresh(ownerId, refreshToken)) {
-        is RefreshResult.Success -> {
-            storage.save(StoredAuthSession(ownerId, result.accessToken, result.refreshToken))
-            mutableState.value = SessionState.Authenticated(ownerId)
-            result
+    internal suspend fun verifyEmailCode(sessionId: String, code: String): VerifyEmailCodeResult =
+        communicate(VerifyEmailCodeResult::TechnicalError) {
+            mutex.withLock {
+                when (val result = auth.verifyEmailCode(sessionId, code)) {
+                    is VerifyEmailCodeResult.Success -> {
+                        save(StoredAuthSession(result.ownerId, result.accessToken, result.refreshToken))
+                        result
+                    }
+                    else -> result
+                }
+            }
         }
-        is RefreshResult.ApiError -> {
-            if (result.error == AuthError.InvalidRefreshToken || result.error == AuthError.SessionExpired) {
+
+    internal suspend fun refreshForRequest(sent: StoredAuthSession): StoredAuthSession? = mutex.withLock {
+        val current = storage.load() ?: return@withLock null
+        if (current.ownerId != sent.ownerId) return@withLock null
+        if (current != sent) return@withLock current
+        refreshLocked(current.ownerId, current.refreshToken, current)
+        storage.load()?.takeIf { it != current }
+    }
+
+    internal suspend fun refresh(ownerId: String, refreshToken: String): RefreshResult =
+        communicate(RefreshResult::TechnicalError) {
+            mutex.withLock { refreshLocked(ownerId, refreshToken, storage.load()) }
+        }
+
+    private suspend fun refreshLocked(ownerId: String, refreshToken: String, current: StoredAuthSession?): RefreshResult {
+        val result = auth.refresh(ownerId, refreshToken)
+        when {
+            result is RefreshResult.Success && (current == null || current.ownerId == ownerId) -> {
+                save(StoredAuthSession(ownerId, result.accessToken, result.refreshToken, current?.anonymous == true))
+            }
+            result is RefreshResult.ApiError && result.error == AuthError.InvalidRefreshToken &&
+                current?.ownerId == ownerId && current.refreshToken == refreshToken -> {
                 storage.clear()
                 mutableState.value = SessionState.Expired
             }
-            result
         }
-        is RefreshResult.TechnicalError -> result
-    }
-
-    suspend fun currentTokens() = storage.load()
-
-    suspend fun logout(): LogoutResult {
-        val current = storage.load()
-        val result = current?.let { auth.logout(it.ownerId) } ?: LogoutResult.Success
-        storage.clear()
-        mutableState.value = SessionState.SignedOut
         return result
     }
+
+    internal suspend fun currentTokens() = storage.load()
+
+    suspend fun logout(): LogoutResult = communicate(LogoutResult::TechnicalError) {
+        mutex.withLock {
+            val current = storage.load() ?: return@withLock LogoutResult.Success
+            var result = auth.logout(current.accessToken)
+            if (result == LogoutResult.ApiError(AuthError.InvalidAccessToken)) {
+                result = when (val refreshed = refreshLocked(current.ownerId, current.refreshToken, current)) {
+                    is RefreshResult.Success -> auth.logout(refreshed.accessToken)
+                    is RefreshResult.TechnicalError -> LogoutResult.TechnicalError(refreshed.error)
+                    is RefreshResult.ApiError -> LogoutResult.ApiError(refreshed.error)
+                }
+            }
+            if (result == LogoutResult.Success) {
+                storage.clear()
+                mutableState.value = SessionState.SignedOut
+            }
+            result
+        }
+    }
+
+    private suspend fun save(session: StoredAuthSession) {
+        storage.save(session)
+        mutableState.value = session.state()
+    }
+
+    private fun StoredAuthSession.state(): SessionState =
+        if (anonymous) SessionState.Anonymous(ownerId) else SessionState.Authenticated(ownerId)
 }

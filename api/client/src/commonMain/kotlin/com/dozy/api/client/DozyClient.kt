@@ -24,12 +24,9 @@ import com.dozy.api.client.storygeneration.DefaultStoryGenerationsClients
 import com.dozy.api.client.storygeneration.v1.KtorStoryGenerationsClient
 import com.dozy.api.contracts.ApiVersion
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.auth.Auth
-import io.ktor.client.plugins.auth.providers.BearerTokens
-import io.ktor.client.plugins.auth.providers.bearer
 
 class DozyClient private constructor(
-    httpClient: HttpClient,
+    private val httpClient: HttpClient,
     config: DozyClientConfig,
     installationIdProvider: InstallationIdProvider,
     sessionStorage: AuthSessionStorage,
@@ -44,29 +41,18 @@ class DozyClient private constructor(
     private val authClient = KtorAuthClient(httpClient, config)
     val sessionManager = AuthSessionManager(authClient, sessionStorage)
     val auth: AuthClients = DefaultAuthClients(ManagedAuthClient(authClient, sessionManager))
-    private val authenticatedHttp = if (enableAuthentication) httpClient.config {
-        install(Auth) {
-            bearer {
-                loadTokens {
-                    sessionManager.currentTokens()?.let { BearerTokens(it.accessToken, it.refreshToken) }
-                }
-                refreshTokens {
-                    sessionManager.refreshForRequest()?.let { access ->
-                        sessionManager.currentTokens()?.let { BearerTokens(access, it.refreshToken) }
-                    }
-                }
-                sendWithoutRequest { true }
-            }
-        }
+    val assetHttpClient: HttpClient = if (enableAuthentication && config.baseUrl != null) httpClient.config {
+        followRedirects = false
+        install(ownerAuthorization(config.baseUrl, sessionManager))
     } else httpClient
-    val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(authenticatedHttp, config, installationIdProvider))
-    val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(authenticatedHttp, config, installationIdProvider))
-    val characterAvatars: CharacterAvatarsClients = DefaultCharacterAvatarsClients(KtorCharacterAvatarsClient(authenticatedHttp, config, installationIdProvider))
-    val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(authenticatedHttp, config, installationIdProvider))
-    val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(authenticatedHttp, config, installationIdProvider))
+    val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(assetHttpClient, config, installationIdProvider))
+    val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(assetHttpClient, config, installationIdProvider))
+    val characterAvatars: CharacterAvatarsClients = DefaultCharacterAvatarsClients(KtorCharacterAvatarsClient(assetHttpClient, config, installationIdProvider))
+    val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(assetHttpClient, config, installationIdProvider))
+    val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(assetHttpClient, config, installationIdProvider))
 
     override fun close() {
-        if (enableAuthentication) authenticatedHttp.close()
+        if (assetHttpClient !== httpClient) assetHttpClient.close()
     }
 }
 

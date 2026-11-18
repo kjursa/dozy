@@ -3,7 +3,7 @@ package com.dozy.api.contracts.v1.auth
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AnonymousOwnerResponse(val ownerId: String)
+data class AnonymousOwnerResponse(val ownerId: String, val accessToken: String, val refreshToken: String)
 
 @Serializable
 data class RequestEmailCodeRequest(val email: String)
@@ -22,6 +22,3 @@ data class RefreshTokensRequest(val ownerId: String, val refreshToken: String)
 
 @Serializable
 data class RefreshTokensResponse(val accessToken: String, val refreshToken: String)
-
-@Serializable
-data class LogoutRequest(val ownerId: String)

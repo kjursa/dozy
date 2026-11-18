@@ -9,7 +9,7 @@ import com.dozy.api.contracts.v1.story.ListStoriesRequest
 import com.dozy.api.contracts.v1.story.StoryListError
 import com.dozy.api.contracts.v1.story.StoryListField
 import com.dozy.api.contracts.v1.story.StoryReadError
-import com.dozy.features.installation.api.installationId
+import com.dozy.plugins.ownerPartition
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.Submission
@@ -25,7 +25,7 @@ import kotlinx.serialization.json.JsonObject
 
 fun Route.storyV1Routes(service: StoryService) {
     post("/story-generations") {
-        val installation = call.installationId()
+        val installation = call.ownerPartition()
         val key = requireUuid(call.request.headers.getAll("Idempotency-Key")?.singleOrNull(), 4)
         val body = call.receive<JsonObject>()
         val command = body.command()
@@ -37,7 +37,7 @@ fun Route.storyV1Routes(service: StoryService) {
         }
     }
     post("/story-generations/{id}/retry") {
-        val installation = call.installationId()
+        val installation = call.ownerPartition()
         val key = requireUuid(call.request.headers.getAll("Idempotency-Key")?.singleOrNull(), 4)
         when (val result = service.retry(installation, call.parameters["id"].orEmpty(), key)) {
             is RetrySubmission.Accepted -> call.respond(HttpStatusCode.Accepted, GenerationAcceptedDto(result.job.id, result.job.stage.name))
@@ -48,12 +48,12 @@ fun Route.storyV1Routes(service: StoryService) {
         }
     }
     get("/story-generations/{id}") {
-        val job = service.status(call.installationId(), call.parameters["id"].orEmpty())
+        val job = service.status(call.ownerPartition(), call.parameters["id"].orEmpty())
             ?: throw BusinessApiException(HttpStatusCode.NotFound, GenerationStatusError.NotFound)
         call.respond(job.toDto())
     }
     get("/stories") {
-        val installation = call.installationId()
+        val installation = call.ownerPartition()
         val limits = call.request.queryParameters.getAll("limit")
         val limit = if (limits == null) 100 else limits.singleOrNull()?.takeIf { it.matches(Regex("[0-9]+")) }?.toIntOrNull()
         if (limit == null || limit !in 1..100) throw BusinessApiException(HttpStatusCode.UnprocessableEntity, StoryListError.Validation(StoryListField.LIMIT, ValidationReason.INVALID_VALUE))
@@ -65,7 +65,7 @@ fun Route.storyV1Routes(service: StoryService) {
         call.respond(page.toDto())
     }
     get("/stories/{id}") {
-        val story = service.read(call.installationId(), call.parameters["id"].orEmpty())
+        val story = service.read(call.ownerPartition(), call.parameters["id"].orEmpty())
             ?: throw BusinessApiException(HttpStatusCode.NotFound, StoryReadError.NotFound)
         call.respond(story.toDto())
     }

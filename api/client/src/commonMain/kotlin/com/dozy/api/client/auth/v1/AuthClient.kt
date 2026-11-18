@@ -8,11 +8,11 @@ interface AuthClient {
     suspend fun requestEmailCode(email: String): RequestEmailCodeResult
     suspend fun verifyEmailCode(sessionId: String, code: String): VerifyEmailCodeResult
     suspend fun refresh(ownerId: String, refreshToken: String): RefreshResult
-    suspend fun logout(ownerId: String): LogoutResult
+    suspend fun logout(): LogoutResult
 }
 
 sealed interface AnonymousResult {
-    data class Success(val ownerId: String) : AnonymousResult
+    data class Success(val ownerId: String, val accessToken: String, val refreshToken: String) : AnonymousResult
     data class ApiError(val error: AuthError) : AnonymousResult
     data class TechnicalError(val error: ClientTechnicalError) : AnonymousResult
 }

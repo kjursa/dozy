@@ -13,7 +13,7 @@ import com.dozy.features.character.application.CharacterService
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
-import com.dozy.features.installation.api.installationId
+import com.dozy.plugins.ownerPartition
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
@@ -32,9 +32,9 @@ import java.util.UUID
 fun Route.characterV1Routes() {
     val service: CharacterService by application.dependencies
     route("/characters") {
-        get { call.respond(service.list(call.installationId()).map { it.toDto() }) }
+        get { call.respond(service.list(call.ownerPartition()).map { it.toDto() }) }
         put("/{id}") {
-            val installation = call.installationId()
+            val installation = call.ownerPartition()
             val id = requireCharacterId(call.parameters["id"])
             val request = call.receive<SaveCharacterRequest>()
             val command = when (val parsed = SaveCharacter.parse(
@@ -53,7 +53,7 @@ fun Route.characterV1Routes() {
             call.respond(status)
         }
         delete("/{id}") {
-            val installation = call.installationId()
+            val installation = call.ownerPartition()
             if (!service.delete(installation, requireCharacterId(call.parameters["id"]))) {
                 throw BusinessApiException(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
             }

@@ -6,11 +6,6 @@ import com.dozy.features.auth.data.database.AuthUsers
 import com.dozy.infrastructure.database.SqliteDatabase
 import java.util.Base64
 import java.util.UUID
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.greaterEq
@@ -19,20 +14,18 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-class AuthService(private val database: SqliteDatabase, private val secret: String) {
-    private val json = Json { encodeDefaults = true }
-
+class AuthService(private val database: SqliteDatabase, private val secret: String, private val accessTokens: AccessTokens) {
     init { require(secret.length >= 32) { "Auth secret must contain at least 32 characters" } }
 
-    suspend fun anonymous(): String = database.write {
+    suspend fun anonymous(): TokenResult.Valid = database.write {
         val ownerId = uuidV7()
         AuthUsers.insert { it[AuthUsers.ownerId] = ownerId; it[AuthUsers.email] = "anonymous+$ownerId@invalid.dozy" }
-        ownerId
+        createTokens(ownerId)
     }
 
     suspend fun requestCode(emailValue: String): EmailRequest = database.write {
         val email = emailValue.trim().lowercase()
-        if (!EMAIL.matches(email)) return@write EmailRequest.InvalidEmail
+        if (!EMAIL.matches(email) || email.endsWith("@invalid.dozy")) return@write EmailRequest.InvalidEmail
         val now = System.currentTimeMillis()
         val recentCount = AuthEmailCodes.selectAll().where { (AuthEmailCodes.email eq email) and (AuthEmailCodes.createdAt greaterEq now - HOUR) }.count()
         if (recentCount >= 5) return@write EmailRequest.RateLimited
@@ -72,7 +65,7 @@ class AuthService(private val database: SqliteDatabase, private val secret: Stri
         val row = AuthRefreshTokens.selectAll().where { AuthRefreshTokens.tokenHash eq hash }.singleOrNull()
         if (row == null || row[AuthRefreshTokens.ownerId] != ownerId || row[AuthRefreshTokens.revoked] || row[AuthRefreshTokens.expiresAt] <= System.currentTimeMillis()) return@write TokenResult.Invalid
         AuthRefreshTokens.update({ AuthRefreshTokens.tokenHash eq hash }) { it[revoked] = true }
-        createTokens(ownerId)
+        createTokens(row[AuthRefreshTokens.ownerId])
     }
 
     suspend fun logout(ownerId: String) = database.write {
@@ -88,31 +81,17 @@ class AuthService(private val database: SqliteDatabase, private val secret: Stri
             it[AuthRefreshTokens.expiresAt] = now + REFRESH_LIFETIME
             it[AuthRefreshTokens.revoked] = false
         }
-        return TokenResult.Valid(ownerId, accessToken(ownerId, now), refresh)
+        return TokenResult.Valid(ownerId, accessTokens.issue(ownerId), refresh)
     }
 
-    private fun accessToken(ownerId: String, now: Long): String {
-        val header = encode(json.encodeToString(JwtHeader("HS256", "JWT", periodKey(now))))
-        val payload = encode(json.encodeToString(JwtClaims(ownerId, ISSUER, AUDIENCE, now / 1000, now / 1000 + ACCESS_LIFETIME / 1000)))
-        val input = "$header.$payload"
-        val key = hmac(hmac(secret, "v1:jwt"), periodKey(now))
-        return "$input.${Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(key, input))}"
-    }
-
-    private fun refreshHash(token: String) = Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(hmac(secret, "v1:refresh"), token))
-    private fun periodKey(now: Long) = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneOffset.UTC).let { "%04d-%02d".format(it.year, it.monthValue) }
-    private fun encode(value: String) = Base64.getUrlEncoder().withoutPadding().encodeToString(value.encodeToByteArray())
-    private fun hmac(key: String, value: String) = hmac(key.encodeToByteArray(), value)
-    private fun hmac(key: ByteArray, value: String): ByteArray = Mac.getInstance("HmacSHA256").run { init(SecretKeySpec(key, "HmacSHA256")); doFinal(value.encodeToByteArray()) }
+    private fun refreshHash(token: String) =
+        Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(hmac(secret.encodeToByteArray(), "v1:refresh"), token))
 
     private companion object {
         const val FAKE_CODE = "123456789"
         const val HOUR = 60 * 60 * 1000L
         const val CODE_LIFETIME = 10 * 60 * 1000L
-        const val ACCESS_LIFETIME = 20 * 60 * 1000L
         const val REFRESH_LIFETIME = 180L * 24 * HOUR
-        const val ISSUER = "dozy"
-        const val AUDIENCE = "dozy-mobile"
         val EMAIL = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
         fun uuidV7(): String {
             val bytes = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
@@ -129,6 +108,3 @@ class AuthService(private val database: SqliteDatabase, private val secret: Stri
 sealed interface EmailRequest { data class Accepted(val sessionId: String) : EmailRequest; data object InvalidEmail : EmailRequest; data object RateLimited : EmailRequest }
 sealed interface VerifyResult { data class Success(val tokens: TokenResult.Valid) : VerifyResult; data object InvalidCode : VerifyResult; data object TooManyAttempts : VerifyResult; data object SessionExpired : VerifyResult }
 sealed interface TokenResult { data class Valid(val ownerId: String, val accessToken: String, val refreshToken: String) : TokenResult; data object Invalid : TokenResult }
-
-@Serializable private data class JwtHeader(val alg: String, val typ: String, val kid: String)
-@Serializable private data class JwtClaims(val sub: String, val iss: String, val aud: String, val iat: Long, val exp: Long)

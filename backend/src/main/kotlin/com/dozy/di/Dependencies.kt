@@ -28,14 +28,20 @@ import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.data.repository.SqlitePlaceRepository
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.features.auth.application.AccessTokens
 import com.dozy.features.auth.application.AuthService
+import com.dozy.features.auth.application.developmentAuthSecret
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
 
 fun Application.configureDependencies() {
     val configuration = environment.config
+    val authSecret = configuration.propertyOrNull("dozy.auth.secret")?.getString()?.takeIf(String::isNotBlank)
+        ?: developmentAuthSecret
+    require(authSecret.length >= 32) { "Auth secret must contain at least 32 characters" }
     dependencies {
-        provide<AssetRepository> { SqliteAssetRepository(resolve()) }
+        provide<AccessTokens> { AccessTokens(authSecret) }
+        provide<AssetRepository> { SqliteAssetRepository(resolve(), resolve()) }
         provide<GenerationConfig> { GenerationConfig.from(configuration) }
         provide<GenerationRepository> { SqliteGenerationRepository(resolve(), resolve()) }
         provide<TextGenerator> { FakeTextGenerator(resolve()) }
@@ -50,7 +56,7 @@ fun Application.configureDependencies() {
         provide<AvatarWorker> { AvatarWorker(resolve(), resolve(), resolve(), resolve()) }
         provide<DatabaseConfig> { resolve<AppConfig>().database }
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
-        provide<AuthService> { AuthService(resolve(), configuration.propertyOrNull("dozy.auth.secret")?.getString() ?: "local-development-auth-secret-change-before-deployment") }
+        provide<AuthService> { AuthService(resolve(), authSecret, resolve()) }
         provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }
         provide<CharacterService> { CharacterService(resolve()) }
         provide<PlaceRepository> { SqlitePlaceRepository(resolve()) }

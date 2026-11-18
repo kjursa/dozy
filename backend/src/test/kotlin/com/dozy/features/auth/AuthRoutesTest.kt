@@ -1,6 +1,9 @@
 package com.dozy.features.auth
 
 import com.dozy.databaseConfig
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -29,6 +32,8 @@ class AuthRoutesTest {
         val ownerId = Json.parseToJsonElement(response.bodyAsText()).jsonObject.getValue("ownerId").jsonPrimitive.content
         assertEquals(36, ownerId.length)
         assertEquals('7', ownerId[14])
+        val token = Json.parseToJsonElement(response.bodyAsText()).jsonObject.getValue("accessToken").jsonPrimitive.content
+        assertEquals(HttpStatusCode.OK, client.get("/api/v1/places") { bearerAuth(token) }.status)
     }
 
     @Test
@@ -59,9 +64,19 @@ class AuthRoutesTest {
             contentType(ContentType.Application.Json)
             setBody("""{"ownerId":"$ownerId","refreshToken":"$refresh"}""")
         }.status)
+        assertEquals(HttpStatusCode.Unauthorized, client.post("/api/v1/auth/logout").status)
+        val other = Json.parseToJsonElement(client.post("/api/v1/auth/anonymous").bodyAsText()).jsonObject
+        val otherId = other.getValue("ownerId").jsonPrimitive.content
+        val otherRefresh = other.getValue("refreshToken").jsonPrimitive.content
         assertEquals(HttpStatusCode.NoContent, client.post("/api/v1/auth/logout") {
+            bearerAuth(fields.getValue("accessToken").jsonPrimitive.content)
+            header("X-Installation-Id", otherId)
             contentType(ContentType.Application.Json)
-            setBody("""{"ownerId":"$ownerId"}""")
+            setBody("""{"ownerId":"$otherId"}""")
+        }.status)
+        assertEquals(HttpStatusCode.OK, client.post("/api/v1/auth/refresh") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"ownerId":"$otherId","refreshToken":"$otherRefresh"}""")
         }.status)
         assertEquals(HttpStatusCode.Unauthorized, client.post("/api/v1/auth/refresh") {
             contentType(ContentType.Application.Json)
