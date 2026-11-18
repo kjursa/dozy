@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="login_use_email">Use email</string>
+    <string name="login_or">OR</string>
+    <string name="login_account_note">We’ll create your account without a password. All you need to sign in is a code sent to your email.</string>
+    <string name="login_terms">Your first sign-in creates an account. By continuing, you accept our Terms and Privacy Policy.</string>
+    <string name="login_address_title">Enter your email address</string>
+    <string name="login_address_intro">We’ll send a one-time code so you can sign in to your stories.</string>
+    <string name="login_verifying">Signing you in…</string>
     <string name="login_tutorial_kicker">GOOD EVENING, LET’S BEGIN</string>
     <string name="login_tutorial_title">Your world. Your story.</string>
     <string name="login_tutorial_subtitle">Swipe to discover Dozy</string>

@@ -26,6 +26,7 @@ import com.dozy.mobile.feature.login.presentation.LoginEmailScreen
 import com.dozy.mobile.feature.login.presentation.LoginPinScreen
 import com.dozy.mobile.feature.login.presentation.LoginTutorialScreen
 import com.dozy.mobile.feature.login.presentation.LoginViewModel
+import com.dozy.mobile.feature.login.presentation.LoginWelcomeScreen
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormEffect
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormScreen
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
@@ -78,7 +79,7 @@ fun DozyApp(
         val startDestination =
             remember(loginViewModel) {
                 if (loginRepository.hasSeenTutorial() || loginViewModel.uiState.value.tutorialSeen) {
-                    LOGIN_EMAIL_ROUTE
+                    "login-welcome"
                 } else {
                     LOGIN_TUTORIAL_ROUTE
                 }
@@ -87,7 +88,7 @@ fun DozyApp(
             loginViewModel.effects.collect { effect ->
                 when (effect) {
                     LoginEffect.OpenEmail ->
-                        navController.navigate(LOGIN_EMAIL_ROUTE) {
+                        navController.navigate("login-welcome") {
                             popUpTo(LOGIN_TUTORIAL_ROUTE) { inclusive = true }
                             launchSingleTop = true
                         }
@@ -119,12 +120,18 @@ fun DozyApp(
             composable(LOGIN_TUTORIAL_ROUTE) {
                 LoginTutorialScreen { loginViewModel.dispatch(LoginAction.TutorialContinued) }
             }
+            composable("login-welcome") {
+                LoginWelcomeScreen(
+                    onEmail = { navController.navigate(LOGIN_EMAIL_ROUTE) },
+                    onGuest = { loginViewModel.dispatch(LoginAction.ContinueAsGuest) },
+                )
+            }
             composable(LOGIN_EMAIL_ROUTE) {
                 LoginEmailScreen(
                     state = loginState,
                     onEmailChanged = { loginViewModel.dispatch(LoginAction.EmailChanged(it)) },
                     onSubmit = { loginViewModel.dispatch(LoginAction.EmailSubmitted) },
-                    onContinueAsGuest = { loginViewModel.dispatch(LoginAction.ContinueAsGuest) },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(LOGIN_PIN_ROUTE) {
