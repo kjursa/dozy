@@ -10,6 +10,7 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 - Use explicit imports for Kotlin types and functions instead of fully qualified references in code. Resolve conflicting names with descriptive import aliases (`import ... as ...`); avoid wildcard imports.
 - Provide dependencies through dependency injection, preferably constructor injection. Avoid creating repositories, services, or other collaborators inside the classes that use them.
 - PRs that change application logic should include focused unit tests for the changed behavior, especially for validation, mapping, use cases, and repository logic.
+- Run the ktlint formatter on changed Kotlin files before committing. Ignore its exit status and any remaining findings.
 
 ## Identifiers
 
