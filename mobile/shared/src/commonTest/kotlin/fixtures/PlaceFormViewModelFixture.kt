@@ -7,15 +7,13 @@ import com.dozy.mobile.feature.place.domain.usecase.SavePlace
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormUiState
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.navigation.AppNavigator
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
-import com.kjursa.foundation.presentation.navigation.Navigator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import kotlin.test.*
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 
@@ -35,8 +33,9 @@ internal open class PlaceFormViewModelFixture {
         repository: FakePlaceRepository,
         handle: SavedStateHandle = SavedStateHandle(),
         id: String? = null,
+        navigator: AppNavigator = AppNavigator(),
     ) = PlaceFormViewModel(
-        Navigator(),
+        navigator,
         SavedStatePersistence(handle, PlaceFormUiState.serializer()),
         SavePlace(
             repository,

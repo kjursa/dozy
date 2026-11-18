@@ -3,8 +3,8 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormAction
-import com.dozy.mobile.feature.place.presentation.form.PlaceFormEffect
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.feature.place.presentation.form.PlaceFormDestination
+import com.dozy.mobile.navigation.AppNavigator
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -36,6 +36,7 @@ internal class PlaceFormRestorationTest : PlaceFormViewModelFixture() {
             assertFalse(viewModel.uiState.value.saving)
             assertNotNull(viewModel.uiState.value.error)
             assertEquals("Garden", viewModel.uiState.value.name)
+            val navigator = AppNavigator()
             val restored =
                 vm(
                     repository,
@@ -44,15 +45,16 @@ internal class PlaceFormRestorationTest : PlaceFormViewModelFixture() {
                             SavedStatePersistence.DEFAULT_KEY to handle.get<String>(SavedStatePersistence.DEFAULT_KEY),
                         ),
                     ),
+                    navigator = navigator,
                 )
             assertEquals("Garden", restored.uiState.value.name)
             assertNull(restored.uiState.value.error)
             repository.failure = false
-            val effect = async { restored.effects.first() }
+            val effect = async { navigator.commands.first() }
             restored.dispatch(PlaceFormAction.Save)
             restored.dispatch(PlaceFormAction.Save)
             advanceUntilIdle()
-            assertEquals(PlaceFormEffect.Saved(Place.Id("new")), effect.await())
+            assertEquals(PlaceFormDestination.Saved(Place.Id("new")), effect.await())
             assertEquals(2, repository.saves)
         }
 
@@ -64,6 +66,7 @@ internal class PlaceFormRestorationTest : PlaceFormViewModelFixture() {
             advanceUntilIdle()
             assertEquals("Garden", viewModel.uiState.value.name)
             viewModel.dispatch(PlaceFormAction.Name("Changed"))
+            val navigator = AppNavigator()
             val restored =
                 vm(
                     repository,
@@ -73,13 +76,14 @@ internal class PlaceFormRestorationTest : PlaceFormViewModelFixture() {
                         ),
                     ),
                     "custom",
+                    navigator,
                 )
             advanceUntilIdle()
             assertEquals("Changed", restored.uiState.value.name)
-            val effect = async { restored.effects.first() }
+            val effect = async { navigator.commands.first() }
             restored.dispatch(PlaceFormAction.Back)
             advanceUntilIdle()
-            assertEquals(PlaceFormEffect.Back, effect.await())
+            assertEquals(PlaceFormDestination.Back, effect.await())
             assertEquals(0, repository.saves)
             val predefined = vm(repository, id = "builtin:woods")
             advanceUntilIdle()
