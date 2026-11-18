@@ -161,7 +161,7 @@ private fun MainBottomItem(
     modifier: Modifier = Modifier,
 ) {
     val selected = route == selectedRoute
-    val tint = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+    val tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         modifier =
             modifier
