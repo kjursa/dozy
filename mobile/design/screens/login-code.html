@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#faf5eb"><title>Kod logowania · Dozy</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="../brand.css"><link rel="stylesheet" href="login.css"></head>
+<body><aside class="review"><a class="wordmark" href="login-tutorial.html"><img class="brand-icon" src="../images/dozy-sleepy-cloud.png" alt="">dozy</a><p class="eyebrow">PROPOZYCJA 02</p><h1>Jeszcze chwila i gotowe</h1><nav class="review-controls" aria-label="Ekrany logowania"><h2>Ekrany</h2><div class="preview-switch"><a href="login-tutorial.html">Samouczek</a><a href="login-welcome.html">Powitanie</a><a href="login-email.html">Email</a><a class="active" href="login-code.html">Kod PIN</a></div></nav></aside>
+<main class="device"><div class="statusbar"><span>9:41</span><span aria-hidden="true">◒ ▰</span></div><section class="screen form-screen code-screen"><header class="topline"><a class="back" href="login-email.html" aria-label="Wróć">←</a></header><div class="eyebrow">SPRAWDŹ SKRZYNKĘ</div><h1>Wpisz kod</h1><p class="lead">Wysłaliśmy go na <strong>ola@example.com</strong>.</p>
+<div class="code-display" role="group" aria-label="Kod logowania, 9 cyfr" aria-live="polite"><div class="digit-slots" id="digit-slots"></div></div><p class="resend">Nie doszedł PIN? <a href="login-email.html">Wyślij ponownie</a></p>
+<form id="code-form" action="login-tutorial.html"><input id="code-value" name="code" type="hidden" value=""><div class="number-pad" aria-label="Klawiatura numeryczna"><button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button><button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button><button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button><button class="clear-key" type="button" data-action="clear">Wyczyść</button><button type="button" data-digit="0">0</button><button class="delete-key" type="button" data-action="delete" aria-label="Usuń ostatnią cyfrę">⌫</button></div></form></section></main><script>
+(() => {
+  const digits = [];
+  const slots = document.querySelector('#digit-slots');
+  const value = document.querySelector('#code-value');
+  const render = () => {
+    slots.replaceChildren();
+    for (let index = 0; index < 9; index += 1) {
+      if (index === 3 || index === 6) {
+        const separator = document.createElement('span');
+        separator.className = 'code-separator';
+        separator.textContent = '-';
+        slots.append(separator);
+      }
+      const slot = document.createElement('span');
+      const filled = index < digits.length;
+      slot.className = `digit-slot${filled ? ' filled' : ''}${index === digits.length && digits.length < 9 ? ' active' : ''}`;
+      slot.textContent = filled ? '●' : '';
+      slots.append(slot);
+    }
+    value.value = digits.join('');
+    if (digits.length === 9) document.querySelector('#code-form').requestSubmit();
+  };
+  document.querySelectorAll('[data-digit]').forEach((button) => button.addEventListener('click', () => {
+    if (digits.length < 9) digits.push(button.dataset.digit);
+    render();
+  }));
+  document.querySelector('[data-action="delete"]').addEventListener('click', () => { digits.pop(); render(); });
+  document.querySelector('[data-action="clear"]').addEventListener('click', () => { digits.length = 0; render(); });
+  render();
+})();
+</script></body></html>

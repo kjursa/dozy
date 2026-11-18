@@ -6,6 +6,10 @@ Open `index.html` in a browser to select a screen and its variants. This directo
 
 | File | Variants / actions |
 | --- | --- |
+| `login-tutorial.html` | One-time introduction with three horizontally scrolling cards. |
+| `login-welcome.html` | Welcome, email sign-in choice, and continue as guest. |
+| `login-email.html` | Email entry, passwordless account creation, and terms notice. |
+| `login-code.html` | Nine-digit code in three groups, custom keypad, clear/delete, and automatic submission. |
 | `home.html` | Saved content, first visit, generating, ready, and failed generation. |
 | `stories.html` | Saved stories and an empty library. |
 | `characters.html` | Character list and an empty list. |
@@ -25,3 +29,7 @@ Open `index.html` in a browser to select a screen and its variants. This directo
 - No real generation, notifications, or durable database operations occur. Some form values may be stored in browser-tab session storage.
 - Google Fonts are optional external dependencies with fallback fonts. No build step is required.
 - For interaction details where prototype simulations or annotations differ, follow `../../SPEC.MD` and the task requirements. In particular, changing character fields does not require regenerating an existing avatar before saving.
+
+## Sign-in prototype
+
+Start at `login-tutorial.html` for the first visit, or `login-welcome.html` for subsequent visits. Email sign-in proceeds through `login-email.html` to `login-code.html`. These screens use `login.css` alongside the shared styles. Authentication and account creation are simulated; no email is sent.
