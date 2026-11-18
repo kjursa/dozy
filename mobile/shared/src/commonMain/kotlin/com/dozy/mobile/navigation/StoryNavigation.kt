@@ -9,6 +9,9 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import kotlinx.serialization.json.Json
 
 const val MAIN_ROUTE = "main"
+const val LOGIN_TUTORIAL_ROUTE = "login-tutorial"
+const val LOGIN_EMAIL_ROUTE = "login-email"
+const val LOGIN_PIN_ROUTE = "login-pin"
 const val CREATE_STORY_ROUTE = "create-story?place={place}&cast={cast}"
 const val PLACES_ROUTE = "places?fromStory={fromStory}"
 const val PLACE_FORM_ROUTE = "place-form?id={id}"

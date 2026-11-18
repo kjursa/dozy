@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -18,6 +19,13 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterScre
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsScreen
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
+import com.dozy.mobile.feature.login.domain.repository.LoginRepository
+import com.dozy.mobile.feature.login.presentation.LoginAction
+import com.dozy.mobile.feature.login.presentation.LoginEffect
+import com.dozy.mobile.feature.login.presentation.LoginEmailScreen
+import com.dozy.mobile.feature.login.presentation.LoginPinScreen
+import com.dozy.mobile.feature.login.presentation.LoginTutorialScreen
+import com.dozy.mobile.feature.login.presentation.LoginViewModel
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormEffect
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormScreen
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
@@ -34,6 +42,9 @@ import com.dozy.mobile.feature.story.presentation.reader.ReaderScreen
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.GENERATION_ROUTE
+import com.dozy.mobile.navigation.LOGIN_EMAIL_ROUTE
+import com.dozy.mobile.navigation.LOGIN_PIN_ROUTE
+import com.dozy.mobile.navigation.LOGIN_TUTORIAL_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.MainScreen
 import com.dozy.mobile.navigation.PLACES_ROUTE
@@ -48,6 +59,7 @@ import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.readerLibrary
 import com.dozy.mobile.navigation.usePlace
 import com.dozy.mobile.ui.theme.DozyTheme
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -58,19 +70,73 @@ fun DozyApp(
     onNotificationHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
-    LaunchedEffect(notificationStory) {
-        notificationStory?.let {
-            navController.openSavedStory(it, fromNotification = true)
-            onNotificationHandled()
-        }
-    }
 
     DozyTheme {
+        val loginRepository: LoginRepository = koinInject()
+        val loginViewModel: LoginViewModel = koinViewModel()
+        val loginState by loginViewModel.uiState.collectAsStateWithLifecycle()
+        val startDestination =
+            remember(loginViewModel) {
+                if (loginRepository.hasSeenTutorial() || loginViewModel.uiState.value.tutorialSeen) {
+                    LOGIN_EMAIL_ROUTE
+                } else {
+                    LOGIN_TUTORIAL_ROUTE
+                }
+            }
+        LaunchedEffect(loginViewModel) {
+            loginViewModel.effects.collect { effect ->
+                when (effect) {
+                    LoginEffect.OpenEmail ->
+                        navController.navigate(LOGIN_EMAIL_ROUTE) {
+                            popUpTo(LOGIN_TUTORIAL_ROUTE) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    LoginEffect.OpenPin -> navController.navigate(LOGIN_PIN_ROUTE) { launchSingleTop = true }
+                    LoginEffect.OpenMain ->
+                        navController.navigate(MAIN_ROUTE) {
+                            popUpTo(startDestination) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    LoginEffect.ReturnToEmail -> navController.popBackStack(LOGIN_EMAIL_ROUTE, inclusive = false)
+                }
+            }
+        }
+        LaunchedEffect(notificationStory, startDestination) {
+            notificationStory?.let { storyId ->
+                navController.navigate(MAIN_ROUTE) {
+                    popUpTo(startDestination) { inclusive = true }
+                    launchSingleTop = true
+                }
+                navController.openSavedStory(storyId)
+                onNotificationHandled()
+            }
+        }
         NavHost(
             navController = navController,
-            startDestination = MAIN_ROUTE,
+            startDestination = startDestination,
             modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
         ) {
+            composable(LOGIN_TUTORIAL_ROUTE) {
+                LoginTutorialScreen { loginViewModel.dispatch(LoginAction.TutorialContinued) }
+            }
+            composable(LOGIN_EMAIL_ROUTE) {
+                LoginEmailScreen(
+                    state = loginState,
+                    onEmailChanged = { loginViewModel.dispatch(LoginAction.EmailChanged(it)) },
+                    onSubmit = { loginViewModel.dispatch(LoginAction.EmailSubmitted) },
+                    onContinueAsGuest = { loginViewModel.dispatch(LoginAction.ContinueAsGuest) },
+                )
+            }
+            composable(LOGIN_PIN_ROUTE) {
+                LoginPinScreen(
+                    state = loginState,
+                    onBack = { loginViewModel.dispatch(LoginAction.BackToEmail) },
+                    onResend = { loginViewModel.dispatch(LoginAction.ResendPin) },
+                    onDigit = { loginViewModel.dispatch(LoginAction.PinDigit(it)) },
+                    onDelete = { loginViewModel.dispatch(LoginAction.DeletePinDigit) },
+                    onClear = { loginViewModel.dispatch(LoginAction.ClearPin) },
+                )
+            }
             composable(MAIN_ROUTE) { entry ->
                 val showStories by entry.savedStateHandle.getStateFlow("showStories", false).collectAsStateWithLifecycle()
                 val showCharacters by entry.savedStateHandle.getStateFlow("showCharacters", false).collectAsStateWithLifecycle()
