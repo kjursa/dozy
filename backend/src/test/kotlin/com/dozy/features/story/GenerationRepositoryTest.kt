@@ -72,7 +72,7 @@ class GenerationRepositoryTest {
         first.close()
         SqliteDatabase(dbConfig).use { second ->
             val recovered = SqliteGenerationRepository(second, options, clock)
-            assertEquals(accepted, recovered.retry(ownerId, job.id, key))
+            assertEquals(accepted.copy(isReplay = true), recovered.retry(ownerId, job.id, key))
             assertTrue(GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
             val ready = assertNotNull(recovered.status(ownerId, job.id))
             assertEquals(Stage.READY, ready.stage)

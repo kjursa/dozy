@@ -133,7 +133,7 @@ class SqliteGenerationRepository(
         val binding = StoryExecutions.selectAll().where { (StoryExecutions.ownerId eq ownerId.value) and (StoryExecutions.key eq key.value) }.singleOrNull()
         if (binding != null) {
             return@write if (binding[StoryExecutions.operation] == "RETRY_STORY_V1" && binding[StoryExecutions.jobId] == id.value) {
-                RetrySubmission.Accepted(Job(id, Stage.valueOf(binding[StoryExecutions.stage])))
+                RetrySubmission.Accepted(Job(id, Stage.valueOf(binding[StoryExecutions.stage])), isReplay = true)
             } else RetrySubmission.IdempotencyConflict
         }
         val row = StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.id eq id.value) }.singleOrNull()
@@ -185,7 +185,17 @@ class SqliteGenerationRepository(
         }
         val jobId = requireNotNull(JobId.parse(row[StoryJobs.id]))
         recordStage(jobId)
-        Execution(Job(jobId, stage), token, decodeConfiguration(row[StoryJobs.configuration]), row[StoryJobs.title], row[StoryJobs.text], row[StoryJobs.ordinal], requireNotNull(GenerationId.parse(row[StoryJobs.executionId])))
+        Execution(
+            job = Job(jobId, stage),
+            ownerId = requireNotNull(OwnerId.parse(row[StoryJobs.ownerId])),
+            storyId = requireNotNull(StoryId.parse(row[StoryJobs.storyId])),
+            token = token,
+            configuration = decodeConfiguration(row[StoryJobs.configuration]),
+            title = row[StoryJobs.title],
+            text = row[StoryJobs.text],
+            ordinal = row[StoryJobs.ordinal],
+            id = requireNotNull(GenerationId.parse(row[StoryJobs.executionId])),
+        )
     }
     override suspend fun renew(execution: Execution): Boolean = database.write {
         StoryJobs.update({ (StoryJobs.id eq execution.job.id.value) and (StoryJobs.executionId eq execution.id.value) and (StoryJobs.leaseToken eq execution.token.value) and (StoryJobs.stage inList active) }) {
@@ -225,12 +235,21 @@ class SqliteGenerationRepository(
         recordStage(execution.job.id)
         true
     }
-    override suspend fun fail(execution: Execution, failure: Failure) { database.write {
-        StoryJobs.update({ (StoryJobs.id eq execution.job.id.value) and (StoryJobs.executionId eq execution.id.value) and (StoryJobs.leaseToken eq execution.token.value) and (StoryJobs.stage inList active) }) {
-            it[stage] = Stage.FAILED.name; it[error] = failure.name; it[leaseToken] = null; it[leaseUntil] = 0
-        }
-        recordStage(execution.job.id)
-    } }
+    override suspend fun fail(execution: Execution, failure: Failure): Boolean = database.write {
+        val changed = StoryJobs.update({
+            (StoryJobs.id eq execution.job.id.value) and
+                (StoryJobs.executionId eq execution.id.value) and
+                (StoryJobs.leaseToken eq execution.token.value) and
+                (StoryJobs.stage inList active)
+        }) {
+            it[stage] = Stage.FAILED.name
+            it[error] = failure.name
+            it[leaseToken] = null
+            it[leaseUntil] = 0
+        } == 1
+        if (changed) recordStage(execution.job.id)
+        changed
+    }
     private fun ResultRow.job(): Job {
         val stage = Stage.valueOf(this[StoryJobs.stage])
         return Job(requireNotNull(JobId.parse(this[StoryJobs.id])), stage, if (stage == Stage.READY) requireNotNull(StoryId.parse(this[StoryJobs.storyId])) else null, this[StoryJobs.error]?.let(Failure::valueOf))
