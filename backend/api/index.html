@@ -250,7 +250,7 @@
 <article class="endpoint" id="generation-status" data-method="GET" data-search="story generation get /api/v1/story-generations/{jobid} observe story generation read a stage, not a percentage. observation failure is not a failed generation.">
  <div class="endpoint-top"><span class="method get">GET</span><code class="path">/api/v1/story-generations/{jobId}</code><span class="badge">Proposed</span><a class="permalink" href="#generation-status" aria-label="Link to Observe story generation">#</a></div>
  <h2>Observe story generation</h2><p class="description">Read a stage, not a percentage. Observation failure is not a FAILED generation.</p>
- <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer access token</td><td>The token supplies the resource owner.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>jobId</td><td>path</td><td>string</td><td>Required; [A-Za-z0-9_-]{1,128}.</td></tr></tbody></table></div><h3>Request body</h3><p class="muted">No request body.</p><h3>Contract rules</h3><ul><li>READY requires storyId and a complete, durably readable story plus cover.</li><li>FAILED requires errorCode: CONTENT_REJECTED or GENERATION_FAILED. Other stages omit/null both terminal fields.</li><li>Stages are monotonic within one execution; an explicit retry may reset FAILED to QUEUED.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">200</span> Queued</summary><pre><code>{
+ <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer access token</td><td>The token supplies the resource owner.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>jobId</td><td>path</td><td>string</td><td>Required; [A-Za-z0-9_-]{1,128}.</td></tr></tbody></table></div><h3>Request body</h3><p class="muted">No request body.</p><h3>Contract rules</h3><ul><li>READY includes storyId and the complete story object returned by the story read endpoint.</li><li>FAILED requires errorCode: CONTENT_REJECTED or GENERATION_FAILED. Terminal fields are omitted or null outside their corresponding stage.</li><li>Stages are monotonic within one execution; an explicit retry may reset FAILED to QUEUED.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">200</span> Queued</summary><pre><code>{
   &quot;jobId&quot;: &quot;job-019a0000-0000-7000-8000-000000000004&quot;,
   &quot;status&quot;: &quot;QUEUED&quot;
 }</code></pre></details><details class="response"><summary><span class="status ok">200</span> Creating Text</summary><pre><code>{
@@ -262,7 +262,28 @@
 }</code></pre></details><details class="response"><summary><span class="status ok">200</span> Ready</summary><pre><code>{
   &quot;jobId&quot;: &quot;job-019a0000-0000-7000-8000-000000000004&quot;,
   &quot;status&quot;: &quot;READY&quot;,
-  &quot;storyId&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;
+  &quot;storyId&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;,
+  &quot;story&quot;: {
+    &quot;id&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;,
+    &quot;jobId&quot;: &quot;job-019a0000-0000-7000-8000-000000000004&quot;,
+    &quot;title&quot;: &quot;A lost star&quot;,
+    &quot;text&quot;: &quot;Once upon a time…&quot;,
+    &quot;coverUrl&quot;: &quot;https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png&quot;,
+    &quot;configuration&quot;: {
+      &quot;cast&quot;: [
+        {
+          &quot;id&quot;: &quot;char-019a0000-0000-7000-8000-000000000001&quot;,
+          &quot;name&quot;: &quot;Luna&quot;,
+          &quot;personality&quot;: &quot;Kind&quot;,
+          &quot;appearance&quot;: &quot;Red hair&quot;,
+          &quot;type&quot;: &quot;CHILD&quot;
+        }
+      ],
+      &quot;mode&quot;: &quot;AUTOMATIC&quot;,
+      &quot;length&quot;: &quot;SHORT&quot;
+    },
+    &quot;createdAt&quot;: 1794355200000
+  }
 }</code></pre></details><details class="response"><summary><span class="status ok">200</span> Content rejected</summary><pre><code>{
   &quot;jobId&quot;: &quot;job-019a0000-0000-7000-8000-000000000004&quot;,
   &quot;status&quot;: &quot;FAILED&quot;,
@@ -305,6 +326,7 @@
  <h2>Read a story</h2><p class="description">Fetch an immutable title, text, cover and original configuration. This request never triggers generation.</p>
  <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer access token</td><td>The token supplies the resource owner.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>storyId</td><td>path</td><td>string</td><td>Required; [A-Za-z0-9_-]{1,128}.</td></tr></tbody></table></div><h3>Request body</h3><p class="muted">No request body.</p><h3>Contract rules</h3><ul><li>title and text are nonblank; coverUrl is a durable HTTPS reference.</li><li>configuration is the accepted request snapshot. Later character/place changes cannot rewrite it.</li><li>createdAt is nonnegative UTC epoch milliseconds; new backend results always include it.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">200</span> Story</summary><pre><code>{
   &quot;id&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;,
+  &quot;jobId&quot;: &quot;job-019a0000-0000-7000-8000-000000000004&quot;,
   &quot;title&quot;: &quot;A lost star&quot;,
   &quot;text&quot;: &quot;Once upon a time…&quot;,
   &quot;coverUrl&quot;: &quot;https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png&quot;,
@@ -343,10 +365,10 @@
 }</code></pre></details><details class="response"><summary><span class="status error">503</span> UNAVAILABLE</summary><p>Temporary service unavailability; preserve known client data.</p><pre><code>{
   &quot;code&quot;: &quot;UNAVAILABLE&quot;
 }</code></pre></details></section></div></article>
-<article class="endpoint" id="stories-list" data-method="GET" data-search="stories get /api/v1/stories browse saved stories page through lightweight summaries from a stable library snapshot.">
+<article class="endpoint" id="stories-list" data-method="GET" data-search="stories get /api/v1/stories browse saved stories page through lightweight summaries in descending StoryId order.">
  <div class="endpoint-top"><span class="method get">GET</span><code class="path">/api/v1/stories</code><span class="badge">Proposed</span><a class="permalink" href="#stories-list" aria-label="Link to Browse saved stories">#</a></div>
- <h2>Browse saved stories</h2><p class="description">Page through lightweight summaries from a stable library snapshot.</p>
- <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer access token</td><td>The token supplies the resource owner.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>limit</td><td>query</td><td>integer</td><td>Mobile sends 100. Proposed server range: 1–100.</td></tr><tr><td>cursor</td><td>query</td><td>string</td><td>Optional opaque URL-encoded cursor. Omit for the first page.</td></tr></tbody></table></div><h3>Request body</h3><p class="muted">No request body.</p><h3>Contract rules</h3><ul><li>Newest createdAt first; ascending story ID breaks ties. Pages contain no duplicate IDs and share one stable snapshot.</li><li>Summaries omit text/configuration. readingMinutes = max(1, ceil(whitespace-delimited word count / 150)).</li><li>The last page omits nextCursor or returns null. New stories appear on a later refresh.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">200</span> Last page</summary><pre><code>{
+ <h2>Browse saved stories</h2><p class="description">Page through the owner’s story summaries in descending StoryId order.</p>
+ <div class="columns"><section class="request"><h3 class="column-heading">Request</h3><h3>Headers</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>Value</th><th>Meaning</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer access token</td><td>The token supplies the resource owner.</td></tr></tbody></table></div><h3>Parameters</h3><div class="table-wrap"><table><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td>limit</td><td>query</td><td>integer</td><td>Mobile sends 100. Accepted range: 1–100.</td></tr><tr><td>cursor</td><td>query</td><td>string</td><td>Optional last StoryId from the previous page. Omit for the first page.</td></tr></tbody></table></div><h3>Request body</h3><p class="muted">No request body.</p><h3>Contract rules</h3><ul><li>Stories are ordered by descending StoryId. A cursor restricts the next page to smaller IDs.</li><li>Summaries omit text/configuration. readingMinutes = max(1, ceil(whitespace-delimited word count / 150)).</li><li>When more stories are available, nextCursor is the last returned StoryId. The last page returns null.</li></ul></section><section><h3 class="column-heading">Possible responses</h3><details class="response" open><summary><span class="status ok">200</span> Last page</summary><pre><code>{
   &quot;stories&quot;: [
     {
       &quot;id&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;,
@@ -367,7 +389,7 @@
       &quot;readingMinutes&quot;: 4
     }
   ],
-  &quot;nextCursor&quot;: &quot;opaque-next-cursor&quot;
+  &quot;nextCursor&quot;: &quot;story-019a0000-0000-7000-8000-000000000005&quot;
 }</code></pre></details><details class="response"><summary><span class="status ok">200</span> Empty library</summary><pre><code>{
   &quot;stories&quot;: [],
   &quot;nextCursor&quot;: null

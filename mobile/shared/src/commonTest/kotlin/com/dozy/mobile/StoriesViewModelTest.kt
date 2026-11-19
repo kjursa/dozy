@@ -1,6 +1,5 @@
 package com.dozy.mobile
 
-import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.testGenerationRepository
@@ -86,7 +85,7 @@ class StoriesViewModelTest {
                     .RequestKey("key"),
                 api.configuration,
             )
-            api.remote = GenerationStatusDto("job", "READY", "story")
+            api.remote = api.ready()
             repo.refresh(
                 GenerationJob
                     .Id("job"),

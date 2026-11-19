@@ -35,10 +35,15 @@ internal class ProgressApi : GenerationApi {
         return remote
     }
 
+    fun completedStory() =
+        StoryDto("story", "A star", "Once upon a time", "https://example.test/cover.png", configuration.toDto(), jobId = "job")
+
+    fun ready() = GenerationStatusDto("job", "READY", "story", story = completedStory())
+
     override suspend fun story(id: String): StoryDto? {
         storyReads++
         if (storyUnavailable) return null
-        return StoryDto("story", "A star", "Once upon a time", "https://example.test/cover.png", configuration.toDto())
+        return completedStory()
     }
 
     override suspend fun retry(

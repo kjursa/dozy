@@ -153,7 +153,9 @@ sends the persisted UUIDv4 `Idempotency-Key`. The client owns serialization and
 omits `place`/`idea`/`ending` in AUTOMATIC mode even if a local draft retains them.
 Cast and place are complete immutable snapshots, with nullable character avatars.
 `GenerationField.reasons` defines start validation combinations; mode, length,
-stage and terminal failure values are defined beside the story DTOs.
+stage and terminal failure values are defined beside the story DTOs. A READY status
+includes the full immutable story in `response.story`, with the same job and story IDs.
+The result can be saved without another HTTP request.
 
 Start errors distinguish idempotency conflict, active job, unavailable reference,
 validation and unknown errors. Status/read distinguish the known
@@ -201,4 +203,4 @@ are unit/component tests, not E2E.
 
 ## Story library listing (API4)
 
-`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain only id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Cursors are opaque, URL-encoded by the client, and bound to a persistent owner-scoped snapshot, request limit and position. The final page returns nextCursor null.
+`stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Pages are ordered by descending story ID. The client URL-encodes the cursor, which is the last returned story ID when more results are available. The final page returns nextCursor null.

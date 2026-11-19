@@ -27,15 +27,15 @@ class StoryClientsTest {
     private val input = GenerationRequestDto(listOf(CharacterDto("hero", "Luna", "Kind", "Coat", "ANIMAL")), "AUTOMATIC", "SHORT", idea = "hidden", ending = "hidden")
     private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/service"))
 
-    @Test fun `listing encodes opaque cursor sends identity and maps error codes independent of status`() = runTest {
+    @Test fun `listing sends the story ID cursor`() = runTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("/service/api/v1/stories", request.url.encodedPath)
 
-            assertEquals("a /+?&", request.url.parameters["cursor"])
+            assertEquals("story-019a0000-0000-7000-8000-000000000001", request.url.parameters["cursor"])
             assertEquals("2", request.url.parameters["limit"])
             respond("""{"stories":[],"nextCursor":null}""")
         })
-        try { assertEquals(emptyList(), assertIs<StoryListResult.Success>(sdk(http).stories.v1.list(ListStoriesRequest(2, "a /+?&"))).response.stories) } finally { http.close() }
+        try { assertEquals(emptyList(), assertIs<StoryListResult.Success>(sdk(http).stories.v1.list(ListStoriesRequest(2, "story-019a0000-0000-7000-8000-000000000001"))).response.stories) } finally { http.close() }
     }
 
     @Test fun `retry sends no body and maps contract codes independently of status`() = runTest {
@@ -54,6 +54,7 @@ class StoryClientsTest {
 
     @Test fun `versioned containers submit snapshot omission key identity and retrieve status and story`() = runTest {
         var calls = 0
+        val story = """{"id":"story","jobId":"job","title":"Luna","text":"Story text","coverUrl":"https://example.test/cover","createdAt":123,"configuration":{"cast":[{"id":"hero","name":"Luna","personality":"Kind","appearance":"Coat","type":"ANIMAL"}],"mode":"AUTOMATIC","length":"SHORT"}}"""
         val http = HttpClient(MockEngine { request ->
 
             when (calls++) {
@@ -65,18 +66,19 @@ class StoryClientsTest {
                 }
                 1 -> {
                     assertEquals("/service/api/v1/story-generations/job", request.url.encodedPath)
-                    respond("""{"jobId":"job","status":"READY","storyId":"story"}""")
+                    respond("""{"jobId":"job","status":"READY","storyId":"story","story":$story}""")
                 }
                 else -> {
                     assertEquals("/service/api/v1/stories/story", request.url.encodedPath)
-                    respond("""{"id":"story","title":"Luna","text":"Story text","coverUrl":"https://example.test/cover","createdAt":123,"configuration":{"cast":[{"id":"hero","name":"Luna","personality":"Kind","appearance":"Coat","type":"ANIMAL"}],"mode":"AUTOMATIC","length":"SHORT"}}""")
+                    respond(story)
                 }
             }
         })
         try {
             assertEquals("job", assertIs<GenerationStartResult.Success>(sdk(http).storyGenerations.v1.start("key", input)).response.let { (it as GenerationAcceptedDto).jobId })
-            assertIs<GenerationStatusResult.Success>(sdk(http).storyGenerations.v1.status("job"))
-            assertIs<StoryReadResult.Success>(sdk(http).stories.v1.read("story"))
+            val ready = assertIs<GenerationStatusResult.Success>(sdk(http).storyGenerations.v1.status("job"))
+            val read = assertIs<StoryReadResult.Success>(sdk(http).stories.v1.read("story"))
+            assertEquals(read.response, ready.response.story)
         } finally { http.close() }
     }
     @Test fun `malformed terminal states become technical errors and cancellation propagates`() = runTest {
@@ -86,6 +88,7 @@ class StoryClientsTest {
         }
         for (body in listOf(
             """{"jobId":"job","status":"READY"}""",
+            """{"jobId":"job","status":"READY","storyId":"story"}""",
             """{"jobId":"job","status":"FAILED"}""",
             """{"jobId":"job","status":"QUEUED","storyId":"story"}""",
             """{"jobId":"job","status":"FAILED","errorCode":"FUTURE"}""",

@@ -49,7 +49,6 @@ For example, characters now support deletion, and full story responses include
   | Avatar job | `avjob-<uuidv7>` |
   | Story generation job | `job-<uuidv7>` |
   | Story | `story-<uuidv7>` |
-  | Library cursor | `cur-<uuidv4>` |
 
   Built-in places retain their `builtin:` IDs. Clients send an unprefixed UUIDv4
   in `Idempotency-Key`. Internal execution IDs, snapshot IDs and lease tokens use
@@ -92,7 +91,7 @@ For example, characters now support deletion, and full story responses include
 | GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
 | POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
 | GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
-| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through a persistent snapshot owned by the authenticated user of story summaries |
+| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through the authenticated owner’s story summaries in descending StoryId order |
 | GET | `/api/v1/assets/{assetId}` | 200 | Read an owned durable PNG cover |
 | POST | `/api/v1/auth/anonymous` | 201 | Create an anonymous owner identity |
 | POST | `/api/v1/auth/email` | 202 | Create a nine-digit code session for an email |
@@ -371,9 +370,10 @@ No body. Return 200 with a stage, not a percentage:
 ```
 
 Allowed stages: `QUEUED`, `CREATING_TEXT`, `CREATING_COVER`, `READY`, `FAILED`.
-READY requires `storyId`; FAILED requires `errorCode` of `CONTENT_REJECTED` or
-`GENERATION_FAILED`. The two fields are absent/null outside their corresponding
-terminal state. `404 JOB_NOT_FOUND`, authentication errors, unknown codes, malformed
+READY includes `storyId` and `story`, the complete DTO returned by the story read
+endpoint. The nested story identifies its source job via `jobId`. FAILED requires
+`errorCode` of `CONTENT_REJECTED` or `GENERATION_FAILED`. Terminal fields are
+absent/null outside their corresponding state. `404 JOB_NOT_FOUND`, authentication errors, unknown codes, malformed
 responses, and network/5xx failures mean observation unavailable, **not FAILED**.
 
 Persist stages and serve monotonic reads within one execution. READY is published
@@ -405,6 +405,7 @@ Return 200:
 ```json
 {
   "id":"story-019a0000-0000-7000-8000-000000000005",
+  "jobId":"job-019a0000-0000-7000-8000-000000000004",
   "title":"A lost star",
   "text":"Once upon a time…",
   "coverUrl":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png",
@@ -420,7 +421,7 @@ supply it (mobile only tolerates zero as a legacy fallback). Content and ID neve
 change on repeated reads. `404 STORY_NOT_FOUND` means missing; `503 UNAVAILABLE`
 and other failures mean unavailable. GET never initiates generation.
 
-### GET /api/v1/stories?limit=100&cursor=<opaque cursor>
+### GET /api/v1/stories?limit=100&cursor=<storyId>
 
 No body. First page omits cursor. Return 200:
 
@@ -433,15 +434,17 @@ No body. First page omits cursor. Return 200:
 
 Summaries omit text and configuration. `readingMinutes` is a positive integer,
 `max(1, ceil(wordCount / 150))`, matching the reader's whitespace-delimited word
-count. Order: descending createdAt, ascending story ID for ties. Use explicit
-lexical ordering consistently rather than locale-dependent sorting.
+count. Stories are ordered by descending lexical StoryId. UUIDv7 IDs are assigned
+when a story is published. Mobile requests limit 100; the backend accepts 1–100
+and defaults to 100. Malformed/out-of-range limits return 422
+`validation.limit.invalid_value`.
 
-Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 `validation.limit.invalid_value`. Every page belongs
-to the same stable snapshot, with no repeated IDs; stories published mid-pagination
-appear on a later refresh, not halfway through the current traversal. Cursor is
-opaque, URL-encoded, bound to the owner and validated; last page omits it or returns null.
-Errors: `400 INVALID_CURSOR`, `401` for missing or invalid access tokens, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
-concrete snapshot implementation.
+When there are more stories, `nextCursor` equals the last returned ID. The next
+page returns only the owner's stories with IDs smaller than that cursor. Newer
+stories appear when the client refreshes from the first page. The final page
+returns `nextCursor: null`. Malformed, unknown or cross-owner cursors return 400
+`INVALID_CURSOR`. Other errors include 401 for missing or invalid access tokens
+and 503 `UNAVAILABLE`. Refresh never triggers generation.
 
 ## Background execution and delivery
 
@@ -474,7 +477,7 @@ future scope. There is no backend reader-preference or reading-position API.
 The shared `contracts.v1.story` models define the shipped wire shapes. Start is
 `POST /api/v1/story-generations` with UUIDv4 `Idempotency-Key`, returning durable
 202 `{jobId,status}`. Status is `GET /api/v1/story-generations/{jobId}`, returning
-200 `{jobId,status,storyId?,errorCode?}`; inaccessible/missing IDs return
+200 `{jobId,status,storyId?,story?,errorCode?}`; inaccessible/missing IDs return
 404 `JOB_NOT_FOUND`. Reading `GET /api/v1/stories/{storyId}` returns the complete
 immutable result or 404 `STORY_NOT_FOUND`. Reads never generate content.
 
@@ -496,8 +499,8 @@ status before checking the active limit or live references. Changed content unde
 the key returns 409 `IDEMPOTENCY_CONFLICT`. Another key while a job is active returns
 409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per owner.
 
-Stages are QUEUED → CREATING_TEXT → CREATING_COVER → READY, or FAILED. READY exposes
-storyId only after text, cover and story are committed together. FAILED carries
+Stages are QUEUED → CREATING_TEXT → CREATING_COVER → READY, or FAILED. READY returns the
+publication-time StoryId and the complete story after text, cover and story commit together. FAILED carries
 `CONTENT_REJECTED` or `GENERATION_FAILED` in errorCode; no other stage carries it.
 Text/title/ID/configuration/createdAt/cover are immutable. createdAt is nonnegative
 UTC epoch milliseconds. The same cover URL serves the library thumbnail and reader.
@@ -506,7 +509,8 @@ token, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-owner and limit-mismatched tokens return INVALID_CURSOR.
+The shared Stories client paginates the library by StoryId. The backend reads an
+owner-scoped range directly from SQLite.
 
 Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing

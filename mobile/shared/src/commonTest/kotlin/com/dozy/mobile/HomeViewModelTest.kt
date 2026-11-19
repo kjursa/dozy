@@ -249,7 +249,7 @@ class HomeViewModelTest {
                 vm.uiState.value.generation.homeJob
                     ?.status,
             )
-            api.remote = GenerationStatusDto("job", "READY", "story")
+            api.remote = api.ready()
             vm.resumed()
             advanceUntilIdle()
             assertEquals(

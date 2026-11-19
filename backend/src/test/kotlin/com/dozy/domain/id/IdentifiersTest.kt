@@ -21,8 +21,6 @@ class IdentifiersTest {
         assertFormat("job", 7, JobId.generate().value) { JobId.parse(it)?.value }
         assertFormat("genid", 7, GenerationId.generate().value) { GenerationId.parse(it)?.value }
         assertFormat("story", 7, StoryId.generate().value) { StoryId.parse(it)?.value }
-        assertFormat("snap", 7, LibrarySnapshotId.generate().value) { LibrarySnapshotId.parse(it)?.value }
-        assertFormat("cur", 4, LibraryCursor.generate().value) { LibraryCursor.parse(it)?.value }
         assertFormat("lease", 4, LeaseToken.generate().value) { LeaseToken.parse(it)?.value }
     }
 
