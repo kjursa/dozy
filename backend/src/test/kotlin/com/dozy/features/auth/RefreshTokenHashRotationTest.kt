@@ -2,6 +2,8 @@ package com.dozy.features.auth
 
 import com.dozy.config.AuthSecretProvider
 import com.dozy.config.DatabaseConfig
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.RefreshToken
 import com.dozy.features.auth.application.AccessTokens
 import com.dozy.features.auth.application.AuthService
 import com.dozy.features.auth.application.TokenResult
@@ -28,9 +30,9 @@ class RefreshTokenHashRotationTest {
     fun rotatesLegacyRefreshTokenIntoTheNewHashFormat() =
         runBlocking {
             val secrets = AuthSecretProvider("test-signing-key-with-at-least-32-characters")
-            val token = "test-refresh-token"
-            val legacyHash = "LfSDaU7trd8KkbLHb0Z5R-LZ3Fd2jQ73qqG6UDkgCMM"
-            val owner = "019a0000-0000-7000-8000-000000000003"
+            val token = requireNotNull(RefreshToken.parse("ref-019a0000-0000-4000-8000-000000000003"))
+            val legacyHash = "c2Nhx9UentAO_Q5HAaA2SkF-8_bLqrMcpL9VKJzNei0"
+            val owner = OwnerId.generate()
 
             assertNotEquals(legacyHash, secrets.hashRefreshToken(token))
 
@@ -47,7 +49,7 @@ class RefreshTokenHashRotationTest {
                     repository.rotateRefreshToken(
                         owner,
                         setOf(secrets.hashRefreshToken(rotated.refreshToken)),
-                        RefreshCredential(secrets.hashRefreshToken("next-refresh"), expiresAt),
+                        RefreshCredential(secrets.hashRefreshToken(RefreshToken.generate()), expiresAt),
                         clock.millis(),
                     ),
                 )

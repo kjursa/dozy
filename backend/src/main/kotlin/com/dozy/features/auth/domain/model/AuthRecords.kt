@@ -1,7 +1,10 @@
 package com.dozy.features.auth.domain.model
 
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
+
 data class EmailChallenge(
-    val sessionId: String,
+    val sessionId: EmailSessionId,
     val email: String,
     val code: String,
     val createdAt: Long,
@@ -15,7 +18,7 @@ data class RefreshCredential(
 
 sealed interface CodeVerification {
     data class Verified(
-        val ownerId: String,
+        val ownerId: OwnerId,
     ) : CodeVerification
 
     data object InvalidCode : CodeVerification

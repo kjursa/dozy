@@ -47,7 +47,7 @@ Use feature-specific packages such as `com.dozy.features.story` and `com.dozy.fe
 - For several small, closely related operations in one feature, a single concrete `<Feature>Service` can be simpler than one class per operation. Do not create both a service and a use case when they duplicate responsibilities.
 - Receive domain contracts and other collaborators through constructors.
 - Have services/use cases accept validated domain values rather than raw strings or transport DTOs. When an operation needs several values, group them in a focused command/domain parameter object such as `SavePlace`, rather than growing a long parameter list. The object should contain the exact validated values required by that operation.
-- Keep state-dependent checks (such as whether an ID exists, belongs to an installation, or may be changed) in the application/service or repository flow; validated value types cover the value's own format and intrinsic business constraints.
+- Keep state-dependent checks (such as whether an ID exists, belongs to an owner, or may be changed) in the application/service or repository flow; validated value types cover the value's own format and intrinsic business constraints.
 - Do not create concrete repositories, network clients, or adapters inside use cases.
 - Keep SQL, HTTP, process handling, and framework configuration out of application code.
 - Name use cases for the action they perform, such as `CreateStoryUseCase`. Avoid a class that only delegates one call without adding responsibility.

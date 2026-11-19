@@ -1,5 +1,7 @@
 package com.dozy.features.auth.domain.repository
 
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.auth.domain.model.CodeVerification
 import com.dozy.features.auth.domain.model.EmailChallenge
 import com.dozy.features.auth.domain.model.RefreshCredential
@@ -7,7 +9,7 @@ import com.dozy.features.auth.domain.model.RefreshCredential
 /** Each write operation is atomic, including its state checks. */
 interface AuthRepository {
     suspend fun createAnonymous(
-        ownerId: String,
+        ownerId: OwnerId,
         refresh: RefreshCredential,
     )
 
@@ -18,20 +20,20 @@ interface AuthRepository {
     ): Boolean
 
     suspend fun verifyChallenge(
-        sessionId: String,
+        sessionId: EmailSessionId,
         code: String,
         now: Long,
         maxAttempts: Int,
-        newOwnerId: String,
+        newOwnerId: OwnerId,
         refresh: RefreshCredential,
     ): CodeVerification
 
     suspend fun rotateRefreshToken(
-        ownerId: String,
+        ownerId: OwnerId,
         hashes: Set<String>,
         replacement: RefreshCredential,
         now: Long,
     ): Boolean
 
-    suspend fun revokeRefreshTokens(ownerId: String)
+    suspend fun revokeRefreshTokens(ownerId: OwnerId)
 }

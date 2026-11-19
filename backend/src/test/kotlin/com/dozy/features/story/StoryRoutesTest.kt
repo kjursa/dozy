@@ -1,11 +1,13 @@
 package com.dozy.features.story
 
-import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.asOwner
 import com.dozy.databaseConfig
+import com.dozy.domain.id.JobId
+import com.dozy.domain.id.OwnerId
 import com.dozy.module
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -17,29 +19,29 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import org.junit.jupiter.api.io.TempDir
 import java.net.URI
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import org.junit.jupiter.api.io.TempDir
 
 class StoryRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "019a0000-0000-7000-8000-000000000010"
-    private val stranger = "019a0000-0000-7000-8000-000000000011"
-    private val request = """{"cast":[{"id":"019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"bundled:moon","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000010"))
+    private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000011"))
+    private val request = """{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"builtin:woods","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
     private val json = Json { ignoreUnknownKeys = true }
     private suspend fun HttpClient.start(body: String = request, key: String = UUID.randomUUID().toString()) = post("/api/v1/story-generations") {
         asOwner(owner); header("Idempotency-Key", key)
         contentType(ContentType.Application.Json); setBody(body)
     }
-    private suspend fun HttpClient.read(path: String, installation: String = owner) = get(path) { asOwner(installation) }
+    private suspend fun HttpClient.read(path: String, ownerId: OwnerId = owner) = get(path) { asOwner(ownerId) }
 
     @Test fun `listing defaults empty and rejects invalid limits and cursors`() = testApplication {
         environment { config = databaseConfig(directory) }
@@ -58,8 +60,8 @@ class StoryRoutesTest {
         application { module() }
         val original = UUID.randomUUID().toString()
         val job = json.decodeFromString<GenerationAcceptedDto>(client.start(key = original).bodyAsText())
-        suspend fun retry(key: String, id: String = job.jobId, installation: String = owner) = client.post("/api/v1/story-generations/$id/retry") {
-            asOwner(installation)
+        suspend fun retry(key: String, id: String = job.jobId, ownerId: OwnerId = owner) = client.post("/api/v1/story-generations/$id/retry") {
+            asOwner(ownerId)
             header("Idempotency-Key", key)
         }
         suspend fun awaitStage(stage: String) = withTimeout(10000) {
@@ -71,7 +73,7 @@ class StoryRoutesTest {
         }
         awaitStage("FAILED")
         assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(original).bodyAsText()).code)
-        assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString(), installation = stranger).bodyAsText()).code)
+        assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString(), ownerId = stranger).bodyAsText()).code)
         val key = UUID.randomUUID().toString()
         val response = retry(key)
         assertEquals(HttpStatusCode.Accepted, response.status)
@@ -79,7 +81,7 @@ class StoryRoutesTest {
         awaitStage("READY")
         assertEquals(GenerationAcceptedDto(job.jobId, "READY"), json.decodeFromString(retry(key).bodyAsText()))
         assertEquals("JOB_NOT_FAILED", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString()).bodyAsText()).code)
-        assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(key, "other").bodyAsText()).code)
+        assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(key, JobId.generate().value).bodyAsText()).code)
     }
 
     @Test fun `full route flow canonical replay immutable read and asset isolation`() = testApplication {
@@ -102,9 +104,12 @@ class StoryRoutesTest {
         assertEquals(GenerationAcceptedDto(job.jobId, "READY"), json.decodeFromString(replay.bodyAsText()))
         val conflict = client.start(request.replace("Find a star", "Find the moon"), key)
         assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(conflict.bodyAsText()).code)
+        assertEquals(HttpStatusCode.NotFound, client.read("/api/v1/stories/${job.jobId}").status)
         val response = client.read("/api/v1/stories/${status.storyId}")
         assertEquals(HttpStatusCode.OK, response.status)
         val story = json.decodeFromString<StoryDto>(response.bodyAsText())
+        assertTrue(job.jobId.startsWith("job-"))
+        assertTrue(story.id.startsWith("story-"))
         assertEquals("Find a star", story.configuration.idea)
         assertTrue(story.text.contains("Luna") && story.text.contains("Moon garden"))
         assertTrue(story.createdAt > 0)
@@ -112,6 +117,7 @@ class StoryRoutesTest {
         assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/story-generations/${job.jobId}", stranger).bodyAsText()).code)
         assertEquals("STORY_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/stories/${story.id}", stranger).bodyAsText()).code)
         val path = URI(story.coverUrl).path
+        assertTrue(path.substringAfterLast('/').startsWith("asset-"))
         assertEquals("image/png", client.read(path).headers["Content-Type"]?.substringBefore(';'))
         assertEquals("ASSET_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(client.read(path, stranger).bodyAsText()).code)
         assertEquals(HttpStatusCode.Unauthorized, client.get(path).status)
@@ -121,9 +127,9 @@ class StoryRoutesTest {
         application { module() }
         for (body in listOf(
             request.replace("MANUAL", "UNKNOWN"), request.replace("SHORT", "MEDIUM"), request.replace("ANIMAL", "ALIEN"),
-            request.replace("MANUAL", "AUTOMATIC"), request.replace("\"Luna\"", "null"), request.replace("\"Kind\"", "false"),
+            request.replace("char-", "asset-"), request.replace("MANUAL", "AUTOMATIC"), request.replace("\"Luna\"", "null"), request.replace("\"Kind\"", "false"),
         )) assertEquals(HttpStatusCode.BadRequest, client.start(body).status)
-        assertEquals(HttpStatusCode.BadRequest, client.start(key = owner).status)
+        assertEquals(HttpStatusCode.BadRequest, client.start(key = owner.value).status)
         val empty = request.replace(Regex("\\[.*?]"), "[]")
         val error = json.decodeFromString<ApiErrorResponse>(client.start(empty).bodyAsText())
         assertEquals(ApiErrorResponse("validation.cast.required"), error)

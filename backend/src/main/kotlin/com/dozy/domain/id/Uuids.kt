@@ -1,4 +1,4 @@
-package com.dozy.infrastructure.id
+package com.dozy.domain.id
 
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

@@ -1,5 +1,7 @@
 package com.dozy.features.auth.data.repository
 
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.auth.data.database.AuthEmailCodes
 import com.dozy.features.auth.data.database.AuthRefreshTokens
 import com.dozy.features.auth.data.database.AuthUsers
@@ -22,11 +24,11 @@ class SqliteAuthRepository(
     private val database: SqliteDatabase,
 ) : AuthRepository {
     override suspend fun createAnonymous(
-        ownerId: String,
+        ownerId: OwnerId,
         refresh: RefreshCredential,
     ) {
         database.write {
-            insertOwner(ownerId, "anonymous+$ownerId@invalid.dozy")
+            insertOwner(ownerId, "anonymous+${ownerId.value}@invalid.dozy")
             insertRefreshToken(ownerId, refresh)
         }
     }
@@ -45,7 +47,7 @@ class SqliteAuthRepository(
                     }.count()
             if (recentCount >= limit) return@write false
             AuthEmailCodes.insert {
-                it[sessionId] = challenge.sessionId
+                it[sessionId] = challenge.sessionId.value
                 it[email] = challenge.email
                 it[code] = challenge.code
                 it[createdAt] = challenge.createdAt
@@ -57,41 +59,41 @@ class SqliteAuthRepository(
         }
 
     override suspend fun verifyChallenge(
-        sessionId: String,
+        sessionId: EmailSessionId,
         code: String,
         now: Long,
         maxAttempts: Int,
-        newOwnerId: String,
+        newOwnerId: OwnerId,
         refresh: RefreshCredential,
     ): CodeVerification =
         database.write {
             val row =
-                AuthEmailCodes.selectAll().where { AuthEmailCodes.sessionId eq sessionId }.singleOrNull()
+                AuthEmailCodes.selectAll().where { AuthEmailCodes.sessionId eq sessionId.value }.singleOrNull()
                     ?: return@write CodeVerification.SessionExpired
             if (row[AuthEmailCodes.consumed] || row[AuthEmailCodes.expiresAt] <= now) return@write CodeVerification.SessionExpired
             val attempts = row[AuthEmailCodes.attempts]
             if (attempts >= maxAttempts) return@write CodeVerification.TooManyAttempts
             if (code != row[AuthEmailCodes.code]) {
                 val nextAttempt = attempts + 1
-                AuthEmailCodes.update({ AuthEmailCodes.sessionId eq sessionId }) { it[AuthEmailCodes.attempts] = nextAttempt }
+                AuthEmailCodes.update({ AuthEmailCodes.sessionId eq sessionId.value }) { it[AuthEmailCodes.attempts] = nextAttempt }
                 return@write if (nextAttempt >= maxAttempts) CodeVerification.TooManyAttempts else CodeVerification.InvalidCode
             }
 
-            AuthEmailCodes.update({ AuthEmailCodes.sessionId eq sessionId }) { it[consumed] = true }
+            AuthEmailCodes.update({ AuthEmailCodes.sessionId eq sessionId.value }) { it[consumed] = true }
             val email = row[AuthEmailCodes.email]
             val ownerId =
                 AuthUsers
                     .selectAll()
                     .where { AuthUsers.email eq email }
                     .singleOrNull()
-                    ?.get(AuthUsers.ownerId)
+                    ?.let { requireNotNull(OwnerId.parse(it[AuthUsers.ownerId])) }
                     ?: newOwnerId.also { insertOwner(it, email) }
             insertRefreshToken(ownerId, refresh)
             CodeVerification.Verified(ownerId)
         }
 
     override suspend fun rotateRefreshToken(
-        ownerId: String,
+        ownerId: OwnerId,
         hashes: Set<String>,
         replacement: RefreshCredential,
         now: Long,
@@ -102,39 +104,39 @@ class SqliteAuthRepository(
                     .selectAll()
                     .where {
                         (AuthRefreshTokens.tokenHash inList hashes) and
-                            (AuthRefreshTokens.ownerId eq ownerId) and
+                            (AuthRefreshTokens.ownerId eq ownerId.value) and
                             (AuthRefreshTokens.revoked eq false) and
                             (AuthRefreshTokens.expiresAt greater now)
                     }.singleOrNull() ?: return@write false
             val hash = row[AuthRefreshTokens.tokenHash]
             AuthRefreshTokens.update({ AuthRefreshTokens.tokenHash eq hash }) { it[revoked] = true }
-            insertRefreshToken(row[AuthRefreshTokens.ownerId], replacement)
+            insertRefreshToken(ownerId, replacement)
             true
         }
 
-    override suspend fun revokeRefreshTokens(ownerId: String) {
+    override suspend fun revokeRefreshTokens(ownerId: OwnerId) {
         database.write {
-            AuthRefreshTokens.update({ AuthRefreshTokens.ownerId eq ownerId }) { it[revoked] = true }
+            AuthRefreshTokens.update({ AuthRefreshTokens.ownerId eq ownerId.value }) { it[revoked] = true }
         }
     }
 
     private fun JdbcTransaction.insertOwner(
-        id: String,
+        id: OwnerId,
         address: String,
     ) {
         AuthUsers.insert {
-            it[ownerId] = id
+            it[ownerId] = id.value
             it[email] = address
         }
     }
 
     private fun JdbcTransaction.insertRefreshToken(
-        owner: String,
+        owner: OwnerId,
         refresh: RefreshCredential,
     ) {
         AuthRefreshTokens.insert {
             it[tokenHash] = refresh.hash
-            it[ownerId] = owner
+            it[ownerId] = owner.value
             it[expiresAt] = refresh.expiresAt
             it[revoked] = false
         }

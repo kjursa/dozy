@@ -1,13 +1,14 @@
 package com.dozy.features.place.domain.model
 
+import com.dozy.domain.id.PlaceId
+
 data class Place(
-    val id: Id,
+    val id: PlaceId,
     val name: Name,
     val description: Description,
     val inhabitants: Inhabitants?,
     val origin: Origin,
 ) {
-    @JvmInline value class Id(val value: String)
     @JvmInline value class Name(val value: String)
     @JvmInline value class Description(val value: String)
     @JvmInline value class Inhabitants(val value: String)
@@ -64,7 +65,7 @@ class SavePlace private constructor(
 }
 
 sealed interface SavePlaceResult {
-    data class Created(val id: Place.Id) : SavePlaceResult
+    data class Created(val id: PlaceId) : SavePlaceResult
     data object NotFound : SavePlaceResult
     data object Updated : SavePlaceResult
     data object Forbidden : SavePlaceResult

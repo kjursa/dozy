@@ -2,33 +2,33 @@ package com.dozy.features.story
 
 import com.dozy.config.DatabaseConfig
 import com.dozy.config.GenerationConfig
-import com.dozy.features.installation.domain.model.InstallationId
+import com.dozy.domain.id.LibraryCursor
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.story.data.database.Stories
 import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.infrastructure.database.SqliteDatabase
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.exposed.v1.jdbc.update
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.time.Clock
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.exposed.v1.jdbc.update
-import org.junit.jupiter.api.io.TempDir
 
 class StoryListingTest {
     private val clock = Clock.systemUTC()
     @TempDir lateinit var directory: Path
-    private val owner = InstallationId("019a0000-0000-7000-8000-000000000010")
-    private val other = InstallationId("019a0000-0000-7000-8000-000000000011")
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000010"))
+    private val other = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000011"))
     private val options = GenerationConfig(delayMillis = 0)
 
     private suspend fun publish(repository: SqliteGenerationRepository) {
-        repository.start(owner, UUID.randomUUID().toString(), "request", command())
+        repository.start(owner, requestKey(), "request", command())
         val execution = assertNotNull(repository.claim())
         assertTrue(repository.saveText(execution, GeneratedText("Title", "word ".repeat(151))))
         assertTrue(repository.publish(execution, byteArrayOf(1)))
@@ -36,7 +36,7 @@ class StoryListingTest {
 
     @Test fun `snapshot freezes lexical ties across publication and database restart`() = runBlocking {
         val config = DatabaseConfig(directory.resolve("library.db").toString(), 5000)
-        lateinit var cursor: String
+        var cursor: LibraryCursor? = null
         lateinit var expected: List<String>
         SqliteDatabase(config).use { database ->
             val repository = SqliteGenerationRepository(database, options, clock)
@@ -44,24 +44,24 @@ class StoryListingTest {
             repeat(5) { publish(repository) }
             database.write { Stories.update { it[createdAt] = 123 } }
             val all = assertNotNull(repository.list(owner, 100, null))
-            expected = all.stories.map { it.id }
+            expected = all.stories.map { it.id.value }
             assertEquals(expected.sorted(), expected)
             assertTrue(all.stories.all { it.readingMinutes == 2 && it.createdAt == 123L })
             val first = assertNotNull(repository.list(owner, 2, null))
-            assertEquals(expected.take(2), first.stories.map { it.id })
+            assertEquals(expected.take(2), first.stories.map { it.id.value })
             cursor = assertNotNull(first.nextCursor)
             publish(repository)
             assertNull(repository.list(other, 2, cursor))
             assertNull(repository.list(owner, 3, cursor))
-            assertNull(repository.list(owner, 2, "malformed /+"))
+            assertNull(repository.list(owner, 2, LibraryCursor.generate()))
         }
         SqliteDatabase(config).use { database ->
             val repository = SqliteGenerationRepository(database, options, clock)
             val second = assertNotNull(repository.list(owner, 2, cursor))
-            assertEquals(expected.drop(2).take(2), second.stories.map { it.id })
+            assertEquals(expected.drop(2).take(2), second.stories.map { it.id.value })
             assertEquals(second, repository.list(owner, 2, cursor))
             val last = assertNotNull(repository.list(owner, 2, second.nextCursor))
-            assertEquals(expected.takeLast(1), last.stories.map { it.id })
+            assertEquals(expected.takeLast(1), last.stories.map { it.id.value })
             assertNull(last.nextCursor)
             assertEquals(6, repository.list(owner, 100, null)?.stories?.size)
             assertTrue(repository.list(other, 100, null)?.stories?.isEmpty() == true)

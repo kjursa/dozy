@@ -1,11 +1,13 @@
 package com.dozy.features.auth.application
 
 import com.dozy.config.AuthSecretProvider
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.RefreshToken
 import com.dozy.features.auth.domain.model.CodeVerification
 import com.dozy.features.auth.domain.model.EmailChallenge
 import com.dozy.features.auth.domain.model.RefreshCredential
 import com.dozy.features.auth.domain.repository.AuthRepository
-import com.dozy.infrastructure.id.Uuids
 import java.time.Clock
 
 class AuthService(
@@ -15,8 +17,8 @@ class AuthService(
     private val clock: Clock,
 ) {
     suspend fun anonymous(): TokenResult.Valid {
-        val ownerId = Uuids.v7()
-        val refreshToken = Uuids.v4()
+        val ownerId = OwnerId.generate()
+        val refreshToken = RefreshToken.generate()
         repository.createAnonymous(ownerId, refreshCredential(refreshToken, clock.millis()))
         return tokens(ownerId, refreshToken)
     }
@@ -25,7 +27,7 @@ class AuthService(
         val email = emailValue.trim().lowercase()
         if (!EMAIL.matches(email) || email.endsWith("@invalid.dozy")) return EmailRequest.InvalidEmail
         val now = clock.millis()
-        val challenge = EmailChallenge(Uuids.v7(), email, FAKE_CODE, now, now + CODE_LIFETIME)
+        val challenge = EmailChallenge(EmailSessionId.generate(), email, FAKE_CODE, now, now + CODE_LIFETIME)
         return if (repository.storeChallenge(challenge, countSince = now - HOUR, limit = 5)) {
             EmailRequest.Accepted(challenge.sessionId)
         } else {
@@ -34,11 +36,11 @@ class AuthService(
     }
 
     suspend fun verify(
-        sessionId: String,
+        sessionId: EmailSessionId,
         code: String,
     ): VerifyResult {
         val now = clock.millis()
-        val refreshToken = Uuids.v4()
+        val refreshToken = RefreshToken.generate()
         return when (
             val result =
                 repository.verifyChallenge(
@@ -46,7 +48,7 @@ class AuthService(
                     code = code,
                     now = now,
                     maxAttempts = 3,
-                    newOwnerId = Uuids.v7(),
+                    newOwnerId = OwnerId.generate(),
                     refresh = refreshCredential(refreshToken, now),
                 )
         ) {
@@ -58,11 +60,11 @@ class AuthService(
     }
 
     suspend fun refresh(
-        ownerId: String,
-        refreshToken: String,
+        ownerId: OwnerId,
+        refreshToken: RefreshToken,
     ): TokenResult {
         val now = clock.millis()
-        val replacement = Uuids.v4()
+        val replacement = RefreshToken.generate()
         val rotated =
             repository.rotateRefreshToken(
                 ownerId = ownerId,
@@ -73,16 +75,16 @@ class AuthService(
         return if (rotated) tokens(ownerId, replacement) else TokenResult.Invalid
     }
 
-    suspend fun logout(ownerId: String) = repository.revokeRefreshTokens(ownerId)
+    suspend fun logout(ownerId: OwnerId) = repository.revokeRefreshTokens(ownerId)
 
     private fun refreshCredential(
-        token: String,
+        token: RefreshToken,
         now: Long,
     ): RefreshCredential = RefreshCredential(secrets.hashRefreshToken(token), now + REFRESH_LIFETIME)
 
     private fun tokens(
-        ownerId: String,
-        refreshToken: String,
+        ownerId: OwnerId,
+        refreshToken: RefreshToken,
     ): TokenResult.Valid = TokenResult.Valid(ownerId, accessTokens.issue(ownerId), refreshToken)
 
     private companion object {
@@ -96,7 +98,7 @@ class AuthService(
 
 sealed interface EmailRequest {
     data class Accepted(
-        val sessionId: String,
+        val sessionId: EmailSessionId,
     ) : EmailRequest
 
     data object InvalidEmail : EmailRequest
@@ -118,9 +120,9 @@ sealed interface VerifyResult {
 
 sealed interface TokenResult {
     data class Valid(
-        val ownerId: String,
+        val ownerId: OwnerId,
         val accessToken: String,
-        val refreshToken: String,
+        val refreshToken: RefreshToken,
     ) : TokenResult
 
     data object Invalid : TokenResult

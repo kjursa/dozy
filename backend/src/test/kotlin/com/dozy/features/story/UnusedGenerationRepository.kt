@@ -1,11 +1,15 @@
 package com.dozy.features.story
 
-import com.dozy.features.installation.domain.model.InstallationId
-import com.dozy.features.story.domain.model.RetrySubmission
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.JobId
+import com.dozy.domain.id.LibraryCursor
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.StoryId
 import com.dozy.features.story.domain.model.Execution
 import com.dozy.features.story.domain.model.Failure
 import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.Job
+import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryPage
@@ -14,12 +18,12 @@ import com.dozy.features.story.domain.repository.GenerationRepository
 
 /** Keeps unrelated route DI tests independent of background storage. */
 class UnusedGenerationRepository : GenerationRepository {
-    override suspend fun list(installation: InstallationId, limit: Int, cursor: String?): StoryPage? = error("unused")
+    override suspend fun list(ownerId: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage? = error("unused")
     override suspend fun claim(): Execution? = null
-    override suspend fun start(installation: InstallationId, key: String, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
-    override suspend fun retry(installation: InstallationId, id: String, key: String): RetrySubmission = error("Unused")
-    override suspend fun status(installation: InstallationId, id: String): Job? = error("Unused")
-    override suspend fun read(installation: InstallationId, id: String): SavedStory? = error("Unused")
+    override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
+    override suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = error("Unused")
+    override suspend fun status(ownerId: OwnerId, id: JobId): Job? = error("Unused")
+    override suspend fun read(ownerId: OwnerId, id: StoryId): SavedStory? = error("Unused")
     override suspend fun renew(execution: Execution): Boolean = error("Unused")
     override suspend fun saveText(execution: Execution, text: GeneratedText): Boolean = error("Unused")
     override suspend fun publish(execution: Execution, cover: ByteArray): Boolean = error("Unused")

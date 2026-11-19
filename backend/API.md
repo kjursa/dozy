@@ -35,10 +35,26 @@ For example, characters now support deletion, and full story responses include
   Ktor validates the JWT and uses its subject as the owner for reads and writes.
   Missing or invalid credentials return `401`. Pre-authentication routes and refresh
   are described in [Authentication](login.md).
-- Character IDs are canonical UUIDv7 strings (case normalized at the boundary).
-  Custom place IDs are opaque strings; predefined places use `builtin:` IDs. Encode path IDs as
-  one path segment. New story/job/asset IDs are backend-generated UUIDv7 strings. Avatar job IDs use
-  the same alphabet; a 128-character cap is a proposed server convention.
+- Identifiers are strings. Encode IDs as single path segments and pass them back
+  unchanged. The backend uses the following prefixes for generated values:
+
+  | Value | Format |
+  | --- | --- |
+  | Owner | `owner-<uuidv7>` |
+  | Email verification session | `sess-<uuidv7>` |
+  | Refresh token | `ref-<uuidv4>` |
+  | Character | `char-<uuidv7>` |
+  | Custom place | `place-<uuidv7>` |
+  | Asset | `asset-<uuidv7>` |
+  | Avatar job | `avjob-<uuidv7>` |
+  | Story generation job | `job-<uuidv7>` |
+  | Story | `story-<uuidv7>` |
+  | Library cursor | `cur-<uuidv4>` |
+
+  Built-in places retain their `builtin:` IDs. Clients send an unprefixed UUIDv4
+  in `Idempotency-Key`. Internal execution IDs, snapshot IDs and lease tokens use
+  `genid-`, `snap-` and `lease-`, respectively. Start with a fresh SQLite database
+  and fresh development sessions when switching from unprefixed IDs.
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
   unless a specific operation requires omission. Responses must preserve required
   fields even if the server serializer normally omits defaults.
@@ -107,12 +123,12 @@ owner identified by the access token; access JWTs remain valid until their 20-mi
 
 ```json
 {
-  "id": "hero-1",
+  "id": "char-019a0000-0000-7000-8000-000000000001",
   "name": "Luna",
   "personality": "Kind and curious",
   "appearance": "Red hair and a green coat",
   "type": "CHILD",
-  "avatar": {"id":"asset-1","url":"https://assets.example.test/asset-1.png"}
+  "avatar": {"id":"asset-019a0000-0000-7000-8000-000000000002","url":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000002.png"}
 }
 ```
 
@@ -146,7 +162,7 @@ structural error. A minimal request is:
 {"name":"Luna","personality":"Kind","appearance":"Green coat","type":"CHILD"}
 ```
 
-POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. An optional UUIDv4
+POST assigns a character ID and returns `201 {"id":"char-<uuidv7>"}`. An optional UUIDv4
 `Idempotency-Key` header returns the original ID on a retry with the same
 normalized values. A different payload with the same key returns
 `409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the owner and resource type.
@@ -160,7 +176,7 @@ Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
 flat validation codes such as `validation.name.too_long` from the shared
 `CharactersSaveError` contract for business
 input; 404 `CHARACTER_NOT_FOUND` for a PUT to a missing ID; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
-READY asset's ID and URL; 409 `CONFLICT` for another installation's or permanently
+READY asset's ID and URL; 409 `CONFLICT` for another owner's or permanently
 deleted ID. The name reasons are REQUIRED, TOO_LONG and SINGLE_LINE; personality
 and appearance support REQUIRED / TOO_LONG; type supports INVALID_VALUE.
 
@@ -185,7 +201,7 @@ Implemented with an injected deterministic PNG fake; no external model is called
 Name is not submitted. Validate type and current description rules. Return `202`:
 
 ```json
-{"jobId":"avatar-job-1","status":"QUEUED","asset":null,"error":null}
+{"jobId":"avjob-019a0000-0000-7000-8000-000000000003","status":"QUEUED","asset":null,"error":null}
 ```
 
 Persist the job and request before acknowledging. Generation is asynchronous and
@@ -199,7 +215,7 @@ provider execution or charges. Retrying/polling limits do not cancel server work
 Return `200` with the same envelope. Status: `QUEUED`, `RUNNING`, `READY`, `FAILED`.
 
 ```json
-{"jobId":"avatar-job-1","status":"READY","asset":{"id":"asset-1","url":"https://assets.example.test/asset-1.png"},"error":null}
+{"jobId":"avjob-019a0000-0000-7000-8000-000000000003","status":"READY","asset":{"id":"asset-019a0000-0000-7000-8000-000000000002","url":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000002.png"},"error":null}
 ```
 
 READY requires a complete durable asset; FAILED carries the contract code in **`error`**
@@ -252,7 +268,7 @@ known local data; there is no GET-by-ID requirement.
 Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
 Both methods accept `name`, `description`, and optional `inhabitants`.
-POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. The backend assigns
+POST assigns a place ID and returns `201 {"id":"place-<uuidv7>"}`. The backend assigns
 `origin: "USER"` and computes `editable`. POST supports the same optional
 `Idempotency-Key` header as character creation.
 
@@ -284,7 +300,7 @@ remain readable even if write limits change.
 | 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
 | 404 | `place.not_found` | PUT references a missing custom place |
 | 409 | `IDEMPOTENCY_CONFLICT` | The creation key was used with different input |
-| 409 | `place.conflict` | Custom ID belongs to another installation |
+| 409 | `place.conflict` | Custom ID belongs to another owner |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
 
 Places SDK operations expose their own Success/ApiError/TechnicalError result.
@@ -304,7 +320,7 @@ multi-device reconciliation is not defined; no version precondition is submitted
 
 ```json
 {
-  "cast":[{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
+  "cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
   "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","inhabitants":null,"origin":"SYSTEM","editable":false},
@@ -330,16 +346,16 @@ requests rather than silently making hidden fields affect generation.
 ### POST /api/v1/story-generations
 
 Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
-`202 {"jobId":"job-1","status":"QUEUED"}` after durable acceptance.
+`202 {"jobId":"job-019a0000-0000-7000-8000-000000000004","status":"QUEUED"}` after durable acceptance.
 
-- Atomically bind the installation/key to the accepted request and job. Identical replays
+- Atomically bind the owner and idempotency key to the accepted request and job. Identical replays
   return 202 with the same job and current execution status, even after completion.
 - A different body for the same key returns `409 IDEMPOTENCY_CONFLICT`. Define a
   deterministic canonical representation preserving array order and omission;
   object key ordering must not affect equality. Store the request and fingerprint.
 - Retain bindings for the lifetime of the job/story. Check replay bindings **before**
   rejecting a new active job, so replaying an active job succeeds.
-- Allow at most one active story job per installation (`QUEUED`, `CREATING_TEXT`,
+- Allow at most one active story job per owner (`QUEUED`, `CREATING_TEXT`,
   `CREATING_COVER`); a new conflicting job returns `409 ACTIVE_JOB_EXISTS`.
 - Other documented errors: `400 INVALID_REQUEST`, `401 UNAUTHORIZED`,
   `404 REFERENCE_UNAVAILABLE`, `429 RATE_LIMITED`, `503 GENERATION_UNAVAILABLE`.
@@ -351,7 +367,7 @@ Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
 No body. Return 200 with a stage, not a percentage:
 
 ```json
-{"jobId":"job-1","status":"CREATING_TEXT"}
+{"jobId":"job-019a0000-0000-7000-8000-000000000004","status":"CREATING_TEXT"}
 ```
 
 Allowed stages: `QUEUED`, `CREATING_TEXT`, `CREATING_COVER`, `READY`, `FAILED`.
@@ -388,11 +404,11 @@ Return 200:
 
 ```json
 {
-  "id":"story-1",
+  "id":"story-019a0000-0000-7000-8000-000000000005",
   "title":"A lost star",
   "text":"Once upon a time…",
-  "coverUrl":"https://assets.example.test/story-1.png",
-  "configuration":{"cast":[{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],"mode":"AUTOMATIC","length":"SHORT"},
+  "coverUrl":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png",
+  "configuration":{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],"mode":"AUTOMATIC","length":"SHORT"},
   "createdAt":1794355200000
 }
 ```
@@ -410,7 +426,7 @@ No body. First page omits cursor. Return 200:
 
 ```json
 {
-  "stories":[{"id":"story-1","title":"A lost star","coverUrl":"https://assets.example.test/story-1.png","readingMinutes":4,"createdAt":1794355200000}],
+  "stories":[{"id":"story-019a0000-0000-7000-8000-000000000005","title":"A lost star","coverUrl":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png","readingMinutes":4,"createdAt":1794355200000}],
   "nextCursor":null
 }
 ```
@@ -423,7 +439,7 @@ lexical ordering consistently rather than locale-dependent sorting.
 Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 `validation.limit.invalid_value`. Every page belongs
 to the same stable snapshot, with no repeated IDs; stories published mid-pagination
 appear on a later refresh, not halfway through the current traversal. Cursor is
-opaque, URL-encoded, installation-bound and validated; last page omits it or returns null.
+opaque, URL-encoded, bound to the owner and validated; last page omits it or returns null.
 Errors: `400 INVALID_CURSOR`, `401` for missing or invalid access tokens, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
 concrete snapshot implementation.
 
@@ -473,24 +489,24 @@ even as null. Validation returns shared error objects with flat 422 codes, e.g.
 `validation.cast.required`: cast supports REQUIRED
 and INVALID_VALUE; idea/ending support TOO_LONG.
 
-Bindings include installation, operation, UUIDv4 key, original canonical request
+Bindings include the owner ID, operation, UUIDv4 key, original canonical request
 and UUIDv7 logical job. JSON object keys are sorted recursively; array order and
 null versus omission remain significant. Replay returns the same job's current
 status before checking the active limit or live references. Changed content under
 the key returns 409 `IDEMPOTENCY_CONFLICT`. Another key while a job is active returns
-409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per installation.
+409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per owner.
 
 Stages are QUEUED → CREATING_TEXT → CREATING_COVER → READY, or FAILED. READY exposes
 storyId only after text, cover and story are committed together. FAILED carries
 `CONTENT_REJECTED` or `GENERATION_FAILED` in errorCode; no other stage carries it.
 Text/title/ID/configuration/createdAt/cover are immutable. createdAt is nonnegative
 UTC epoch milliseconds. The same cover URL serves the library thumbnail and reader.
-`GET /api/v1/assets/{assetId}` returns local `image/png` bytes, requires the installation
-header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
+`GET /api/v1/assets/{assetId}` returns local `image/png` bytes, requires a bearer access
+token, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-installation and limit-mismatched tokens return INVALID_CURSOR.
+Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-owner and limit-mismatched tokens return INVALID_CURSOR.
 
 Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing
@@ -498,7 +514,7 @@ SUCCESS, FAILURE, CONTENT_REJECTED and cover modes remain available.
 
 ## API2 asset delivery and recovery
 
-Missing and other-installation avatar jobs both return 404 `AVATAR_JOB_NOT_FOUND`.
+Requests for missing avatar jobs or jobs owned by someone else return 404 `AVATAR_JOB_NOT_FOUND`.
 FAILED observations return HTTP 200 with `error: "GENERATION_FAILED"`, no asset,
 and no story `errorCode`. QUEUED/RUNNING contain neither asset nor error; READY
 contains one complete asset and no error. The shared client validates combinations.
