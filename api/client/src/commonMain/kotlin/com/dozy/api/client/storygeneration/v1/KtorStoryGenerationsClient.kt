@@ -1,7 +1,6 @@
 package com.dozy.api.client.storygeneration.v1
 
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.clientJson
 import com.dozy.api.client.communicate
@@ -29,12 +28,10 @@ import io.ktor.http.contentType
 internal class KtorStoryGenerationsClient(
     private val http: HttpClient,
     private val config: DozyClientConfig,
-    private val installations: InstallationIdProvider,
 ) : StoryGenerationsClient {
     override suspend fun start(idempotencyKey: String, request: GenerationRequestDto): GenerationStartResult = communicate(GenerationStartResult::TechnicalError) {
         val response = http.post(config.endpoint(ApiVersion.V1, "story-generations")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             header("Idempotency-Key", idempotencyKey)
             contentType(ContentType.Application.Json)
             setBody(request.toRequestBody().toString())
@@ -50,7 +47,6 @@ internal class KtorStoryGenerationsClient(
     override suspend fun retry(jobId: String, idempotencyKey: String): GenerationRetryResult = communicate(GenerationRetryResult::TechnicalError) {
         val response = http.post(config.endpoint(ApiVersion.V1, "story-generations")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             header("Idempotency-Key", idempotencyKey)
             url { appendPathSegments(jobId, "retry", encodeSlash = true) }
         }
@@ -65,7 +61,6 @@ internal class KtorStoryGenerationsClient(
     override suspend fun status(jobId: String): GenerationStatusResult = communicate(GenerationStatusResult::TechnicalError) {
         val response = http.get(config.endpoint(ApiVersion.V1, "story-generations")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(jobId, encodeSlash = true) }
         }
         if (response.status.value in 200..299) {

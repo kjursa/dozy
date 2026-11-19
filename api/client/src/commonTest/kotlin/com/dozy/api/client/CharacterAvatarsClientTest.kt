@@ -17,13 +17,13 @@ import kotlinx.serialization.json.jsonObject
 
 class CharacterAvatarsClientTest {
     private val input = AvatarRequestDto("CHILD", "kind", "eyes")
-    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "installation" }).characterAvatars.v1
+    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test")).characterAvatars.v1
 
     @Test fun eachMethodSendsOneRequestAndFailedJobIsSuccess() = runTest {
         var requests = 0
         val http = HttpClient(MockEngine { request ->
             requests++
-            assertEquals("installation", request.headers["X-Installation-Id"])
+
             when (requests) {
                 1 -> {
                     assertEquals("POST", request.method.value)

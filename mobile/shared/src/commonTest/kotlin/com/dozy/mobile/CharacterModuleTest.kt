@@ -3,7 +3,6 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
@@ -66,7 +65,7 @@ class CharacterModuleTest {
             val platformModule =
                 module {
                     single { ApiConfig(baseUrl = null) }
-                    single<InstallationIdProvider> { InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" } }
+
                     single<CharacterDao> { dao }
                     single<PlaceDao> { FakePlaceDao() }
                     single { BundledPlaces(listOf(place("builtin:woods", "Woods", false))) }

@@ -7,19 +7,33 @@ import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
-import com.dozy.mobile.feature.story.data.*
-import com.dozy.mobile.feature.story.data.api.*
-import com.dozy.mobile.feature.story.domain.model.*
-import com.dozy.mobile.feature.story.domain.usecase.*
-import com.dozy.mobile.feature.story.presentation.create.*
+import com.dozy.mobile.feature.story.data.api.GenerationApi
+import com.dozy.mobile.feature.story.data.testGenerationRepository
+import com.dozy.mobile.feature.story.domain.model.GenerationInput
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
+import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
+import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryDestination
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.navigation.AppNavigator
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
-import io.ktor.client.engine.mock.*
-import io.ktor.http.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.*
-import kotlinx.serialization.json.*
-import org.junit.Assert.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -70,6 +84,7 @@ class GenerationRestorationTest {
 
                 fun vm(handle: SavedStateHandle) =
                     CreateStoryViewModel(
+                        AppNavigator(),
                         SavedStatePersistence(handle, CreateStoryUiState.serializer()),
                         null,
                         SelectPlace(places),
@@ -109,7 +124,7 @@ class GenerationRestorationTest {
                 assertNull(restored.uiState.value.submissionError)
                 restored.dispatch(CreateStoryAction.Submit)
                 advanceUntilIdle()
-                assertEquals(CreateStoryEffect.Accepted("job"), restored.effects.first())
+                assertEquals(CreateStoryDestination.Accepted("job"), restored.navigator.commands.first())
                 assertEquals(1, keys)
                 restored.dispatch(CreateStoryAction.Submit)
                 advanceUntilIdle()

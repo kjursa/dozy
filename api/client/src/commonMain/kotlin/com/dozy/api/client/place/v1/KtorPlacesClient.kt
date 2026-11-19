@@ -1,7 +1,6 @@
 package com.dozy.api.client.place.v1
 
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.communicate
 import com.dozy.api.contracts.ApiVersion
@@ -12,7 +11,6 @@ import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -24,7 +22,6 @@ import kotlinx.serialization.json.Json
 internal class KtorPlacesClient(
     private val http: HttpClient,
     private val config: DozyClientConfig,
-    private val installations: InstallationIdProvider,
 ) : PlacesClient {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -34,7 +31,6 @@ internal class KtorPlacesClient(
     override suspend fun list(): PlacesListResult = communicate(PlacesListResult::TechnicalError) {
         val response = http.get(config.endpoint(ApiVersion.V1, "places")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
         }
         if (response.status.value == 200) {
             PlacesListResult.Success(json.decodeFromString<PlacesResponse>(response.bodyAsText()))
@@ -51,7 +47,6 @@ internal class KtorPlacesClient(
         require(id.isNotBlank())
         val response = http.put(config.endpoint(ApiVersion.V1, "places")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(id, encodeSlash = true) }
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(request))

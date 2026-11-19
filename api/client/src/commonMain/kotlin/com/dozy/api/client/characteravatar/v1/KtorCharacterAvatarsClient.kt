@@ -1,7 +1,6 @@
 package com.dozy.api.client.characteravatar.v1
 
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.InvalidResponseException
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.communicate
@@ -14,7 +13,6 @@ import com.dozy.api.contracts.v1.characteravatar.AvatarStatusError
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -28,14 +26,12 @@ import kotlinx.serialization.json.Json
 internal class KtorCharacterAvatarsClient(
     private val http: HttpClient,
     private val config: DozyClientConfig,
-    private val installations: InstallationIdProvider,
 ) : CharacterAvatarsClient {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     override suspend fun start(request: AvatarRequestDto): AvatarStartResult = communicate(AvatarStartResult::TechnicalError) {
         val response = http.post(config.endpoint(ApiVersion.V1, "character-avatars")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(request))
         }
@@ -47,7 +43,6 @@ internal class KtorCharacterAvatarsClient(
         require(jobId.isNotBlank())
         val response = http.get(config.endpoint(ApiVersion.V1, "character-avatars")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(jobId, encodeSlash = true) }
         }
         if (response.status.value in 200..299) return@communicate AvatarStatusResult.Success(response.job().also {

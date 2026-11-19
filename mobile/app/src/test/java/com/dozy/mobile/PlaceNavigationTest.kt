@@ -15,6 +15,7 @@ import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.navigation.AppNavigator
 import com.dozy.mobile.navigation.CREATE_CHARACTER_ROUTE
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.GENERATION_ROUTE
@@ -113,6 +114,7 @@ class PlaceNavigationTest {
         val story = nav.currentBackStackEntry
         val draft =
             CreateStoryViewModel(
+                AppNavigator(),
                 object : StatePersistence<CreateStoryUiState> {
                     override fun restore(defaultState: CreateStoryUiState) = defaultState
 
@@ -174,6 +176,7 @@ class PlaceNavigationTest {
         val story = nav.currentBackStackEntry
         val draft =
             CreateStoryViewModel(
+                AppNavigator(),
                 object : StatePersistence<CreateStoryUiState> {
                     override fun restore(defaultState: CreateStoryUiState) = defaultState
 

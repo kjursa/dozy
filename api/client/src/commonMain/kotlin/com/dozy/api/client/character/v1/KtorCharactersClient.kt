@@ -1,7 +1,6 @@
 package com.dozy.api.client.character.v1
 
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.communicate
 import com.dozy.api.contracts.ApiVersion
@@ -14,7 +13,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -26,7 +24,6 @@ import kotlinx.serialization.json.Json
 internal class KtorCharactersClient(
     private val http: HttpClient,
     private val config: DozyClientConfig,
-    private val installations: InstallationIdProvider,
 ) : CharactersClient {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -36,7 +33,6 @@ internal class KtorCharactersClient(
     override suspend fun list(): CharactersListResult = communicate(CharactersListResult::TechnicalError) {
         val response = http.get(config.endpoint(ApiVersion.V1, "characters")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
         }
         if (response.status.value in 200..299) {
             return@communicate CharactersListResult.Success(json.decodeFromString<List<CharacterDto>>(response.bodyAsText()))
@@ -48,7 +44,6 @@ internal class KtorCharactersClient(
         require(id.isNotBlank())
         val response = http.put(config.endpoint(ApiVersion.V1, "characters")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(id, encodeSlash = true) }
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(request))
@@ -61,7 +56,6 @@ internal class KtorCharactersClient(
         require(id.isNotBlank())
         val response = http.delete(config.endpoint(ApiVersion.V1, "characters")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(id, encodeSlash = true) }
         }
         if (response.status.value in 200..299) return@communicate CharactersDeleteResult.Success

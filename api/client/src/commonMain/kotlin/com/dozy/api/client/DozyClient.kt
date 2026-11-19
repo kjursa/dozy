@@ -3,6 +3,13 @@ package com.dozy.api.client
 import com.dozy.api.client.characteravatar.CharacterAvatarsClients
 import com.dozy.api.client.characteravatar.DefaultCharacterAvatarsClients
 import com.dozy.api.client.characteravatar.v1.KtorCharacterAvatarsClient
+import com.dozy.api.client.auth.AuthClients
+import com.dozy.api.client.auth.AuthSessionManager
+import com.dozy.api.client.auth.AuthSessionStorage
+import com.dozy.api.client.auth.DefaultAuthClients
+import com.dozy.api.client.auth.InMemoryAuthSessionStorage
+import com.dozy.api.client.auth.ManagedAuthClient
+import com.dozy.api.client.auth.v1.KtorAuthClient
 import com.dozy.api.client.character.CharactersClients
 import com.dozy.api.client.character.DefaultCharactersClients
 import com.dozy.api.client.character.v1.KtorCharactersClient
@@ -19,15 +26,26 @@ import com.dozy.api.contracts.ApiVersion
 import io.ktor.client.HttpClient
 
 class DozyClient(
-    httpClient: HttpClient,
+    private val httpClient: HttpClient,
     config: DozyClientConfig,
-    installationIdProvider: InstallationIdProvider,
-) {
-    val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(httpClient, config, installationIdProvider))
-    val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(httpClient, config, installationIdProvider))
-    val characterAvatars: CharacterAvatarsClients = DefaultCharacterAvatarsClients(KtorCharacterAvatarsClient(httpClient, config, installationIdProvider))
-    val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(httpClient, config, installationIdProvider))
-    val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(httpClient, config, installationIdProvider))
+    sessionStorage: AuthSessionStorage = InMemoryAuthSessionStorage(),
+) : AutoCloseable {
+    private val authClient = KtorAuthClient(httpClient, config)
+    val sessionManager = AuthSessionManager(authClient, sessionStorage)
+    val auth: AuthClients = DefaultAuthClients(ManagedAuthClient(authClient, sessionManager))
+    val assetHttpClient: HttpClient = if (config.baseUrl != null) httpClient.config {
+        followRedirects = false
+        install(ownerAuthorization(config.baseUrl, sessionManager))
+    } else httpClient
+    val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(assetHttpClient, config))
+    val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(assetHttpClient, config))
+    val characterAvatars: CharacterAvatarsClients = DefaultCharacterAvatarsClients(KtorCharacterAvatarsClient(assetHttpClient, config))
+    val characters: CharactersClients = DefaultCharactersClients(KtorCharactersClient(assetHttpClient, config))
+    val places: PlacesClients = DefaultPlacesClients(KtorPlacesClient(assetHttpClient, config))
+
+    override fun close() {
+        if (assetHttpClient !== httpClient) assetHttpClient.close()
+    }
 }
 
 data class DozyClientConfig(
@@ -42,10 +60,6 @@ data class DozyClientConfig(
         val base = baseUrl ?: throw ApiDisabledException()
         return "${base.trimEnd('/')}${version.path}/$resource"
     }
-}
-
-fun interface InstallationIdProvider {
-    fun get(): String
 }
 
 class ApiDisabledException : IllegalStateException("Dozy API is disabled")

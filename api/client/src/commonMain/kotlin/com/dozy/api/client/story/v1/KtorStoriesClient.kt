@@ -1,7 +1,6 @@
 package com.dozy.api.client.story.v1
 
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.clientJson
 import com.dozy.api.client.communicate
@@ -17,7 +16,6 @@ import com.dozy.api.contracts.v1.story.StoryReadError
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.URLProtocol
@@ -27,12 +25,10 @@ import io.ktor.http.appendPathSegments
 internal class KtorStoriesClient(
     private val http: HttpClient,
     private val config: DozyClientConfig,
-    private val installations: InstallationIdProvider,
 ) : StoriesClient {
     override suspend fun list(request: ListStoriesRequest): StoryListResult = communicate(StoryListResult::TechnicalError) {
         val response = http.get(config.endpoint(ApiVersion.V1, "stories")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             parameter("limit", request.limit)
             request.cursor?.let { parameter("cursor", it) }
         }
@@ -55,7 +51,6 @@ internal class KtorStoriesClient(
     override suspend fun read(storyId: String): StoryReadResult = communicate(StoryReadResult::TechnicalError) {
         val response = http.get(config.endpoint(ApiVersion.V1, "stories")) {
             expectSuccess = false
-            header("X-Installation-Id", installations.get())
             url { appendPathSegments(storyId, encodeSlash = true) }
         }
         if (response.status.value in 200..299) {

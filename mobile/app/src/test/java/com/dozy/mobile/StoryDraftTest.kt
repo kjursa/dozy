@@ -7,9 +7,10 @@ import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryAction
-import com.dozy.mobile.feature.story.presentation.create.CreateStoryEffect
+import com.dozy.mobile.feature.story.presentation.create.CreateStoryDestination
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryUiState
 import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
+import com.dozy.mobile.navigation.AppNavigator
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +43,7 @@ class StoryDraftTest {
         handle: SavedStateHandle,
         initial: String? = null,
     ) = CreateStoryViewModel(
+        AppNavigator(),
         SavedStatePersistence(handle, CreateStoryUiState.serializer()),
         initial,
         SelectPlace(FakePlaceRepository()),
@@ -63,11 +65,11 @@ class StoryDraftTest {
             draft.dispatch(CreateStoryAction.Hero("2"))
             draft.dispatch(CreateStoryAction.Length(1))
             val before = draft.uiState.value
-            val open = async { draft.effects.first() }
+            val open = async { draft.navigator.commands.first() }
             draft.dispatch(CreateStoryAction.ChoosePlace)
             draft.dispatch(CreateStoryAction.ChoosePlace)
             advanceUntilIdle()
-            assertEquals(CreateStoryEffect.OpenPlaces, open.await())
+            assertEquals(CreateStoryDestination.OpenPlaces, open.await())
             // Back from Places has no draft action and leaves every input intact.
             assertEquals(before, draft.uiState.value)
             draft.dispatch(CreateStoryAction.Setting("custom"))
@@ -88,6 +90,7 @@ class StoryDraftTest {
             val handle = SavedStateHandle()
             val draft =
                 CreateStoryViewModel(
+                    AppNavigator(),
                     SavedStatePersistence(handle, CreateStoryUiState.serializer()),
                     null,
                     SelectPlace(FakePlaceRepository()),

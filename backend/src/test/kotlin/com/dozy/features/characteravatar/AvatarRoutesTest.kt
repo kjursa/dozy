@@ -1,5 +1,6 @@
 package com.dozy.features.characteravatar
 
+import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.characteravatar.AvatarField
@@ -10,7 +11,6 @@ import com.dozy.config.FakeAvatarMode
 import com.dozy.databaseConfig
 import com.dozy.module
 import io.ktor.client.request.get
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -45,14 +45,14 @@ class AvatarRoutesTest {
             module()
         }
         val accepted = client.post("/api/v1/character-avatars") {
-            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request)
+            asOwner(owner); contentType(ContentType.Application.Json); setBody(request)
         }
         assertEquals(HttpStatusCode.Accepted, accepted.status)
         var job = Json.decodeFromString<AvatarJobDto>(accepted.bodyAsText())
         assertEquals("QUEUED", job.status)
         assertNull(job.asset); assertNull(job.error)
         for (attempt in 0 until 100) {
-            val status = client.get("/api/v1/character-avatars/${job.jobId}") { header("X-Installation-Id", owner) }
+            val status = client.get("/api/v1/character-avatars/${job.jobId}") { asOwner(owner) }
             assertEquals(HttpStatusCode.OK, status.status)
             job = Json.decodeFromString(status.bodyAsText())
             if (job.status == "READY") break
@@ -60,22 +60,24 @@ class AvatarRoutesTest {
         }
         assertEquals("READY", job.status)
         val asset = assertNotNull(job.asset)
-        val image = client.get("/assets/${asset.id}")
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/assets/${asset.id}").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/assets/${asset.id}") { asOwner(stranger) }.status)
+        val image = client.get("/assets/${asset.id}") { asOwner(owner) }
         assertEquals(HttpStatusCode.OK, image.status)
         assertEquals("image/png", image.headers["Content-Type"])
         assertEquals(64, ImageIO.read(ByteArrayInputStream(image.bodyAsBytes())).height)
-        assertEquals(HttpStatusCode.NotFound, client.get("/assets/unknown").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/assets/unknown") { asOwner(owner) }.status)
         for (id in listOf(job.jobId, "unknown")) {
-            val missing = client.get("/api/v1/character-avatars/$id") { header("X-Installation-Id", stranger) }
+            val missing = client.get("/api/v1/character-avatars/$id") { asOwner(stranger) }
             assertEquals(HttpStatusCode.NotFound, missing.status)
             assertEquals("AVATAR_JOB_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(missing.bodyAsText()).code)
         }
         val character = """{"name":"Hero","type":"CHILD","personality":"Kind","appearance":"Green eyes","avatar":${Json.encodeToString(asset)}}"""
         assertEquals(HttpStatusCode.Created, client.put("/api/v1/characters/${job.jobId}") {
-            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(character)
+            asOwner(owner); contentType(ContentType.Application.Json); setBody(character)
         }.status)
         val invalid = client.post("/api/v1/character-avatars") {
-            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request.replace("Kind", ""))
+            asOwner(owner); contentType(ContentType.Application.Json); setBody(request.replace("Kind", ""))
         }
         assertEquals(HttpStatusCode.UnprocessableEntity, invalid.status)
         assertEquals(AvatarStartError.Validation(AvatarField.PERSONALITY, ValidationReason.REQUIRED), Json.decodeFromString<AvatarStartError>(invalid.bodyAsText()))
@@ -88,11 +90,11 @@ class AvatarRoutesTest {
             module()
         }
         val accepted = client.post("/api/v1/character-avatars") {
-            header("X-Installation-Id", owner); contentType(ContentType.Application.Json); setBody(request)
+            asOwner(owner); contentType(ContentType.Application.Json); setBody(request)
         }
         var job = Json.decodeFromString<AvatarJobDto>(accepted.bodyAsText())
         for (attempt in 0 until 100) {
-            val status = client.get("/api/v1/character-avatars/${job.jobId}") { header("X-Installation-Id", owner) }
+            val status = client.get("/api/v1/character-avatars/${job.jobId}") { asOwner(owner) }
             assertEquals(HttpStatusCode.OK, status.status)
             job = Json.decodeFromString(status.bodyAsText())
             if (job.status == "FAILED") break

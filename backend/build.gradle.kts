@@ -11,9 +11,15 @@ repositories {
 val ktorVersion = "3.6.0"
 val exposedVersion = "1.6.1"
 
+val jwtVersion = "0.13.0"
+
 dependencies {
     implementation("com.dozy.api:contracts:0.1.0")
+    implementation("io.jsonwebtoken:jjwt-api:$jwtVersion")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:$jwtVersion")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jwtVersion")
     implementation("io.ktor:ktor-server-core:$ktorVersion")
+    implementation("io.ktor:ktor-server-auth:$ktorVersion")
     implementation("io.ktor:ktor-server-config-yaml:$ktorVersion")
     implementation("io.ktor:ktor-server-di:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")

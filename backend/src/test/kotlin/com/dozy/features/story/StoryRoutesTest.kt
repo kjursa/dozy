@@ -1,5 +1,6 @@
 package com.dozy.features.story
 
+import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
@@ -35,10 +36,10 @@ class StoryRoutesTest {
     private val request = """{"cast":[{"id":"019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"bundled:moon","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
     private val json = Json { ignoreUnknownKeys = true }
     private suspend fun HttpClient.start(body: String = request, key: String = UUID.randomUUID().toString()) = post("/api/v1/story-generations") {
-        header("X-Installation-Id", owner); header("Idempotency-Key", key)
+        asOwner(owner); header("Idempotency-Key", key)
         contentType(ContentType.Application.Json); setBody(body)
     }
-    private suspend fun HttpClient.read(path: String, installation: String = owner) = get(path) { header("X-Installation-Id", installation) }
+    private suspend fun HttpClient.read(path: String, installation: String = owner) = get(path) { asOwner(installation) }
 
     @Test fun `listing defaults empty and rejects invalid limits and cursors`() = testApplication {
         environment { config = databaseConfig(directory) }
@@ -58,7 +59,7 @@ class StoryRoutesTest {
         val original = UUID.randomUUID().toString()
         val job = json.decodeFromString<GenerationAcceptedDto>(client.start(key = original).bodyAsText())
         suspend fun retry(key: String, id: String = job.jobId, installation: String = owner) = client.post("/api/v1/story-generations/$id/retry") {
-            header("X-Installation-Id", installation)
+            asOwner(installation)
             header("Idempotency-Key", key)
         }
         suspend fun awaitStage(stage: String) = withTimeout(10000) {
@@ -113,7 +114,7 @@ class StoryRoutesTest {
         val path = URI(story.coverUrl).path
         assertEquals("image/png", client.read(path).headers["Content-Type"]?.substringBefore(';'))
         assertEquals("ASSET_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(client.read(path, stranger).bodyAsText()).code)
-        assertEquals(HttpStatusCode.BadRequest, client.get(path).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.get(path).status)
     }
     @Test fun `structural errors domain validation historical text and null versus omitted binding`() = testApplication {
         environment { config = databaseConfig(directory) }

@@ -1,5 +1,7 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.auth.InMemoryAuthSessionStorage
+import com.dozy.api.client.auth.StoredAuthSession
 import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
@@ -25,13 +27,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 class DozyClientTest {
-    private val owner = "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0"
-
     @Test
-    fun `lists through v1 with installation identity and tolerates additive response fields`() = runTest {
+    fun `lists through v1 and tolerates additive response fields`() = runTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("https://example.test/api/v1/places", request.url.toString())
-            assertEquals(owner, request.headers["X-Installation-Id"])
+
             respond("""{"places":[{"id":"builtin:woods","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false,"newField":true}],"extra":1}""",
                 headers = headersOf(HttpHeaders.ContentType, "application/json"))
         })
@@ -50,14 +50,16 @@ class DozyClientTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("PUT", request.method.value)
             assertEquals("/api/v1/places/custom%2Fone%20two", request.url.encodedPath)
-            assertEquals(owner, request.headers["X-Installation-Id"])
+
             val body = (request.body as TextContent).text
             assertEquals(setOf("name", "description", "inhabitants"), Json.parseToJsonElement(body).jsonObject.keys)
             assertEquals(input, Json.decodeFromString<SavePlaceRequest>(body))
             respond("", HttpStatusCode.fromValue(statuses[calls++]))
         })
         try {
-            repeat(statuses.size) { assertEquals(PlacesSaveResult.Success, sdk(http).places.v1.save("custom/one two", input)) }
+            sdk(http).use { client ->
+                repeat(statuses.size) { assertEquals(PlacesSaveResult.Success, client.places.v1.save("custom/one two", input)) }
+            }
             assertEquals(statuses.size, calls)
         } finally { http.close() }
     }
@@ -153,7 +155,7 @@ class DozyClientTest {
         val cancelled = HttpClient(MockEngine { throw CancellationException("Cancelled") })
         val programmingBug = HttpClient(MockEngine { throw IllegalStateException("Bug") })
         try {
-            val disabled = DozyClient(http, DozyClientConfig(null), InstallationIdProvider { owner })
+            val disabled = DozyClient(http, DozyClientConfig(null))
             assertIs<ApiDisabledException>(assertIs<TechnicalError.Communication>(failure(disabled.places.v1.list())).exception)
             assertIs<TechnicalError.Communication>(failure(disabled.places.v1.save("one", SavePlaceRequest("Garden", "Quiet"))))
             assertIs<IllegalArgumentException>(assertIs<TechnicalError.Communication>(failure(sdk(http).places.v1.save(" ", SavePlaceRequest("Garden", "Quiet")))).exception)
@@ -165,16 +167,21 @@ class DozyClientTest {
     }
 
     @Test
-    fun `different installations can share one caller owned HTTP client`() = runTest {
-        val ids = mutableListOf<String?>()
+    fun `different owner sessions can share one caller owned HTTP client`() = runTest {
+        val headers = mutableListOf<String?>()
         val http = HttpClient(MockEngine {
-            ids += it.headers["X-Installation-Id"]
+            headers += it.headers[HttpHeaders.Authorization]
             respond("""{"places":[]}""")
         })
         try {
-            sdk(http).places.v1.list()
-            DozyClient(http, DozyClientConfig("https://example.test"), InstallationIdProvider { "another-installation" }).places.v1.list()
-            assertEquals<List<String?>>(listOf(owner, "another-installation"), ids)
+            for (owner in listOf("first", "second")) {
+                val storage = InMemoryAuthSessionStorage()
+                storage.save(StoredAuthSession(owner, "$owner-access", "$owner-refresh"))
+                DozyClient(http, DozyClientConfig("https://example.test"), storage).use {
+                    value(it.places.v1.list())
+                }
+            }
+            assertEquals<List<String?>>(listOf("Bearer first-access", "Bearer second-access"), headers)
         } finally { http.close() }
     }
 
@@ -192,5 +199,5 @@ class DozyClientTest {
         PlacesSaveResult.Success -> error("Expected failure")
     }
 
-    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/"), InstallationIdProvider { owner })
+    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/"))
 }

@@ -2,7 +2,6 @@ package com.dozy.mobile
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.characteravatar.CharacterAvatarsClients
 import com.dozy.api.contracts.v1.character.AvatarDto
 import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
@@ -48,7 +47,7 @@ class CharacterAvatarApiTest {
             var requests = 0
             val client =
                 client { request ->
-                    assertEquals("installation", request.headers["X-Installation-Id"])
+
                     requests++
                     when (requests) {
                         1 -> {
@@ -80,9 +79,6 @@ class CharacterAvatarApiTest {
                         avatarClient(
                             client,
                             ApiConfig("https://example.test/"),
-                            InstallationIdProvider {
-                                "installation"
-                            },
                         ),
                     ).generateAvatar(createInput())?.let { AvatarDto(it.id.value, it.url.value) },
                 )
@@ -98,7 +94,7 @@ class CharacterAvatarApiTest {
             try {
                 val result =
                     GenerateCharacterAvatar(
-                        repository(avatarClient(client, ApiConfig(null), InstallationIdProvider { "installation" })),
+                        repository(avatarClient(client, ApiConfig(null))),
                     )(createInput())
                 assertEquals(GenerateCharacterAvatar.Result.Unavailable, result)
             } finally {
@@ -123,7 +119,7 @@ class CharacterAvatarApiTest {
                     val generate =
                         GenerateCharacterAvatar(
                             repository(
-                                avatarClient(client, ApiConfig("https://example.test"), InstallationIdProvider { "installation" }),
+                                avatarClient(client, ApiConfig("https://example.test")),
                             ),
                         )
                     assertEquals(GenerateCharacterAvatar.Result.Failure, generate(createInput()))
@@ -154,9 +150,6 @@ class CharacterAvatarApiTest {
                             avatarClient(
                                 client,
                                 ApiConfig("https://example.test"),
-                                InstallationIdProvider {
-                                    "installation"
-                                },
                             ),
                         ),
                     )(createInput()),
@@ -199,7 +192,7 @@ class CharacterAvatarApiTest {
                 }
             try {
                 val repository =
-                    repository(avatarClient(http, ApiConfig("https://example.test"), InstallationIdProvider { "installation" }))
+                    repository(avatarClient(http, ApiConfig("https://example.test")))
                 assertEquals(GenerateCharacterAvatar.Result.Failure, GenerateCharacterAvatar(repository)(createInput()))
                 assertEquals(1, posts)
                 assertEquals(120, gets)
@@ -259,8 +252,7 @@ class CharacterAvatarApiTest {
     private fun avatarClient(
         client: HttpClient,
         config: ApiConfig,
-        installations: InstallationIdProvider,
-    ) = DozyClient(client, DozyClientConfig(config.baseUrl), installations).characterAvatars
+    ) = DozyClient(client, DozyClientConfig(config.baseUrl)).characterAvatars
 
     private fun client(handler: MockRequestHandler) = HttpClient(MockEngine(handler)) { install(ContentNegotiation) { json() } }
 

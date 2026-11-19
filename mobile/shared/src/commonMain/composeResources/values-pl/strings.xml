@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="login_request_error">Nie udało się wykonać operacji. Spróbuj ponownie.</string>
     <string name="login_tutorial_kicker">DOBRY WIECZÓR, ZACZYNAMY</string>
     <string name="login_tutorial_title">Wasz świat. Wasza bajka.</string>
     <string name="login_tutorial_subtitle">Przesuń, by poznać Dozy</string>

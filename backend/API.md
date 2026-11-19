@@ -31,14 +31,10 @@ For example, characters now support deletion, and full story responses include
 
 - Feature paths use `/api/v1`, relative to the configured server root URL.
   `/hello` remains unversioned. Requests/responses use JSON unless stated otherwise.
-- Personal resources belong to an installation, not a user account. As confirmed
-  for this stage, send `X-Installation-Id: <client-generated UUID>` on every feature
-  request, with no separate secret or login endpoint. Persist the UUID locally;
-  the server registers it lazily on first use. The shared Places and Characters clients send this
-  header automatically; the story clients use it as well. Missing/invalid headers
-  return `400 INVALID_INSTALLATION_ID`. The ID partitions data but is not strong
-  authentication: a caller knowing another ID could access its namespace. No
-  library recovery is defined after losing the ID. Never take ownership from JSON.
+- Feature routes and asset downloads require `Authorization: Bearer <accessToken>`.
+  Ktor validates the JWT and uses its subject as the owner for reads and writes.
+  Missing or invalid credentials return `401`. Pre-authentication routes and refresh
+  are described in [Authentication](login.md).
 - Character IDs are canonical UUIDv7 strings (case normalized at the boundary).
   Custom place IDs are opaque strings; predefined places use `builtin:` IDs. Encode path IDs as
   one path segment. New story/job/asset IDs are backend-generated UUIDv7 strings. Avatar job IDs use
@@ -51,18 +47,16 @@ For example, characters now support deletion, and full story responses include
   category independently of HTTP status; it is not display-ready text. Mobile should
   localize known codes/reasons and use a localized generic fallback for unknown ones.
   Other proposed feature payloads do not yet define field-level error details.
-- `401` is reserved for future authentication (and appears in mobile proposals);
-  `403` means forbidden, `429` throttled, and `503` temporarily
-  unavailable. For owner-scoped ID reads, use `404` for missing or inaccessible
-  resources to avoid disclosing another installation's records. Collection reads include
-  only visible records. All feature queries/mutations must be scoped to the supplied installation ID.
+- `403` means forbidden, `429` throttled, and `503` temporarily unavailable.
+  Reads return `404` for missing or inaccessible resources. Collection reads include
+  only records visible to the authenticated owner.
 - A successful mutation acknowledgement means a durable write. HTTP timeout does
   not mean cancellation or rollback; clients may repeat operations as defined below.
 - Validate new/edited input after trimming. Match Kotlin `String.length` (UTF-16
   code units), rather than counting PostgreSQL characters or bytes. Existing
   records and embedded historical snapshots must remain readable after rule changes.
 - HTTPS asset references must remain usable for the lifetime of saved content.
-  Mobile cover loading sends the installation header only for assets on its configured backend origin. Do not return
+  Mobile image loading sends bearer tokens only to the configured API origin. Do not return
   short-lived signed URLs without extending the mobile contract first.
 
 ## Endpoint inventory
@@ -80,14 +74,30 @@ For example, characters now support deletion, and full story responses include
 | GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
 | POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
 | GET | `/api/v1/stories/{storyId}` | 200 | Read an immutable complete story |
-| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through a persistent, installation-owned snapshot of story summaries |
+| GET | `/api/v1/stories?limit=100&cursor=...` | 200 | Page through a persistent snapshot owned by the authenticated user of story summaries |
 | GET | `/api/v1/assets/{assetId}` | 200 | Read an owned durable PNG cover |
+| POST | `/api/v1/auth/anonymous` | 201 | Create an anonymous owner identity |
+| POST | `/api/v1/auth/email` | 202 | Create a nine-digit code session for an email |
+| POST | `/api/v1/auth/email/code` | 200 | Verify a code and create an account session |
+| POST | `/api/v1/auth/refresh` | 200 | Rotate a refresh token |
+| POST | `/api/v1/auth/logout` | 204 | Revoke all refresh tokens for an owner |
 
-There are **13 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
+There are **18 method/path operations** above. `GET /api/v1/characters/{id}` is an optional
 future extension described in mobile documents, not a current client requirement.
 Home, character details, place editing, and reader settings introduce no additional
 endpoints. There is no place/story deletion, story editing, device-token registration,
-payment, balance, subscription, or authentication endpoint proposed by these clients.
+payment, balance, or subscription endpoint proposed by these clients.
+
+## Authentication (Auth v1)
+
+The implemented operations are `POST /api/v1/auth/anonymous`, `POST /api/v1/auth/email`,
+`POST /api/v1/auth/email/code`, `POST /api/v1/auth/refresh`, and `POST /api/v1/auth/logout`.
+Request and response bodies are defined in `contracts.v1.auth`. Codes are fixed to
+`123456789` in the fake email sender; they expire after ten minutes, permit three
+attempts per session, and are limited to five requests per email per hour. Refresh
+tokens last six months and rotate on use. Logout revokes every refresh token for the
+owner identified by the access token; access JWTs remain valid until their 20-minute expiry. See
+[login scope](login.md) for the account and library boundaries.
 
 ## Characters
 
@@ -154,8 +164,7 @@ Implemented. No body. Return empty 204 for an owned live or already-deleted ID;
 return 404 `CHARACTER_NOT_FOUND` for a missing/inaccessible ID. The shared client
 acknowledges that known code, not arbitrary 404s. A permanent tombstone prevents
 any subsequent PUT from claiming/reviving the ID, including by its former owner.
-Deletion does not alter saved story snapshots. Missing/invalid installation IDs
-return 400 `INVALID_INSTALLATION_ID` on every operation.
+Deletion does not alter saved story snapshots.
 
 ## Character avatars
 
@@ -220,7 +229,7 @@ required/max 500, inhabitants optional/max 500, using trimmed UTF-16 lengths.
 
 ### GET /api/v1/places
 
-Implemented. Requires `X-Installation-Id`. The backend returns custom places first,
+Implemented. Requires bearer authentication. The backend returns custom places first,
 then sorts each group by lowercase name and ID. A fresh database includes all
 three predefined places, so it does not return an empty collection.
 
@@ -234,7 +243,7 @@ known local data; there is no GET-by-ID requirement.
 
 ### PUT /api/v1/places/{id}
 
-Implemented. Requires `X-Installation-Id` and `Content-Type: application/json`.
+Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
 Body: `name`, `description`, and optional `inhabitants`. The ID comes only from
 the path; the backend assigns `origin: "USER"` and computes `editable`.
@@ -262,7 +271,8 @@ remain readable even if write limits change.
 
 | Status | Code | Meaning |
 | --- | --- | --- |
-| 400 | `INVALID_REQUEST` / `INVALID_INSTALLATION_ID` | Invalid request structure or installation header |
+| 400 | `INVALID_REQUEST` | Invalid request structure |
+| 401 | | Missing or invalid access token |
 | 422 | Flat validation code above | Invalid user input |
 | 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
 | 409 | `place.conflict` | Custom ID belongs to another installation |
@@ -275,8 +285,7 @@ requests/responses, transport failures and local argument errors. Future decoded
 business codes remain operation-specific `Unknown`. Cancellation propagates. All other clients now use the same result/technical-error policy and shared
 business-error contracts.
 
-GET can return the installation-header and database errors above. Rate limiting
-and authentication are not implemented. Edits cannot rewrite existing story
+GET can return authentication and database errors. Rate limiting is not implemented. Edits cannot rewrite existing story
 configurations when those are introduced. Versioned
 multi-device reconciliation is not defined; no version precondition is submitted.
 
@@ -406,7 +415,7 @@ Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malf
 to the same stable snapshot, with no repeated IDs; stories published mid-pagination
 appear on a later refresh, not halfway through the current traversal. Cursor is
 opaque, URL-encoded, installation-bound and validated; last page omits it or returns null.
-Errors: `400 INVALID_CURSOR`, `400 INVALID_INSTALLATION_ID`, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
+Errors: `400 INVALID_CURSOR`, `401` for missing or invalid access tokens, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
 concrete snapshot implementation.
 
 ## Background execution and delivery
@@ -422,10 +431,7 @@ future scope. There is no backend reader-preference or reading-position API.
 
 ## Decisions and compatibility gaps before enabling production API
 
-1. Installation-only ownership and a bare UUID header are confirmed for this stage.
-   UUID persistence/shared headers are implemented for Places and Characters.
-   Strong authentication, future account linking and library recovery remain separate
-   scope; the UUID must not be presented as authenticated private storage.
+1. Decide how to recover data created before owner authentication was introduced.
 2. Generated avatars remain in scope, as confirmed. Keep POST/poll/explicit save;
    bundled fake generation remains limited to disabled-API development mode.
 3. Agree avatar job/unused-asset retention and request limits. The avatar POST lacks
@@ -433,8 +439,7 @@ future scope. There is no backend reader-preference or reading-position API.
    provider work. Rate limits are not a substitute for product balances.
 4. Define multi-device conflict resolution before enabling it. Current full PUTs
    have no version token; do not invent If-Match requirements the client cannot send.
-5. Decide the asset privacy/delivery policy: current loaders require stable URLs
-   without API auth; unguessable URLs do not provide authenticated private access.
+5. Host protected assets on the same origin and under the same deployment prefix as the API.
 6. Payments, free quotas and story/avatar balances were discussed but are not yet
    mobile endpoint contracts. They are intentionally excluded from this schema/API.
 7. Existing fake-avatar records need a migration/regeneration path before real sync.
@@ -490,8 +495,7 @@ and no story `errorCode`. QUEUED/RUNNING contain neither asset nor error; READY
 contains one complete asset and no error. The shared client validates combinations.
 POST has no name or idempotency key and persists the owner/request before 202.
 
-`GET /assets/{assetId}` delivers immutable PNG bytes without an installation header;
-it is static public delivery, not a feature SDK endpoint. Its URL must match the
+`GET /assets/{assetId}` delivers PNG bytes to the authenticated owner. Its URL must match the
 owned READY metadata for character PUT. Normal URLs use HTTPS; explicitly enabled
 loopback/emulator HTTP development URLs are supported. See root README for settings.
 A bounded worker pool recovers RUNNING jobs to QUEUED at process startup. Database

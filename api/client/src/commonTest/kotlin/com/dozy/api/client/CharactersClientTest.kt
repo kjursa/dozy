@@ -16,12 +16,12 @@ import kotlinx.serialization.json.jsonObject
 
 class CharactersClientTest {
     private val input = SaveCharacterRequest("Oliver", "Curious", "Green eyes", "CHILD")
-    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/"), InstallationIdProvider { "installation" }).characters.v1
+    private fun sdk(http: HttpClient) = DozyClient(http, DozyClientConfig("https://example.test/")).characters.v1
 
     @Test fun bareArrayAndFullReplacementWireContract() = runTest {
         var writes = 0
         val http = HttpClient(MockEngine { request ->
-            assertEquals("installation", request.headers["X-Installation-Id"])
+
             if (request.method.value == "GET") {
                 assertEquals("/api/v1/characters", request.url.encodedPath)
                 respond("""[{"id":"one","name":"Oliver","personality":"","appearance":"","type":"CHILD","extra":1}]""")

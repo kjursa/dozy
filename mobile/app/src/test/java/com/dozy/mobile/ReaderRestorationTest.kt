@@ -2,18 +2,28 @@ package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
 import com.dozy.api.contracts.v1.story.StoryDto
-import com.dozy.mobile.feature.story.data.*
-import com.dozy.mobile.feature.story.data.api.*
-import com.dozy.mobile.feature.story.domain.model.*
+import com.dozy.mobile.feature.story.data.api.GenerationApi
+import com.dozy.mobile.feature.story.data.api.StoryNotFoundException
+import com.dozy.mobile.feature.story.data.testGenerationRepository
+import com.dozy.mobile.feature.story.domain.model.Story
 import com.dozy.mobile.feature.story.domain.usecase.ReadStory
-import com.dozy.mobile.feature.story.presentation.reader.*
+import com.dozy.mobile.feature.story.presentation.reader.ReaderAction
+import com.dozy.mobile.feature.story.presentation.reader.ReaderDestination
+import com.dozy.mobile.feature.story.presentation.reader.ReaderUiState
+import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
+import com.dozy.mobile.navigation.AppNavigator
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
-import io.ktor.client.engine.mock.*
-import io.ktor.http.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.*
-import org.junit.Assert.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,7 +46,7 @@ class ReaderRestorationTest {
                 val read = ReadStory(testGenerationRepository(FakeGenerationDao(), api))
                 val handle = SavedStateHandle()
                 val persistence = SavedStatePersistence(handle, ReaderUiState.serializer())
-                val vm = ReaderViewModel(id, read, persistence)
+                val vm = ReaderViewModel(AppNavigator(), id, read, persistence)
                 assertTrue(vm.uiState.value.loading)
                 vm.dispatch(ReaderAction.Retry)
                 advanceUntilIdle()
@@ -56,17 +66,17 @@ class ReaderRestorationTest {
                 vm.dispatch(ReaderAction.Cover)
                 vm.dispatch(ReaderAction.Dismiss)
                 assertEquals(story, vm.uiState.value.story)
-                val restored = ReaderViewModel(id, read, persistence)
+                val restored = ReaderViewModel(AppNavigator(), id, read, persistence)
                 advanceUntilIdle()
                 assertTrue(restored.uiState.value.evening)
                 assertEquals(ReaderUiState.TextSize.LARGE, restored.uiState.value.textSize)
                 assertNull(restored.uiState.value.overlay)
                 vm.dispatch(ReaderAction.NewAdventure)
                 vm.dispatch(ReaderAction.NewAdventure)
-                assertEquals(ReaderEffect.NewAdventure(progress.configuration.cast.map { it.id }), vm.effects.first())
+                assertEquals(ReaderDestination.NewAdventure(progress.configuration.cast.map { it.id }), vm.navigator.commands.first())
                 vm.resumed()
                 vm.dispatch(ReaderAction.Library)
-                assertEquals(ReaderEffect.Library, vm.effects.first())
+                assertEquals(ReaderDestination.Library, vm.navigator.commands.first())
             } finally {
                 Dispatchers.resetMain()
             }

@@ -3,7 +3,6 @@ package com.dozy.mobile.feature.story.data.api
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.story.v1.StoryListResult
 import com.dozy.api.client.story.v1.StoryReadResult
@@ -24,7 +23,7 @@ class KtorGenerationApi(
     http: HttpClient,
     config: ApiConfig,
 ) : GenerationApi {
-    private val sdk = DozyClient(http, DozyClientConfig(config.baseUrl), InstallationIdProvider { "60c55c02-8d8b-46c2-a0cb-9a2d241eeea0" })
+    private val sdk = DozyClient(http, DozyClientConfig(config.baseUrl))
 
     override suspend fun stories(cursor: String?) =
         try {

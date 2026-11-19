@@ -4,7 +4,7 @@ package com.dozy.e2e
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
-import com.dozy.api.client.InstallationIdProvider
+import com.dozy.api.client.auth.v1.AnonymousResult
 import com.dozy.api.client.place.v1.PlacesClient
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
@@ -28,26 +28,28 @@ import kotlinx.coroutines.runBlocking
 
 class PlacesTest {
     private lateinit var http: HttpClient
-    private lateinit var places: PlacesClient
+    private lateinit var sdk: DozyClient
+    private val places get() = sdk.places.v1
 
     @BeforeTest
-    fun setUp() {
+    fun setUp() = runBlocking {
         http = HttpClient(CIO) {
             install(HttpTimeout) {
                 requestTimeoutMillis = 10_000
                 connectTimeoutMillis = 2_000
             }
         }
-        places = client()
+        sdk = client()
     }
 
     @AfterTest
     fun tearDown() {
+        if (::sdk.isInitialized) sdk.close()
         http.close()
     }
 
     @Test
-    fun `fresh installation lists shared non-editable system places`() = runBlocking {
+    fun `fresh guest lists shared non-editable system places`() = runBlocking {
         val snapshot = places.snapshot()
         assertTrue(snapshot.isNotEmpty())
         assertTrue(snapshot.all { it.origin == "SYSTEM" && !it.editable })
@@ -102,27 +104,30 @@ class PlacesTest {
     }
 
     @Test
-    fun `another installation cannot see or replace an owned place`() = runBlocking {
+    fun `another guest cannot see or replace an owned place`() = runBlocking {
         val id = resourceId()
         val request = SavePlaceRequest("Our garden", "Our quiet place")
         assertEquals(PlacesSaveResult.Success, places.save(id, request))
         val original = places.snapshot().single { it.id == id }
-        val other = client()
-        assertFalse(other.snapshot().any { it.id == id })
-        assertEquals(
-            PlacesSaveResult.ApiError(PlacesSaveError.Conflict),
-            other.save(id, SavePlaceRequest("Other garden", "Other description")),
-        )
+        client().use { other ->
+            assertFalse(other.places.v1.snapshot().any { it.id == id })
+            assertEquals(
+                PlacesSaveResult.ApiError(PlacesSaveError.Conflict),
+                other.places.v1.save(id, SavePlaceRequest("Other garden", "Other description")),
+            )
+        }
         assertEquals(original, places.snapshot().single { it.id == id })
     }
 
-    private fun client(): PlacesClient {
-        val installation = resourceId()
-        return DozyClient(
-            http,
-            DozyClientConfig(System.getenv("DOZY_E2E_BASE_URL") ?: "http://127.0.0.1:8080"),
-            InstallationIdProvider { installation },
-        ).places.v1
+    private suspend fun client(): DozyClient {
+        val client = DozyClient(http, DozyClientConfig(System.getenv("DOZY_E2E_BASE_URL") ?: "http://127.0.0.1:8080"))
+        try {
+            assertIs<AnonymousResult.Success>(client.auth.v1.anonymous(), "Expected a new guest session")
+            return client
+        } catch (failure: Throwable) {
+            client.close()
+            throw failure
+        }
     }
 
     private suspend fun PlacesClient.snapshot(): List<PlaceResponse> =

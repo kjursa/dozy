@@ -6,6 +6,8 @@ ktor:
     host: "${HOST:0.0.0.0}"
     port: "${PORT:8080}"
 dozy:
+  auth:
+    secret: "${DOZY_AUTH_SECRET:}"
   database:
     path: "${DOZY_DATABASE_PATH:data/dozy.db}"
     busyTimeoutMillis: "${DOZY_DATABASE_BUSY_TIMEOUT_MS:5000}"

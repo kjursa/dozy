@@ -13,8 +13,8 @@ import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.model.AvatarState
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
-import com.dozy.features.characteravatar.domain.repository.AvatarStorage
-import com.dozy.features.installation.api.installationId
+import com.dozy.features.asset.domain.repository.AssetRepository
+import com.dozy.plugins.ownerPartition
 import com.dozy.plugins.BusinessApiException
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -31,7 +31,7 @@ import io.ktor.server.routing.route
 fun Route.avatarV1Routes(jobs: AvatarJobs) {
     route("/character-avatars") {
         post {
-            val owner = call.installationId()
+            val owner = call.ownerPartition()
             val request = call.receive<AvatarRequestDto>()
             val input = when (val parsed = AvatarInput.parse(request.type, request.personality, request.appearance)) {
                 is AvatarInput.Result.Valid -> parsed.input
@@ -41,18 +41,18 @@ fun Route.avatarV1Routes(jobs: AvatarJobs) {
             call.respond(HttpStatusCode.Accepted, jobs.create(owner, input).toDto())
         }
         get("/{jobId}") {
-            val job = jobs.find(call.installationId(), call.parameters["jobId"].orEmpty())
+            val job = jobs.find(call.ownerPartition(), call.parameters["jobId"].orEmpty())
                 ?: throw BusinessApiException(HttpStatusCode.NotFound, AvatarStatusError.NotFound)
             call.respond(job.toDto())
         }
     }
 }
-fun Route.avatarAssetRoutes(storage: AvatarStorage) {
+fun Route.avatarAssetRoutes(repository: AssetRepository) {
     get("/assets/{assetId}") {
-        val bytes = storage.get(call.parameters["assetId"].orEmpty())
+        val bytes = repository.read(call.ownerPartition(), call.parameters["assetId"].orEmpty())
         if (bytes == null) call.respond(HttpStatusCode.NotFound)
         else {
-            call.response.headers.append(HttpHeaders.CacheControl, "public, max-age=31536000, immutable")
+            call.response.headers.append(HttpHeaders.CacheControl, "private, no-store")
             call.respondBytes(bytes, ContentType.Image.PNG)
         }
     }
