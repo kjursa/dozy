@@ -71,8 +71,11 @@ class AvatarJobsTest {
             val avatar = Character.Avatar(job.assetId, job.url)
             val command = (SaveCharacter.parse("Hero", input.personality, input.appearance, input.type, avatar) as SaveCharacter.Result.Valid).command
             val characters = SqliteCharacterRepository(database)
-            assertEquals(SaveCharacterResult.Created, characters.save(owner, Character.Id(job.id), command))
-            assertEquals(SaveCharacterResult.ReferenceUnavailable, characters.save(other, Character.Id(job.assetId), command))
+            assertTrue(characters.create(owner, command) is SaveCharacterResult.Created)
+            assertEquals(
+                SaveCharacterResult.ReferenceUnavailable,
+                characters.create(other, command)
+            )
         }
         SqliteDatabase(databaseConfig).use { database ->
             assertEquals(AvatarState.READY, SqliteAvatarJobs(database, config).find(owner, job.id)?.state)

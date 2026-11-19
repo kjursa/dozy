@@ -21,11 +21,11 @@ class SqliteDatabaseTest {
         repeat(2) { SqliteDatabase(config).use { } }
         val flyway = Flyway.configure().dataSource(url, null, null).load()
         val applied = flyway.info().applied()
-        assertEquals(7, applied.size)
+        assertEquals(8, applied.size)
         assertEquals("1", applied.first().version.version)
         assertEquals("V1__places.sql", applied.first().script)
-        assertEquals("7", applied.last().version.version)
-        assertEquals("V7__auth.sql", applied.last().script)
+        assertEquals("8", applied.last().version.version)
+        assertEquals("V8__resource_creations.sql", applied.last().script)
         flyway.validate()
     }
 

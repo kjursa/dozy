@@ -64,8 +64,10 @@ class SavePlace private constructor(
 }
 
 sealed interface SavePlaceResult {
-    data object Created : SavePlaceResult
+    data class Created(val id: Place.Id) : SavePlaceResult
+    data object NotFound : SavePlaceResult
     data object Updated : SavePlaceResult
     data object Forbidden : SavePlaceResult
+    data object IdempotencyConflict : SavePlaceResult
     data object Conflict : SavePlaceResult
 }

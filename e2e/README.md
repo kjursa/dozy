@@ -42,7 +42,7 @@ The HTML report remains in `e2e/build/reports/tests/test/index.html`.
 - Return shared validation errors for invalid fields without creating records.
 - Isolate guest accounts and reject attempts to replace another guest's place.
 
-Each scenario creates its own guest session and generates UUIDv7 resource IDs.
+Each scenario creates its own guest session and uses resource IDs returned by the backend.
 
 ## Use an already running backend
 

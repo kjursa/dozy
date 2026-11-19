@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.place.di
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.core.data.database.RoomCreationDraft
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormUiState
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
 import com.dozy.mobile.feature.place.presentation.list.PlacesViewModel
@@ -17,6 +18,13 @@ val placeModule =
         viewModelOf(::PlacesViewModel)
         viewModel {
             val handle: SavedStateHandle = get()
-            PlaceFormViewModel(get(), SavedStatePersistence(handle, PlaceFormUiState.serializer()), get(), get(), handle.get<String>("id"))
+            PlaceFormViewModel(
+                get(),
+                SavedStatePersistence(handle, PlaceFormUiState.serializer()),
+                get(),
+                get(),
+                RoomCreationDraft(get(), "place", PlaceFormUiState.serializer()),
+                handle.get<String>("id"),
+            )
         }
     }

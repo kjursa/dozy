@@ -1,10 +1,10 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
-import com.dozy.plugins.ownerPartition
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.domain.model.ParseResult
 import com.dozy.features.place.domain.model.Place
@@ -12,12 +12,16 @@ import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.idempotencyKey
+import com.dozy.plugins.ownerPartition
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
@@ -27,15 +31,23 @@ fun Route.placeV1Routes(service: PlaceService) {
             val places = service.list(call.ownerPartition())
             call.respond(PlacesResponse(places.map { it.toResponse() }))
         }
+        post {
+            val installation = call.ownerPartition()
+            val requestKey = call.idempotencyKey()
+            call.respondToSave(
+                service.create(
+                    installation,
+                    call.receive<SavePlaceRequest>().toCommand(),
+                    requestKey
+                )
+            )
+        }
         put("/{id}") {
             val installation = call.ownerPartition()
-            val request = call.receive<SavePlaceRequest>()
             val id = requirePlaceId(call.parameters["id"])
-            val command = when (val result = SavePlace.parse(request.name, request.description, request.inhabitants)) {
-                is ParseResult.Valid -> result.value
-                is ParseResult.Invalid -> throw result.error.toApiException()
-            }
-            call.respond(service.save(installation, id, command).status())
+            call.respondToSave(
+                service.save(installation, id, call.receive<SavePlaceRequest>().toCommand())
+            )
         }
     }
 }
@@ -58,9 +70,34 @@ private fun SavePlace.Error.toApiException(): BusinessApiException {
     return BusinessApiException(HttpStatusCode.UnprocessableEntity, error)
 }
 
-private fun SavePlaceResult.status(): HttpStatusCode = when (this) {
-    SavePlaceResult.Created -> HttpStatusCode.Created
-    SavePlaceResult.Updated -> HttpStatusCode.NoContent
-    SavePlaceResult.Forbidden -> throw BusinessApiException(HttpStatusCode.Forbidden, PlacesSaveError.Forbidden)
-    SavePlaceResult.Conflict -> throw BusinessApiException(HttpStatusCode.Conflict, PlacesSaveError.Conflict)
+private fun SavePlaceRequest.toCommand(): SavePlace =
+    when (val result = SavePlace.parse(name, description, inhabitants)) {
+        is ParseResult.Valid -> result.value
+        is ParseResult.Invalid -> throw result.error.toApiException()
+    }
+
+private suspend fun ApplicationCall.respondToSave(result: SavePlaceResult) {
+    when (result) {
+        is SavePlaceResult.Created -> respond(
+            HttpStatusCode.Created,
+            CreatedPlaceResponse(result.id.value)
+        )
+        SavePlaceResult.Updated -> respond(HttpStatusCode.NoContent)
+        SavePlaceResult.NotFound -> throw BusinessApiException(
+            HttpStatusCode.NotFound,
+            PlacesSaveError.NotFound
+        )
+        SavePlaceResult.Forbidden -> throw BusinessApiException(
+            HttpStatusCode.Forbidden,
+            PlacesSaveError.Forbidden
+        )
+        SavePlaceResult.IdempotencyConflict -> throw BusinessApiException(
+            HttpStatusCode.Conflict,
+            PlacesSaveError.IdempotencyConflict
+        )
+        SavePlaceResult.Conflict -> throw BusinessApiException(
+            HttpStatusCode.Conflict,
+            PlacesSaveError.Conflict
+        )
+    }
 }

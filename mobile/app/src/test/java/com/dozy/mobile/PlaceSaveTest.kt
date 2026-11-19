@@ -3,6 +3,7 @@ package com.dozy.mobile
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.PlacesSaveError
@@ -36,11 +37,17 @@ class PlaceSaveTest {
     @Test fun savesBeforeHttpAndRetriesDurablePendingRowsWithSameId() =
         runTest {
             val dao = FakePlaceDao()
+            dao.upsert(place().toEntity().copy(pendingSync = false))
             var available = false
             val ids = mutableListOf<String>()
             val api =
                 object : PlacesClient {
                     override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+
+                    override suspend fun create(
+                        request: SavePlaceRequestDto,
+                        requestKey: String?,
+                    ): PlacesCreateResult = error("Unexpected place creation")
 
                     override suspend fun save(
                         id: String,
@@ -67,9 +74,15 @@ class PlaceSaveTest {
     @Test fun typedApiFailureKeepsTheDurableWritePending() =
         runTest {
             val dao = FakePlaceDao()
+            dao.upsert(place().toEntity().copy(pendingSync = false))
             val api =
                 object : PlacesClient {
                     override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+
+                    override suspend fun create(
+                        request: SavePlaceRequestDto,
+                        requestKey: String?,
+                    ): PlacesCreateResult = error("Unexpected place creation")
 
                     override suspend fun save(
                         id: String,
@@ -87,11 +100,17 @@ class PlaceSaveTest {
     @Test fun storageFailureDoesNotRequestHttpAndCancellationLeavesDurablePendingRow() =
         runTest {
             val dao = FakePlaceDao()
+            dao.upsert(place().toEntity().copy(pendingSync = false))
             var calls = 0
             val api =
                 object : PlacesClient {
                     override suspend fun list(): PlacesListResult =
                         PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
+
+                    override suspend fun create(
+                        request: SavePlaceRequestDto,
+                        requestKey: String?,
+                    ): PlacesCreateResult = error("Unexpected place creation")
 
                     override suspend fun save(
                         id: String,
@@ -179,6 +198,11 @@ class PlaceSaveTest {
                     fakePlacesClients(
                         object : PlacesClient {
                             override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+
+                            override suspend fun create(
+                                request: SavePlaceRequestDto,
+                                requestKey: String?,
+                            ): PlacesCreateResult = error("Unexpected place creation")
 
                             override suspend fun save(
                                 id: String,

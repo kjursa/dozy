@@ -9,16 +9,14 @@ import com.kjursa.foundation.coroutines.runCatchingSuspend
 
 class SaveCharacter(
     private val repository: CharacterRepository,
-    private val ids: CharacterIdGenerator,
 ) {
     suspend operator fun invoke(
         input: CreateCharacterInput,
         avatar: Character.Avatar,
+        requestKey: String? = null,
     ): Result =
         runCatchingSuspend {
-            repository.save(
-                Character(ids.next(), Character.Details(input.name, input.personality, input.appearance, input.type), avatar),
-            )
+            repository.create(input, avatar, requestKey)
         }.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { Result.Failure },

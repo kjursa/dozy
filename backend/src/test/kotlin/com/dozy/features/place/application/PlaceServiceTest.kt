@@ -56,7 +56,16 @@ class PlaceServiceTest {
             lastInstallation = installation
             return places
         }
-        override suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult {
+        override suspend fun create(
+            installation: InstallationId,
+            command: SavePlace,
+            requestKey: String?
+        ): SavePlaceResult = error("Unexpected creation")
+        override suspend fun save(
+            installation: InstallationId,
+            id: Place.Id,
+            command: SavePlace
+        ): SavePlaceResult {
             saveCalls++
             saved = Triple(installation, id, command)
             return SavePlaceResult.Conflict

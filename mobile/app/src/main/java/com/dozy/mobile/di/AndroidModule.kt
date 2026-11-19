@@ -10,11 +10,8 @@ import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.core.data.database.databaseModule
-import com.dozy.mobile.feature.character.data.UuidCharacterIdGenerator
-import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.domain.model.Place
-import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
 import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
 import com.dozy.mobile.feature.story.data.background.GenerationWorkerFactory
@@ -54,9 +51,6 @@ internal val androidModule =
                 GenerationJob
                     .RequestKey(UUID.randomUUID().toString())
             }
-        }
-        single<PlaceIdGenerator> {
-            PlaceIdGenerator { Place.Id(UUID.randomUUID().toString()) }
         }
         single {
             runBlocking {
@@ -100,5 +94,4 @@ internal val androidModule =
                 )
             }
         }
-        single<CharacterIdGenerator> { UuidCharacterIdGenerator() }
     }

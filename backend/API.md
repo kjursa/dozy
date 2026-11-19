@@ -6,8 +6,8 @@ and response examples. It works locally without a build step or API calls.
 ## Status and sources
 
 This document combines implemented routes and proposals consolidated from the
-mobile contracts. The backend implements `GET /hello`, `GET /api/v1/places`, and
-`PUT /api/v1/places/{id}`, and character GET/PUT/DELETE under `/api/v1/characters`.
+mobile contracts. The backend implements `GET /hello`, Places GET/POST/PUT,
+and Characters GET/POST/PUT/DELETE.
 Story start/status/retry/read, protected PNG asset reads and fake avatar generation are implemented. Stable library listing is implemented. `/hello` returns
 `200 {"message":"Hello world from Dozy"}`. Places and Characters use a local SQLite database;
 see [runtime storage](DB.md#current-sqlite-implementation) and the root README for configuration.
@@ -64,12 +64,14 @@ For example, characters now support deletion, and full story responses include
 | Method | Path | Success | Purpose |
 | --- | --- | --- | --- |
 | GET | `/api/v1/characters` | 200 | Complete personal character collection |
-| PUT | `/api/v1/characters/{id}` | 201 / 204 | Create or replace a character |
+| POST | `/api/v1/characters` | 201 | Create a character and return its ID |
+| PUT | `/api/v1/characters/{id}` | 204 | Replace an existing character |
 | DELETE | `/api/v1/characters/{id}` | 204 / 404 | Idempotent character deletion |
 | POST | `/api/v1/character-avatars` | 202 | Start a standalone avatar job |
 | GET | `/api/v1/character-avatars/{jobId}` | 200 | Observe an avatar job |
 | GET | `/api/v1/places` | 200 | Personal and predefined places |
-| PUT | `/api/v1/places/{id}` | 201 / 204 | Create or replace a custom place |
+| POST | `/api/v1/places` | 201 | Create a custom place and return its ID |
+| PUT | `/api/v1/places/{id}` | 204 | Replace an existing custom place |
 | POST | `/api/v1/story-generations` | 202 | Accept a durable story-generation job |
 | GET | `/api/v1/story-generations/{jobId}` | 200 | Observe generation stages |
 | POST | `/api/v1/story-generations/{jobId}/retry` | 202 | Explicitly retry a failed job |
@@ -134,26 +136,30 @@ Non-200 responses are refresh failures; mobile retains known data. Pending local
 edits and local deletion tombstones take precedence over a fetched snapshot.
 There is no separate required character-details read endpoint.
 
-### PUT /api/v1/characters/{id}
+### POST /api/v1/characters and PUT /api/v1/characters/{id}
 
-Implemented. Body: `SaveCharacterRequest` with `name`, `personality`, `appearance`,
-`type`, and optional nullable `avatar`. The UUIDv7 ID appears only in the path;
-an ID in the body is a structural error. A minimal request is:
+Both methods accept a `SaveCharacterRequest` with `name`, `personality`,
+`appearance`, `type`, and optional nullable `avatar`. An ID in the body is a
+structural error. A minimal request is:
 
 ```json
 {"name":"Luna","personality":"Kind","appearance":"Green coat","type":"CHILD"}
 ```
 
-PUT fully replaces editable fields; omitted/null avatar clears it. Repeated PUTs
-reuse the same resource. Return 201 creation or 204 replacement, both empty.
-Names are trimmed, required, single-line and at most 50 UTF-16 units. Personality
+POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. An optional UUIDv4
+`Idempotency-Key` header returns the original ID on a retry with the same
+normalized values. A different payload with the same key returns
+`409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the owner and resource type.
+
+PUT takes the existing resource ID in the path and returns empty `204`.
+Omitting `avatar` or passing `null` clears it. Names are trimmed, required, single-line and at most 50 UTF-16 units. Personality
 and appearance are trimmed, required and at most 2000 each. Reads preserve
 historical values. Unknown types are field validation failures.
 
 Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
 flat validation codes such as `validation.name.too_long` from the shared
 `CharactersSaveError` contract for business
-input; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
+input; 404 `CHARACTER_NOT_FOUND` for a PUT to a missing ID; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
 READY asset's ID and URL; 409 `CONFLICT` for another installation's or permanently
 deleted ID. The name reasons are REQUIRED, TOO_LONG and SINGLE_LINE; personality
 and appearance support REQUIRED / TOO_LONG; type supports INVALID_VALUE.
@@ -241,17 +247,18 @@ snapshot with bundled fallback entries and preserves authoritative local edits.
 `{"places":[]}` is a valid empty remote snapshot. Non-200/invalid collections retain
 known local data; there is no GET-by-ID requirement.
 
-### PUT /api/v1/places/{id}
+### POST /api/v1/places and PUT /api/v1/places/{id}
 
 Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
-Body: `name`, `description`, and optional `inhabitants`. The ID comes only from
-the path; the backend assigns `origin: "USER"` and computes `editable`.
-Omitted/null inhabitants clears the previous value. Only the owner may upsert a
-custom record; reject writes to the predefined namespace. Responses:
-`201` creation, `204` update, no body; mobile accepts any 2xx.
-Repeated identical PUTs replace one resource. A transaction checks ownership and
-writes the replacement atomically. `editable: true` does not bypass permissions.
+Both methods accept `name`, `description`, and optional `inhabitants`.
+POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. The backend assigns
+`origin: "USER"` and computes `editable`. POST supports the same optional
+`Idempotency-Key` header as character creation.
+
+PUT takes the existing ID in the path and returns empty `204`. Omitting
+`inhabitants` or passing `null` clears it. The owner can replace the existing
+custom place. The backend rejects changes to the predefined namespace.
 
 Implemented place business errors are shared serializable `PlacesSaveError` values
 from `api/contracts`. Backend sends that object and the SDK deserializes the same
@@ -275,6 +282,8 @@ remain readable even if write limits change.
 | 401 | | Missing or invalid access token |
 | 422 | Flat validation code above | Invalid user input |
 | 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
+| 404 | `place.not_found` | PUT references a missing custom place |
+| 409 | `IDEMPOTENCY_CONFLICT` | The creation key was used with different input |
 | 409 | `place.conflict` | Custom ID belongs to another installation |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
 

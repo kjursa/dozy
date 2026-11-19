@@ -20,8 +20,18 @@ class CharacterServiceTest {
                 assertEquals("owner", installation.value)
                 return characters
             }
-            override suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter): SaveCharacterResult = error("Unexpected save")
-            override suspend fun delete(installation: InstallationId, id: Character.Id): Boolean = error("Unexpected delete")
+            override suspend fun create(
+                installation: InstallationId,
+                command: SaveCharacter,
+                requestKey: String?
+            ): SaveCharacterResult = error("Unexpected creation")
+            override suspend fun save(
+                installation: InstallationId,
+                id: Character.Id,
+                command: SaveCharacter
+            ): SaveCharacterResult = error("Unexpected save")
+            override suspend fun delete(installation: InstallationId, id: Character.Id): Boolean =
+                error("Unexpected delete")
         }
         val result = CharacterService(repository).list(installation)
         assertEquals(listOf("a", "b", "old"), result.map { it.id.value })

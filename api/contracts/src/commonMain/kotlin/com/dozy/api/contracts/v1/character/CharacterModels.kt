@@ -25,3 +25,6 @@ data class SaveCharacterRequest(
 )
 
 enum class CharacterType { CHILD, ANIMAL, FANTASY, OTHER }
+
+@Serializable
+data class CreatedCharacterResponse(val id: String)

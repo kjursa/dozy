@@ -7,6 +7,15 @@ import com.dozy.features.installation.domain.model.InstallationId
 
 interface CharacterRepository {
     suspend fun list(installation: InstallationId): List<Character>
-    suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter): SaveCharacterResult
+    suspend fun create(
+        installation: InstallationId,
+        command: SaveCharacter,
+        requestKey: String? = null
+    ): SaveCharacterResult
+    suspend fun save(
+        installation: InstallationId,
+        id: Character.Id,
+        command: SaveCharacter
+    ): SaveCharacterResult
     suspend fun delete(installation: InstallationId, id: Character.Id): Boolean
 }

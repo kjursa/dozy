@@ -3,6 +3,7 @@ package com.dozy.mobile.feature.character.data
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.character.CharactersClients
+import com.dozy.api.client.character.v1.CharactersCreateResult
 import com.dozy.api.client.character.v1.CharactersDeleteResult
 import com.dozy.api.client.character.v1.CharactersListResult
 import com.dozy.api.client.character.v1.CharactersSaveResult
@@ -25,7 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Local-first persistence; mutations and acknowledgements are serialized. */
+/** Mutations, acknowledgements, and refreshes are serialized. */
 class DefaultCharacterRepository(
     private val dao: CharacterDao,
     private val characters: CharactersClients,
@@ -109,12 +110,19 @@ class DefaultCharacterRepository(
             SavedCharacter(character, synchronize(row))
         }
 
-    override suspend fun save(character: Character): SavedCharacter =
+    override suspend fun create(
+        input: CreateCharacterInput,
+        avatar: Character.Avatar,
+        requestKey: String?,
+    ): SavedCharacter =
         mutations.withLock {
-            require(character.id.value !in dao.deletedIds()) { "Deleted character ID cannot be reused" }
-            val row = character.toEntity(pendingSync = true)
-            dao.upsert(row)
-            SavedCharacter(character, synchronize(row))
+            check(!avatar.id.value.startsWith("fake:") && !avatar.url.value.startsWith("bundled-avatar:"))
+            val details = Character.Details(input.name, input.personality, input.appearance, input.type)
+            val result = characters.v1.create(details.toSaveRequest(avatar), requestKey)
+            check(result is CharactersCreateResult.Success) { "Character creation failed" }
+            val character = Character(Character.Id(result.response.id), details, avatar)
+            dao.upsert(character.toEntity(pendingSync = false))
+            SavedCharacter(character, CharacterSync.SYNCED)
         }
 
     private suspend fun synchronize(row: CharacterEntity): CharacterSync {

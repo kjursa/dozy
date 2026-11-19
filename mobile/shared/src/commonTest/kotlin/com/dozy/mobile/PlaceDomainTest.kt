@@ -3,7 +3,6 @@ package com.dozy.mobile
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceErrors
 import com.dozy.mobile.feature.place.domain.model.PlaceInput
-import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
 import com.dozy.mobile.feature.place.domain.usecase.RefreshPlaces
 import com.dozy.mobile.feature.place.domain.usecase.SavePlace
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
@@ -31,7 +30,7 @@ class PlaceDomainTest {
         runTest {
             val repository = FakePlaceRepository()
             val input = (PlaceInput.validate("Garden", "Sunny", "Bees") as PlaceInput.Validation.Valid).input
-            val save = SavePlace(repository, PlaceIdGenerator { Place.Id("new") })
+            val save = SavePlace(repository)
             assertEquals(SavePlace.Result.NotEditable, save(input, Place.Id("builtin:woods")))
             assertEquals(SavePlace.Result.Unavailable, save(input, Place.Id("missing")))
             assertEquals(0, repository.saves)

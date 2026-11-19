@@ -1,6 +1,8 @@
 package com.dozy.mobile.feature.place.presentation.form
 
 import androidx.lifecycle.viewModelScope
+import com.dozy.mobile.core.presentation.CreationDraft
+import com.dozy.mobile.core.presentation.newCreationRequestKey
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceInput
 import com.dozy.mobile.feature.place.domain.usecase.SavePlace
@@ -10,6 +12,7 @@ import com.dozy.mobile.navigation.NavigationCommand
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviViewModel
 import com.kjursa.foundation.compose.mvi.StatePersistence
+import com.kjursa.foundation.coroutines.runCatchingSuspend
 import com.kjursa.foundation.presentation.text.UiText
 import kotlinx.coroutines.launch
 
@@ -18,10 +21,20 @@ class PlaceFormViewModel(
     persistence: StatePersistence<PlaceFormUiState>,
     private val savePlace: SavePlace,
     private val selectPlace: SelectPlace,
+    private val creationDraft: CreationDraft<PlaceFormUiState>,
     private val editId: String?,
 ) : MviViewModel<PlaceFormUiState, PlaceFormAction, Nothing>(PlaceFormUiState(id = editId), persistence) {
     init {
         initialize()
+        if (editId == null) restoreCreationDraft(PlaceFormUiState(initialized = true))
+    }
+
+    private fun restoreCreationDraft(emptyForm: PlaceFormUiState) {
+        if (uiState.value != emptyForm) return
+        viewModelScope.launch {
+            val draft = runCatchingSuspend { creationDraft.load() }.getOrNull()
+            if (draft != null && uiState.value == emptyForm) updateState { draft }
+        }
     }
 
     private fun initialize() {
@@ -69,9 +82,9 @@ class PlaceFormViewModel(
                 navigateTo(PlaceFormDestination.Back)
             }
             PlaceFormAction.Retry -> initialize()
-            is PlaceFormAction.Name -> updateState { copy(name = action.value, nameError = null) }
-            is PlaceFormAction.Description -> updateState { copy(description = action.value, descriptionError = null) }
-            is PlaceFormAction.Inhabitants -> updateState { copy(inhabitants = action.value, inhabitantsError = null) }
+            is PlaceFormAction.Name -> updateState { copy(name = action.value, nameError = null, creationKey = null) }
+            is PlaceFormAction.Description -> updateState { copy(description = action.value, descriptionError = null, creationKey = null) }
+            is PlaceFormAction.Inhabitants -> updateState { copy(inhabitants = action.value, inhabitantsError = null, creationKey = null) }
             PlaceFormAction.Save -> save()
         }
     }
@@ -93,10 +106,20 @@ class PlaceFormViewModel(
                 }
                 is PlaceInput.Validation.Valid -> validation.input
             }
-        updateState { copy(saving = true, error = null, nameError = null, descriptionError = null, inhabitantsError = null) }
+        val requestKey = if (editId == null) state.creationKey ?: newCreationRequestKey() else null
+        updateState {
+            copy(saving = true, error = null, nameError = null, descriptionError = null, inhabitantsError = null, creationKey = requestKey)
+        }
         viewModelScope.launch {
-            when (val result = savePlace(input, editId?.let(Place::Id))) {
-                is SavePlace.Result.Saved -> navigateTo(PlaceFormDestination.Saved(result.place.id))
+            if (editId == null && runCatchingSuspend { creationDraft.save(state.copy(creationKey = requestKey)) }.isFailure) {
+                updateState { copy(saving = false, error = UiText.Resource(Res.string.place_save_error)) }
+                return@launch
+            }
+            when (val result = savePlace(input, editId?.let(Place::Id), requestKey)) {
+                is SavePlace.Result.Saved -> {
+                    if (editId == null) runCatchingSuspend { creationDraft.clear() }
+                    navigateTo(PlaceFormDestination.Saved(result.place.id))
+                }
                 SavePlace.Result.Unavailable -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_unavailable)) }
                 SavePlace.Result.NotEditable -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_not_editable)) }
                 SavePlace.Result.Failure -> updateState { copy(saving = false, error = UiText.Resource(Res.string.place_save_error)) }

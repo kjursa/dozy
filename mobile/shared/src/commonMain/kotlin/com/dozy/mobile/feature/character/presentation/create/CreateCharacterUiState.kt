@@ -21,6 +21,7 @@ data class CreateCharacterUiState(
     val avatarId: String? = null,
     val avatarUrl: String? = null,
     val editingId: String? = null,
+    val creationKey: String? = null,
     val selectedType: String = "Child",
     val name: String? = null,
     val personality: String? = null,

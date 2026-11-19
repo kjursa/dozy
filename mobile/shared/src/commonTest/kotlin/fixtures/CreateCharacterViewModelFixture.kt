@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterInput
-import com.dozy.mobile.feature.character.domain.model.SavedCharacter
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.domain.usecase.*
 import com.dozy.mobile.feature.character.presentation.create.*
@@ -22,11 +21,12 @@ import kotlin.test.BeforeTest
 internal open class CreateCharacterViewModelFixture {
     protected val dispatcher = StandardTestDispatcher()
     protected val stored = FakeCharacterRepository()
+    protected val draft = MemoryCreationDraft<CreateCharacterUiState>()
     protected var readFailure: Exception? = null
     protected var generations = 0
     protected var generate: suspend () -> Character.Avatar? = { avatar() }
     protected val repository =
-        object : CharacterRepository {
+        object : CharacterRepository by stored {
             override suspend fun delete(id: Character.Id): CharacterSync = error("Unexpected deletion")
 
             override fun observe() =
@@ -35,7 +35,7 @@ internal open class CreateCharacterViewModelFixture {
                     emitAll(stored.observe())
                 }
 
-            override suspend fun save(character: Character): SavedCharacter = stored.save(character)
+            override fun observe(id: Character.Id) = observe().map { rows -> rows.firstOrNull { it.id == id } }
 
             override suspend fun generateAvatar(input: CreateCharacterInput): Character.Avatar? {
                 generations++
@@ -69,9 +69,10 @@ internal open class CreateCharacterViewModelFixture {
     ) = CreateCharacterViewModel(
         Navigator(),
         SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
-        SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") }),
+        SaveCharacter(repository),
         GenerateCharacterAvatar(repository),
         ObserveCharacter(repository),
+        draft,
         id,
     )
 }

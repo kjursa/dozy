@@ -6,24 +6,19 @@ import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 
-fun interface PlaceIdGenerator {
-    fun generate(): Place.Id
-}
-
 class SavePlace(
     private val repository: PlaceRepository,
-    private val ids: PlaceIdGenerator,
 ) {
     suspend operator fun invoke(
         input: PlaceInput,
         id: Place.Id?,
+        requestKey: String? = null,
     ): Result =
         runCatchingSuspend {
-            if (id != null) {
-                val existing = repository.find(id) ?: return@runCatchingSuspend Result.Unavailable
-                if (!existing.canEdit) return@runCatchingSuspend Result.NotEditable
-            }
-            val place = Place(id ?: ids.generate(), input.name, input.description, input.inhabitants, Place.Origin.USER, true)
+            if (id == null) return@runCatchingSuspend Result.Saved(repository.create(input, requestKey), PlaceSync.SYNCED)
+            val existing = repository.find(id) ?: return@runCatchingSuspend Result.Unavailable
+            if (!existing.canEdit) return@runCatchingSuspend Result.NotEditable
+            val place = existing.copy(name = input.name, description = input.description, inhabitants = input.inhabitants)
             val sync = repository.save(place)
             Result.Saved(place, sync)
         }.getOrDefault(Result.Failure)

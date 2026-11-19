@@ -5,11 +5,18 @@ import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.CharactersDeleteError
 import com.dozy.api.contracts.v1.character.CharactersListError
 import com.dozy.api.contracts.v1.character.CharactersSaveError
+import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
 
 sealed interface CharactersListResult {
     data class Success(val response: List<CharacterDto>) : CharactersListResult
     data class ApiError(val error: CharactersListError) : CharactersListResult
     data class TechnicalError(val error: SharedTechnicalError) : CharactersListResult
+}
+
+sealed interface CharactersCreateResult {
+    data class Success(val response: CreatedCharacterResponse) : CharactersCreateResult
+    data class ApiError(val error: CharactersSaveError) : CharactersCreateResult
+    data class TechnicalError(val error: SharedTechnicalError) : CharactersCreateResult
 }
 
 sealed interface CharactersSaveResult {

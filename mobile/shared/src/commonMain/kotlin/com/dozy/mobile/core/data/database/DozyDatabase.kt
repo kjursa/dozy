@@ -1,5 +1,6 @@
 package com.dozy.mobile.core.data.database
 
+import androidx.room3.AutoMigration
 import androidx.room3.ConstructedBy
 import androidx.room3.Database
 import androidx.room3.RoomDatabase
@@ -13,11 +14,14 @@ import com.dozy.mobile.feature.story.data.database.GenerationEntity
 
 @ConstructedBy(DozyDatabaseConstructor::class)
 @Database(
-    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class],
-    version = 8,
+    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class, CreationDraftEntity::class],
+    version = 9,
+    autoMigrations = [AutoMigration(from = 8, to = 9)],
     exportSchema = true,
 )
 abstract class DozyDatabase : RoomDatabase() {
+    abstract fun creationDrafts(): CreationDraftDao
+
     abstract fun generations(): GenerationDao
 
     abstract fun places(): PlaceDao

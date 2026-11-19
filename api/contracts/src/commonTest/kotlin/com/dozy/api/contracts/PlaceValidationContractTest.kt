@@ -15,7 +15,7 @@ class PlaceValidationContractTest {
         val codes = listOf(
             "validation.name.required", "validation.name.too_long",
             "validation.description.required", "validation.description.too_long",
-            "validation.inhabitants.too_long", "place.not_editable", "place.conflict",
+            "validation.inhabitants.too_long", "place.not_editable", "place.not_found", "place.conflict", "IDEMPOTENCY_CONFLICT"
         )
         assertEquals(codes, PlacesSaveError.known.map { it.code })
         assertEquals(codes.size, codes.toSet().size)

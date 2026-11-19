@@ -12,7 +12,6 @@ import com.dozy.databaseConfig
 import com.dozy.module
 import io.ktor.client.request.get
 import io.ktor.client.request.post
-import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
@@ -72,10 +71,17 @@ class AvatarRoutesTest {
             assertEquals(HttpStatusCode.NotFound, missing.status)
             assertEquals("AVATAR_JOB_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(missing.bodyAsText()).code)
         }
-        val character = """{"name":"Hero","type":"CHILD","personality":"Kind","appearance":"Green eyes","avatar":${Json.encodeToString(asset)}}"""
-        assertEquals(HttpStatusCode.Created, client.put("/api/v1/characters/${job.jobId}") {
-            asOwner(owner); contentType(ContentType.Application.Json); setBody(character)
-        }.status)
+        val character = """{"name":"Hero","type":"CHILD","personality":"Kind","appearance":"Green eyes","avatar":${Json.encodeToString(
+            asset
+        )}}"""
+        assertEquals(
+            HttpStatusCode.Created,
+            client.post("/api/v1/characters") {
+                asOwner(owner)
+                contentType(ContentType.Application.Json)
+                setBody(character)
+            }.status
+        )
         val invalid = client.post("/api/v1/character-avatars") {
             asOwner(owner); contentType(ContentType.Application.Json); setBody(request.replace("Kind", ""))
         }

@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -29,13 +30,12 @@ class SqlitePlaceRepositoryTest {
     private val databases = mutableListOf<SqliteDatabase>()
     private val owner = InstallationId("owner")
     private val stranger = InstallationId("stranger")
-    private val id = placeId("019a0000-0000-7000-8000-000000000001")
     private val input = savePlace("Woods", "Forest", "Owls")
 
     @Test
     fun `seeds shared catalog and isolates custom data by installation`() = runBlocking {
         val repository = repository()
-        assertEquals(SavePlaceResult.Created, repository.save(owner, id, input))
+        val id = assertIs<SavePlaceResult.Created>(repository.create(owner, input)).id
         val owned = repository.list(owner)
         assertEquals(4, owned.size)
         assertEquals("Owls", owned.single { it.id == id }.inhabitants?.value)
@@ -44,21 +44,24 @@ class SqlitePlaceRepositoryTest {
     }
 
     @Test
-    fun `repeat saves replace one resource and omitted inhabitants clears previous value`() = runBlocking {
-        val repository = repository()
-        repository.save(owner, id, input)
-        val replacement = savePlace("Island", "Sea", null)
-        repeat(2) { assertEquals(SavePlaceResult.Updated, repository.save(owner, id, replacement)) }
-        val custom = repository.list(owner).filter { it.origin == Place.Origin.USER }
-        assertEquals(1, custom.size)
-        assertEquals("Island", custom.single().name.value)
-        assertNull(custom.single().inhabitants)
-    }
+    fun `repeat saves replace one resource and omitted inhabitants clears previous value`() =
+        runBlocking {
+            val repository = repository()
+            val id = assertIs<SavePlaceResult.Created>(repository.create(owner, input)).id
+            val replacement = savePlace("Island", "Sea", null)
+            repeat(2) {
+                assertEquals(SavePlaceResult.Updated, repository.save(owner, id, replacement))
+            }
+            val custom = repository.list(owner).filter { it.origin == Place.Origin.USER }
+            assertEquals(1, custom.size)
+            assertEquals("Island", custom.single().name.value)
+            assertNull(custom.single().inhabitants)
+        }
 
     @Test
     fun `rejects another owner and predefined edits without changing records`() = runBlocking {
         val repository = repository()
-        repository.save(owner, id, input)
+        val id = assertIs<SavePlaceResult.Created>(repository.create(owner, input)).id
         assertEquals(SavePlaceResult.Conflict, repository.save(stranger, id, input))
         assertEquals(SavePlaceResult.Forbidden, repository.save(owner, placeId("builtin:woods"), input))
         assertEquals(SavePlaceResult.Forbidden, repository.save(owner, placeId("builtin:missing"), input))
@@ -68,22 +71,27 @@ class SqlitePlaceRepositoryTest {
 
     @Test
     fun `survives reopening and migration does not duplicate seeds`() = runBlocking {
-        repository().save(owner, id, input)
+        val id = assertIs<SavePlaceResult.Created>(repository().create(owner, input)).id
         val reopened = repository().list(owner)
         assertEquals(4, reopened.size)
         assertEquals("Woods", reopened.single { it.id == id }.name.value)
     }
 
     @Test
-    fun `concurrent claims cannot transfer origin`() = runBlocking {
-        val repositories = listOf(repository(), repository())
-        val results = listOf(owner, stranger).mapIndexed { index, installation ->
-            async { repositories[index].save(installation, id, input) }
+    fun `concurrent creates have distinct IDs and isolated owners`() = runBlocking {
+        val repositories = listOf(repository() to owner, repository() to stranger)
+        val ids = repositories.map { (repository, installation) ->
+            async { assertIs<SavePlaceResult.Created>(repository.create(installation, input)).id }
         }.awaitAll()
-        assertEquals(setOf(SavePlaceResult.Created, SavePlaceResult.Conflict), results.toSet())
-        assertEquals(1, listOf(owner, stranger).sumOf { installation ->
-            repositories.first().list(installation).count { it.id == id }
-        })
+        assertEquals(2, ids.distinct().size)
+        repositories.zip(ids).forEach { (entry, id) ->
+            assertEquals(
+                id,
+                entry.first.list(entry.second).single {
+                    it.origin == Place.Origin.USER
+                }.id
+            )
+        }
     }
 
     @Test
@@ -110,7 +118,7 @@ class SqlitePlaceRepositoryTest {
     fun `round trips quoted and Unicode input through DSL`() = runBlocking {
         val repository = repository()
         val special = savePlace("O'Brien's 🌙 garden", "A forest; with 'quoted' paths", "Owls 🦉")
-        repository.save(owner, id, special)
+        val id = assertIs<SavePlaceResult.Created>(repository.create(owner, special)).id
         val saved = repository.list(owner).single { it.id == id }
         assertEquals(special.name, saved.name)
         assertEquals(special.description, saved.description)

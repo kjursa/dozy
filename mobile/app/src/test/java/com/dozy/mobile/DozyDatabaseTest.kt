@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import com.dozy.mobile.core.data.database.CreationDraftEntity
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.di.androidModule
@@ -44,6 +45,7 @@ class DozyDatabaseTest {
             context.deleteDatabase("dozy.db")
             val character = character().toEntity(true)
             val place = place().toEntity()
+            val draft = CreationDraftEntity("place", """{"name":"Moon garden"}""")
             val generation = GenerationEntity("existing-key", "immutable-snapshot", "existing-job", "READY", result = "saved-story")
             // The builder used before extraction writes the installed database.
             val original = Room.databaseBuilder<DozyDatabase>(context, "dozy.db").setDriver(AndroidSQLiteDriver()).build()
@@ -51,6 +53,7 @@ class DozyDatabaseTest {
                 original.characters().upsert(character)
                 original.places().upsert(place)
                 original.generations().upsert(generation)
+                original.creationDrafts().save(draft)
             } finally {
                 original.close()
             }
@@ -67,6 +70,7 @@ class DozyDatabaseTest {
                 )
                 assertEquals(place, extracted.places().find(place.id))
                 assertEquals(generation, extracted.generations().find("existing-key"))
+                assertEquals(draft.payload, extracted.creationDrafts().load(draft.form))
             } finally {
                 extracted.close()
                 context.deleteDatabase("dozy.db")
@@ -146,8 +150,7 @@ class DozyDatabaseTest {
                         .first()
                         .isEmpty(),
                 )
-                val saved = app.koin.get<CharacterRepository>().save(character)
-                assertEquals(CharacterSync.PENDING, saved.sync)
+                database.characters().upsert(character.toEntity(pendingSync = true))
                 assertTrue(context.getDatabasePath("dozy.db").isFile)
                 val dao = database.characters()
                 dao.upsert(character("synced").toEntity(false))

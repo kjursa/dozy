@@ -95,6 +95,33 @@ internal class CreateCharacterViewModelTest : CreateCharacterViewModelFixture() 
             assertEquals(1, generations)
         }
 
+    @Test fun failedCreateKeepsAnIdlessDraftWithoutAddingACharacter() =
+        runTest(dispatcher) {
+            val initialCharacters = stored.characters.value
+            val form = vm()
+            fill(form)
+            ready(form)
+            stored.failure = IllegalStateException("Offline")
+            form.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+
+            assertEquals(SaveStatus.FAILURE, form.uiState.value.saveStatus)
+            assertEquals(initialCharacters, stored.characters.value)
+            val key = assertNotNull(form.uiState.value.creationKey)
+            val reopened = vm()
+            advanceUntilIdle()
+            assertEquals(key, reopened.uiState.value.creationKey)
+            assertEquals("Finn", reopened.uiState.value.name)
+            assertEquals("Curious", reopened.uiState.value.personality)
+            assertNull(reopened.uiState.value.editingId)
+
+            stored.failure = null
+            reopened.dispatch(CreateCharacterAction.SaveClicked)
+            advanceUntilIdle()
+            assertEquals(CreateCharacterDestination.Saved(Character.Id("new")), reopened.navigator.commands.first())
+            assertNull(draft.load())
+        }
+
     @Test fun generationFailureAndUnavailableRetainInputAndAllowRetryWithoutSaving() =
         runTest(dispatcher) {
             val vm = vm()
