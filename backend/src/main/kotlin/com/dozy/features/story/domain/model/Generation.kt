@@ -43,6 +43,7 @@ data class SavedStory(val id: StoryId, val title: String, val text: String, val 
 data class Execution(
     val job: Job,
     val ownerId: OwnerId,
+    val storyId: StoryId,
     val token: LeaseToken,
     val configuration: StoryConfiguration,
     val title: String?,
@@ -51,7 +52,7 @@ data class Execution(
     val id: GenerationId,
 )
 sealed interface RetrySubmission {
-    data class Accepted(val job: Job) : RetrySubmission
+    data class Accepted(val job: Job, val isReplay: Boolean = false) : RetrySubmission
     data object JobNotFound : RetrySubmission
     data object JobNotFailed : RetrySubmission
     data object ActiveJobExists : RetrySubmission

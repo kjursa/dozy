@@ -12,11 +12,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.minutes
 
 class KeyValueJobStatusCache(
     private val store: KeyValueStore,
-    private val ttl: Duration = 5.seconds,
+    private val ttl: Duration = 5.minutes,
 ) : JobStatusCache {
     init {
         require(ttl.isFinite() && ttl.isPositive()) { "TTL must be positive and finite" }
@@ -37,10 +37,12 @@ class KeyValueJobStatusCache(
         ownerId: OwnerId,
         job: Job,
     ) {
-        bestEffort {
-            val status = CachedStatus(job.stage, job.storyId?.value, job.failure)
-            store.put(key(ownerId, job.id), Json.encodeToString(status), ttl)
-        }
+        val stored =
+            bestEffort {
+                val status = CachedStatus(job.stage, job.storyId?.value, job.failure)
+                store.put(key(ownerId, job.id), Json.encodeToString(status), ttl)
+            }
+        if (stored == null) invalidate(ownerId, job.id)
     }
 
     override suspend fun invalidate(

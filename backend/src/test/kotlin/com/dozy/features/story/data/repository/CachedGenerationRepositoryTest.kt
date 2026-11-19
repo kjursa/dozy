@@ -22,6 +22,7 @@ import com.dozy.infrastructure.keyvalue.InMemoryKeyValueStore
 import com.dozy.infrastructure.keyvalue.KeyValueStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -31,6 +32,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -49,63 +51,70 @@ class CachedGenerationRepositoryTest {
     fun pollsFromTheCacheUntilExpiryAndKeepsOwnersIsolated() =
         runBlocking {
             database().use { database ->
-                val sqlite = SqliteGenerationRepository(database, GenerationConfig(), clock)
-                var statusReads = 0
-                val source =
-                    object : GenerationRepository by sqlite {
-                        override suspend fun status(
-                            ownerId: OwnerId,
-                            id: JobId,
-                        ): Job? {
-                            statusReads++
-                            return sqlite.status(ownerId, id)
-                        }
-                    }
+                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
                 val repository = CachedGenerationRepository(source, cache())
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
 
-                repeat(2) { assertEquals(job, repository.status(ownerId, job.id)) }
-                assertEquals(1, statusReads)
-                assertNull(repository.status(OwnerId.generate(), job.id))
-                assertEquals(2, statusReads)
-
-                clock.advance(5.seconds)
                 assertEquals(job, repository.status(ownerId, job.id))
-                assertEquals(3, statusReads)
+                repeat(29) {
+                    clock.advance(10.seconds)
+                    assertEquals(job, repository.status(ownerId, job.id))
+                }
+                assertEquals(0, source.statusReads)
+                assertNull(repository.status(OwnerId.generate(), job.id))
+                assertEquals(1, source.statusReads)
+
+                clock.advance(10.seconds)
+                assertEquals(job, repository.status(ownerId, job.id))
+                assertEquals(2, source.statusReads)
             }
         }
 
     @Test
-    fun transitionsAndRetryInvalidateStatusImmediately() =
+    fun transitionsAndRetriesKeepStatusAvailableWithoutPollingSqlite() =
         runBlocking {
             database().use { database ->
-                val repository = CachedGenerationRepository(SqliteGenerationRepository(database, GenerationConfig(), clock), cache())
+                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
+                val repository = CachedGenerationRepository(source, cache())
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
                 assertEquals(Stage.QUEUED, repository.status(ownerId, job.id)?.stage)
 
                 val first = assertNotNull(repository.claim())
                 assertEquals(Stage.CREATING_TEXT, repository.status(ownerId, job.id)?.stage)
-                repository.fail(first, Failure.CONTENT_REJECTED)
+                assertTrue(repository.fail(first, Failure.CONTENT_REJECTED))
                 assertEquals(Job(job.id, Stage.FAILED, failure = Failure.CONTENT_REJECTED), repository.status(ownerId, job.id))
 
-                assertIs<RetrySubmission.Accepted>(repository.retry(ownerId, job.id, requestKey()))
+                val firstRetryKey = requestKey()
+                assertIs<RetrySubmission.Accepted>(repository.retry(ownerId, job.id, firstRetryKey))
                 assertEquals(job, repository.status(ownerId, job.id))
                 val retry = assertNotNull(repository.claim())
+                assertFalse(repository.fail(first, Failure.CONTENT_REJECTED))
+                assertEquals(Stage.CREATING_TEXT, repository.status(ownerId, job.id)?.stage)
+                assertTrue(repository.fail(retry, Failure.GENERATION_FAILED))
+
+                assertIs<RetrySubmission.Accepted>(repository.retry(ownerId, job.id, requestKey()))
+                val current = assertNotNull(repository.claim())
+                val replay = assertIs<RetrySubmission.Accepted>(repository.retry(ownerId, job.id, firstRetryKey))
+                assertTrue(replay.isReplay)
+                assertEquals(Stage.FAILED, replay.job.stage)
                 assertEquals(Stage.CREATING_TEXT, repository.status(ownerId, job.id)?.stage)
 
-                assertTrue(repository.saveText(retry, GeneratedText("Title", "Text")))
+                assertTrue(repository.saveText(current, GeneratedText("Title", "Text")))
                 assertEquals(Stage.CREATING_COVER, repository.status(ownerId, job.id)?.stage)
-                assertTrue(repository.publish(retry, byteArrayOf(1)))
-                repeat(2) {
-                    val ready = assertNotNull(repository.status(ownerId, job.id))
-                    assertEquals(Stage.READY, ready.stage)
-                    assertNotNull(ready.storyId)
-                }
+                clock.advance(10.seconds)
+                assertTrue(repository.publish(current, byteArrayOf(1)))
+                val ready = Job(job.id, Stage.READY, storyId = current.storyId)
+                assertEquals(ready, repository.status(ownerId, job.id))
+
+                // The previous stage's TTL has elapsed and READY is still cached.
+                clock.advance(295.seconds)
+                assertEquals(ready, repository.status(ownerId, job.id))
+                assertEquals(0, source.statusReads)
             }
         }
 
     @Test
-    fun aConcurrentCacheMissCannotPutBackAnOldStatusAfterInvalidation() =
+    fun aConcurrentCacheMissCannotOverwriteACommittedTransition() =
         runBlocking {
             val failed = Job(JobId.generate(), Stage.FAILED, failure = Failure.GENERATION_FAILED)
             val queued = Job(failed.id, Stage.QUEUED)
@@ -143,8 +152,8 @@ class CachedGenerationRepositoryTest {
             withTimeout(5.seconds) {
                 try {
                     readStarted.await()
-                    val retrying = async { repository.retry(ownerId, failed.id, requestKey()) }
-                    retryCommitted.await()
+                    val retrying = async(start = CoroutineStart.UNDISPATCHED) { repository.retry(ownerId, failed.id, requestKey()) }
+                    assertFalse(retryCommitted.isCompleted)
                     finishRead.complete(Unit)
                     assertEquals(failed, reading.await())
                     assertEquals(RetrySubmission.Accepted(queued), retrying.await())
@@ -184,6 +193,33 @@ class CachedGenerationRepositoryTest {
         }
 
     @Test
+    fun failedCacheUpdateRemovesThePreviouslyCachedStatus() =
+        runBlocking {
+            database().use { database ->
+                val memory = InMemoryKeyValueStore(clock)
+                var failWrites = false
+                val store =
+                    object : KeyValueStore by memory {
+                        override suspend fun put(
+                            key: String,
+                            value: String,
+                            ttl: Duration,
+                        ) {
+                            if (failWrites) throw IOException("Unavailable")
+                            memory.put(key, value, ttl)
+                        }
+                    }
+                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
+                val repository = CachedGenerationRepository(source, KeyValueJobStatusCache(store))
+                val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
+                failWrites = true
+                assertNotNull(repository.claim())
+                assertEquals(Stage.CREATING_TEXT, repository.status(ownerId, job.id)?.stage)
+                assertEquals(1, source.statusReads)
+            }
+        }
+
+    @Test
     fun preservesCancellationFromCacheReads() =
         runBlocking {
             val cancelled =
@@ -194,6 +230,21 @@ class CachedGenerationRepositoryTest {
             assertFailsWith<CancellationException> { repository.status(ownerId, JobId.generate()) }
             Unit
         }
+
+    private class CountingRepository(
+        private val repository: GenerationRepository,
+    ) : GenerationRepository by repository {
+        var statusReads = 0
+            private set
+
+        override suspend fun status(
+            ownerId: OwnerId,
+            id: JobId,
+        ): Job? {
+            statusReads++
+            return repository.status(ownerId, id)
+        }
+    }
 
     private fun database() = SqliteDatabase(DatabaseConfig(directory.resolve("jobs.db").toString(), 5000))
 

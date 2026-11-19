@@ -25,5 +25,5 @@ interface GenerationRepository {
     suspend fun renew(execution: Execution): Boolean
     suspend fun saveText(execution: Execution, text: GeneratedText): Boolean
     suspend fun publish(execution: Execution, cover: ByteArray): Boolean
-    suspend fun fail(execution: Execution, failure: Failure)
+    suspend fun fail(execution: Execution, failure: Failure): Boolean
 }

@@ -92,11 +92,12 @@ reference and fenced publication prevent multiple successful results. Publicatio
 sets the immutable UTC epoch-millisecond createdAt. No update/read path mutates a
 saved result or invokes a generator. All job/story/asset reads filter by owner ID.
 
-The generation status endpoint caches successful reads for five seconds in a
-process-local key-value store. The cache uses the namespace `story:job-status:v1`
-with the owner and job IDs. Committed transitions invalidate cached statuses.
-On a cache miss or failure, the endpoint reads the current status from SQLite.
-Worker leasing and recovery use SQLite.
+The generation status endpoint uses a process-local key-value store with a
+five-minute TTL. The cache uses the namespace `story:job-status:v1` with the owner and
+job IDs. The repository writes it after creation and committed status transitions, resetting the TTL,
+so polling can use the cache from the first request. On a cache miss or failure,
+the endpoint reads the current status from SQLite. Worker leasing and recovery
+use SQLite.
 
 
 ## Proposed PostgreSQL database

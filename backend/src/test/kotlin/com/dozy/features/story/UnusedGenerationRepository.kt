@@ -27,5 +27,5 @@ class UnusedGenerationRepository : GenerationRepository {
     override suspend fun renew(execution: Execution): Boolean = error("Unused")
     override suspend fun saveText(execution: Execution, text: GeneratedText): Boolean = error("Unused")
     override suspend fun publish(execution: Execution, cover: ByteArray): Boolean = error("Unused")
-    override suspend fun fail(execution: Execution, failure: Failure): Unit = error("Unused")
+    override suspend fun fail(execution: Execution, failure: Failure): Boolean = error("Unused")
 }
