@@ -10,7 +10,8 @@ import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.infrastructure.database.SqliteDatabase
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -18,11 +19,12 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
+@OptIn(ExperimentalUuidApi::class)
 class SqliteAvatarJobs(private val database: SqliteDatabase, private val config: AvatarConfig) : AvatarJobs {
     override suspend fun create(owner: InstallationId, input: AvatarInput): AvatarJob = database.write {
         registerInstallation(owner)
-        val id = uuid7()
-        val asset = uuid7()
+        val id = Uuid.generateV7().toString()
+        val asset = Uuid.generateV7().toString()
         val job = AvatarJob(id, owner.value, input, asset, "${config.publicBaseUrl.trimEnd('/')}/assets/$asset", AvatarState.QUEUED)
         Jobs.insert {
             it[Jobs.id] = id
@@ -70,8 +72,4 @@ class SqliteAvatarJobs(private val database: SqliteDatabase, private val config:
 private fun ResultRow.toJob(): AvatarJob {
     val input = AvatarInput.parse(this[Jobs.type], this[Jobs.personality], this[Jobs.appearance]) as AvatarInput.Result.Valid
     return AvatarJob(this[Jobs.id], this[Jobs.owner], input.input, this[Jobs.assetId], this[Jobs.url], AvatarState.valueOf(this[Jobs.state]))
-}
-internal fun uuid7(): String {
-    val random = UUID.randomUUID()
-    return UUID((System.currentTimeMillis() shl 16) or 0x7000L or (random.mostSignificantBits and 0xfffL), random.leastSignificantBits).toString()
 }

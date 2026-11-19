@@ -5,6 +5,7 @@ import com.dozy.features.auth.domain.model.CodeVerification
 import com.dozy.features.auth.domain.model.EmailChallenge
 import com.dozy.features.auth.domain.model.RefreshCredential
 import com.dozy.features.auth.domain.repository.AuthRepository
+import java.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -13,18 +14,19 @@ class AuthService(
     private val repository: AuthRepository,
     private val secrets: AuthSecretProvider,
     private val accessTokens: AccessTokens,
+    private val clock: Clock,
 ) {
     suspend fun anonymous(): TokenResult.Valid {
         val ownerId = Uuid.generateV7().toString()
         val refreshToken = Uuid.random().toString()
-        repository.createAnonymous(ownerId, refreshCredential(refreshToken, System.currentTimeMillis()))
+        repository.createAnonymous(ownerId, refreshCredential(refreshToken, clock.millis()))
         return tokens(ownerId, refreshToken)
     }
 
     suspend fun requestCode(emailValue: String): EmailRequest {
         val email = emailValue.trim().lowercase()
         if (!EMAIL.matches(email) || email.endsWith("@invalid.dozy")) return EmailRequest.InvalidEmail
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val challenge = EmailChallenge(Uuid.generateV7().toString(), email, FAKE_CODE, now, now + CODE_LIFETIME)
         return if (repository.storeChallenge(challenge, countSince = now - HOUR, limit = 5)) {
             EmailRequest.Accepted(challenge.sessionId)
@@ -37,7 +39,7 @@ class AuthService(
         sessionId: String,
         code: String,
     ): VerifyResult {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val refreshToken = Uuid.random().toString()
         return when (
             val result =
@@ -61,7 +63,7 @@ class AuthService(
         ownerId: String,
         refreshToken: String,
     ): TokenResult {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val replacement = Uuid.random().toString()
         val rotated =
             repository.rotateRefreshToken(

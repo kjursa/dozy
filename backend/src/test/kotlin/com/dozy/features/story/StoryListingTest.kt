@@ -9,6 +9,7 @@ import com.dozy.features.story.domain.model.GeneratedText
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.infrastructure.database.SqliteDatabase
 import java.nio.file.Path
+import java.time.Clock
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,6 +21,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.io.TempDir
 
 class StoryListingTest {
+    private val clock = Clock.systemUTC()
     @TempDir lateinit var directory: Path
     private val owner = InstallationId("019a0000-0000-7000-8000-000000000010")
     private val other = InstallationId("019a0000-0000-7000-8000-000000000011")
@@ -37,7 +39,7 @@ class StoryListingTest {
         lateinit var cursor: String
         lateinit var expected: List<String>
         SqliteDatabase(config).use { database ->
-            val repository = SqliteGenerationRepository(database, options)
+            val repository = SqliteGenerationRepository(database, options, clock)
             assertEquals(emptyList(), repository.list(owner, 2, null)?.stories)
             repeat(5) { publish(repository) }
             database.write { Stories.update { it[createdAt] = 123 } }
@@ -54,7 +56,7 @@ class StoryListingTest {
             assertNull(repository.list(owner, 2, "malformed /+"))
         }
         SqliteDatabase(config).use { database ->
-            val repository = SqliteGenerationRepository(database, options)
+            val repository = SqliteGenerationRepository(database, options, clock)
             val second = assertNotNull(repository.list(owner, 2, cursor))
             assertEquals(expected.drop(2).take(2), second.stories.map { it.id })
             assertEquals(second, repository.list(owner, 2, cursor))

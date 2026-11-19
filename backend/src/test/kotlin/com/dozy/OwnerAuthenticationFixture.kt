@@ -1,11 +1,12 @@
 package com.dozy
 
-import com.dozy.features.auth.application.AccessTokens
 import com.dozy.config.AuthSecretProvider
-import io.ktor.server.config.MapApplicationConfig
+import com.dozy.features.auth.application.AccessTokens
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.bearerAuth
+import io.ktor.server.config.MapApplicationConfig
+import java.time.Clock
 
 internal fun HttpRequestBuilder.asOwner(id: String) {
-    bearerAuth(AccessTokens(AuthSecretProvider.from(MapApplicationConfig())).issue(id.lowercase()))
+    bearerAuth(AccessTokens(AuthSecretProvider.from(MapApplicationConfig()), Clock.systemUTC()).issue(id.lowercase()))
 }

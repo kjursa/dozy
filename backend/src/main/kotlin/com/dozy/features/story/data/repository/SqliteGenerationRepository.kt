@@ -29,6 +29,7 @@ import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
+import java.time.Clock
 import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -40,7 +41,11 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-class SqliteGenerationRepository(private val database: SqliteDatabase, private val config: GenerationConfig) : GenerationRepository {
+class SqliteGenerationRepository(
+    private val database: SqliteDatabase,
+    private val config: GenerationConfig,
+    private val clock: Clock,
+) : GenerationRepository {
     override suspend fun list(installation: InstallationId, limit: Int, cursor: String?): StoryPage? = database.write {
         require(limit in 1..100)
         val snapshotId: String
@@ -101,7 +106,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             it[stage] = Stage.QUEUED.name
             it[storyId] = Uuid.generateV7().toString()
             it[assetId] = Uuid.generateV7().toString()
-            it[createdAt] = System.currentTimeMillis()
+            it[createdAt] = clock.millis()
             it[leaseUntil] = 0
             it[StoryJobs.executionId] = executionId
             it[ordinal] = 1
@@ -162,7 +167,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
         }
     }
     override suspend fun claim(): Execution? = database.write {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val row = StoryJobs.selectAll().where { (StoryJobs.stage inList active) and (StoryJobs.leaseUntil lessEq now) }.orderBy(StoryJobs.createdAt).limit(1).singleOrNull() ?: return@write null
         val token = Uuid.random().toString()
         val stage = if (row[StoryJobs.stage] == Stage.QUEUED.name) Stage.CREATING_TEXT else Stage.valueOf(row[StoryJobs.stage])
@@ -177,7 +182,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
     }
     override suspend fun renew(execution: Execution): Boolean = database.write {
         StoryJobs.update({ (StoryJobs.id eq execution.job.id) and (StoryJobs.executionId eq execution.id) and (StoryJobs.leaseToken eq execution.token) and (StoryJobs.stage inList active) }) {
-            it[leaseUntil] = System.currentTimeMillis() + config.leaseMillis
+            it[leaseUntil] = clock.millis() + config.leaseMillis
         } == 1
     }
     override suspend fun saveText(execution: Execution, text: GeneratedText): Boolean = database.write {
@@ -207,7 +212,7 @@ class SqliteGenerationRepository(private val database: SqliteDatabase, private v
             it[text] = requireNotNull(row[StoryJobs.text])
             it[coverUrl] = url
             it[configuration] = row[StoryJobs.configuration]
-            it[createdAt] = System.currentTimeMillis()
+            it[createdAt] = clock.millis()
         }
         StoryJobs.update({ StoryJobs.id eq execution.job.id }) { it[stage] = Stage.READY.name; it[leaseToken] = null; it[leaseUntil] = 0 }
         recordStage(execution.job.id)

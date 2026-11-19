@@ -11,6 +11,9 @@ import com.dozy.infrastructure.database.SqliteDatabase
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -33,8 +36,9 @@ class RefreshTokenHashRotationTest {
 
             SqliteDatabase(DatabaseConfig(directory.resolve("auth.db").toString(), 5000)).use { database ->
                 val repository = SqliteAuthRepository(database)
-                val auth = AuthService(repository, secrets, AccessTokens(secrets))
-                val expiresAt = System.currentTimeMillis() + 60_000
+                val clock = Clock.fixed(Instant.parse("2026-11-30T23:55:00Z"), ZoneOffset.UTC)
+                val auth = AuthService(repository, secrets, AccessTokens(secrets, clock), clock)
+                val expiresAt = clock.millis() + 60_000
                 repository.createAnonymous(owner, RefreshCredential(legacyHash, expiresAt))
 
                 val rotated = assertIs<TokenResult.Valid>(auth.refresh(owner, token))
@@ -44,7 +48,7 @@ class RefreshTokenHashRotationTest {
                         owner,
                         setOf(secrets.hashRefreshToken(rotated.refreshToken)),
                         RefreshCredential(secrets.hashRefreshToken("next-refresh"), expiresAt),
-                        System.currentTimeMillis(),
+                        clock.millis(),
                     ),
                 )
             }
