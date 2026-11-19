@@ -5,6 +5,7 @@ import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.GenerationId
 import com.dozy.domain.id.JobId
 import com.dozy.domain.id.LeaseToken
+import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
 import com.dozy.domain.id.StoryId
 
@@ -39,7 +40,16 @@ enum class Stage { QUEUED, CREATING_TEXT, CREATING_COVER, READY, FAILED }
 enum class Failure { CONTENT_REJECTED, GENERATION_FAILED }
 data class Job(val id: JobId, val stage: Stage, val storyId: StoryId? = null, val failure: Failure? = null)
 data class SavedStory(val id: StoryId, val title: String, val text: String, val coverUrl: String, val configuration: StoryConfiguration, val createdAt: Long)
-data class Execution(val job: Job, val token: LeaseToken, val configuration: StoryConfiguration, val title: String?, val text: String?, val ordinal: Int, val id: GenerationId)
+data class Execution(
+    val job: Job,
+    val ownerId: OwnerId,
+    val token: LeaseToken,
+    val configuration: StoryConfiguration,
+    val title: String?,
+    val text: String?,
+    val ordinal: Int,
+    val id: GenerationId,
+)
 sealed interface RetrySubmission {
     data class Accepted(val job: Job) : RetrySubmission
     data object JobNotFound : RetrySubmission

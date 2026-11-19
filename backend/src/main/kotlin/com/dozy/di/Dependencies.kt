@@ -28,11 +28,16 @@ import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.FakeTextGenerator
+import com.dozy.features.story.data.cache.KeyValueJobStatusCache
+import com.dozy.features.story.data.repository.CachedGenerationRepository
 import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.CoverGenerator
 import com.dozy.features.story.domain.model.TextGenerator
 import com.dozy.features.story.domain.repository.GenerationRepository
+import com.dozy.features.story.domain.repository.JobStatusCache
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.keyvalue.InMemoryKeyValueStore
+import com.dozy.infrastructure.keyvalue.KeyValueStore
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
 import java.time.Clock
@@ -45,7 +50,11 @@ fun Application.configureDependencies() {
         provide<AccessTokens> { AccessTokens(resolve(), resolve()) }
         provide<AssetRepository> { SqliteAssetRepository(resolve(), resolve()) }
         provide<GenerationConfig> { GenerationConfig.from(configuration) }
-        provide<GenerationRepository> { SqliteGenerationRepository(resolve(), resolve(), resolve()) }
+        provide<KeyValueStore> { InMemoryKeyValueStore(resolve()) }
+        provide<JobStatusCache> { KeyValueJobStatusCache(resolve()) }
+        provide<GenerationRepository> {
+            CachedGenerationRepository(SqliteGenerationRepository(resolve(), resolve(), resolve()), resolve())
+        }
         provide<TextGenerator> { FakeTextGenerator(resolve()) }
         provide<CoverGenerator> { FakeCoverGenerator(resolve()) }
         provide<StoryService> { StoryService(resolve()) }

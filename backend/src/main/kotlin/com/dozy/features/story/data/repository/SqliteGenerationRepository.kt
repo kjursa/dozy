@@ -185,7 +185,16 @@ class SqliteGenerationRepository(
         }
         val jobId = requireNotNull(JobId.parse(row[StoryJobs.id]))
         recordStage(jobId)
-        Execution(Job(jobId, stage), token, decodeConfiguration(row[StoryJobs.configuration]), row[StoryJobs.title], row[StoryJobs.text], row[StoryJobs.ordinal], requireNotNull(GenerationId.parse(row[StoryJobs.executionId])))
+        Execution(
+            job = Job(jobId, stage),
+            ownerId = requireNotNull(OwnerId.parse(row[StoryJobs.ownerId])),
+            token = token,
+            configuration = decodeConfiguration(row[StoryJobs.configuration]),
+            title = row[StoryJobs.title],
+            text = row[StoryJobs.text],
+            ordinal = row[StoryJobs.ordinal],
+            id = requireNotNull(GenerationId.parse(row[StoryJobs.executionId])),
+        )
     }
     override suspend fun renew(execution: Execution): Boolean = database.write {
         StoryJobs.update({ (StoryJobs.id eq execution.job.id.value) and (StoryJobs.executionId eq execution.id.value) and (StoryJobs.leaseToken eq execution.token.value) and (StoryJobs.stage inList active) }) {
