@@ -1,4 +1,3 @@
-@file:OptIn(kotlin.uuid.ExperimentalUuidApi::class)
 package com.dozy.features.story.data.repository
 
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
@@ -29,8 +28,8 @@ import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.id.Uuids
 import java.time.Clock
-import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
@@ -53,7 +52,7 @@ class SqliteGenerationRepository(
         val summaries: List<StorySummaryDto>
         if (cursor == null) {
             registerInstallation(installation)
-            snapshotId = Uuid.generateV7().toString()
+            snapshotId = Uuids.v7()
             position = 0
             summaries = Stories.selectAll().where { Stories.installation eq installation.value }.map {
                 StorySummaryDto(it[Stories.id], it[Stories.title], it[Stories.coverUrl], readingMinutes(it[Stories.text]), it[Stories.createdAt])
@@ -74,7 +73,7 @@ class SqliteGenerationRepository(
         val end = minOf(position + limit, summaries.size)
         val next = if (end < summaries.size) {
             LibraryCursors.selectAll().where { (LibraryCursors.snapshot eq snapshotId) and (LibraryCursors.position eq end) }.singleOrNull()?.get(LibraryCursors.token)
-                ?: Uuid.random().toString().also { token -> LibraryCursors.insert { it[LibraryCursors.token] = token; it[snapshot] = snapshotId; it[LibraryCursors.position] = end } }
+                ?: Uuids.v4().also { token -> LibraryCursors.insert { it[LibraryCursors.token] = token; it[snapshot] = snapshotId; it[LibraryCursors.position] = end } }
         } else null
         StoryPage(summaries.subList(position, end).map { StorySummary(it.id, it.title, it.coverUrl, it.readingMinutes, it.createdAt) }, next)
     }
@@ -94,8 +93,8 @@ class SqliteGenerationRepository(
             }
         }
         registerInstallation(installation)
-        val id = Uuid.generateV7().toString()
-        val executionId = Uuid.generateV7().toString()
+        val id = Uuids.v7()
+        val executionId = Uuids.v7()
         StoryJobs.insert {
             it[StoryJobs.id] = id
             it[StoryJobs.installation] = installation.value
@@ -104,8 +103,8 @@ class SqliteGenerationRepository(
             it[canonical] = canonicalRequest
             it[configuration] = Json.encodeToString(command.configuration.toDto())
             it[stage] = Stage.QUEUED.name
-            it[storyId] = Uuid.generateV7().toString()
-            it[assetId] = Uuid.generateV7().toString()
+            it[storyId] = Uuids.v7()
+            it[assetId] = Uuids.v7()
             it[createdAt] = clock.millis()
             it[leaseUntil] = 0
             it[StoryJobs.executionId] = executionId
@@ -134,7 +133,7 @@ class SqliteGenerationRepository(
             ?: return@write RetrySubmission.JobNotFound
         if (row[StoryJobs.stage] != Stage.FAILED.name) return@write RetrySubmission.JobNotFailed
         if (StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.stage inList active) }.any()) return@write RetrySubmission.ActiveJobExists
-        val executionId = Uuid.generateV7().toString()
+        val executionId = Uuids.v7()
         val ordinal = row[StoryJobs.ordinal] + 1
         StoryExecutions.insert {
             it[StoryExecutions.id] = executionId
@@ -169,7 +168,7 @@ class SqliteGenerationRepository(
     override suspend fun claim(): Execution? = database.write {
         val now = clock.millis()
         val row = StoryJobs.selectAll().where { (StoryJobs.stage inList active) and (StoryJobs.leaseUntil lessEq now) }.orderBy(StoryJobs.createdAt).limit(1).singleOrNull() ?: return@write null
-        val token = Uuid.random().toString()
+        val token = Uuids.v4()
         val stage = if (row[StoryJobs.stage] == Stage.QUEUED.name) Stage.CREATING_TEXT else Stage.valueOf(row[StoryJobs.stage])
         StoryJobs.update({ StoryJobs.id eq row[StoryJobs.id] }) {
             it[StoryJobs.stage] = stage.name

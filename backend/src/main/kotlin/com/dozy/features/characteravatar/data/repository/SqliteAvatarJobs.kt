@@ -10,8 +10,7 @@ import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.infrastructure.database.SqliteDatabase
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import com.dozy.infrastructure.id.Uuids
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -19,12 +18,11 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-@OptIn(ExperimentalUuidApi::class)
 class SqliteAvatarJobs(private val database: SqliteDatabase, private val config: AvatarConfig) : AvatarJobs {
     override suspend fun create(owner: InstallationId, input: AvatarInput): AvatarJob = database.write {
         registerInstallation(owner)
-        val id = Uuid.generateV7().toString()
-        val asset = Uuid.generateV7().toString()
+        val id = Uuids.v7()
+        val asset = Uuids.v7()
         val job = AvatarJob(id, owner.value, input, asset, "${config.publicBaseUrl.trimEnd('/')}/assets/$asset", AvatarState.QUEUED)
         Jobs.insert {
             it[Jobs.id] = id
