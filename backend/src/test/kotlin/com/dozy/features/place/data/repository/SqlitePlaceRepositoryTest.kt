@@ -1,21 +1,15 @@
 package com.dozy.features.place.data.repository
 
 import com.dozy.config.DatabaseConfig
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.installation.data.database.Installations
 import com.dozy.features.installation.data.database.registerInstallation
-import com.dozy.features.installation.domain.model.InstallationId
-import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.ParseResult
+import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.infrastructure.database.SqliteDatabase
-import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -24,12 +18,19 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 class SqlitePlaceRepositoryTest {
     @TempDir lateinit var directory: Path
     private val databases = mutableListOf<SqliteDatabase>()
-    private val owner = InstallationId("owner")
-    private val stranger = InstallationId("stranger")
+    private val owner = OwnerId.generate()
+    private val stranger = OwnerId.generate()
     private val input = savePlace("Woods", "Forest", "Owls")
 
     @Test
@@ -97,14 +98,15 @@ class SqlitePlaceRepositoryTest {
     @Test
     fun `failed transaction rolls back all writes`() = runBlocking {
         val database = database()
+        val ownerId = OwnerId.generate()
         assertFailsWith<IllegalStateException> {
             database.write {
-                registerInstallation(InstallationId("rollback"))
+                registerInstallation(ownerId)
                 error("Rollback")
             }
         }
         val count = database.write {
-            Installations.selectAll().where { Installations.id eq "rollback" }.count()
+            Installations.selectAll().where { Installations.id eq ownerId.value }.count()
         }
         assertEquals(0L, count)
     }
@@ -133,7 +135,7 @@ class SqlitePlaceRepositoryTest {
     private fun database() = SqliteDatabase(DatabaseConfig(directory.resolve("nested/dozy.db").toString(), 5000))
         .also(databases::add)
     private fun repository() = SqlitePlaceRepository(database())
-    private fun placeId(value: String) = Place.Id(value)
+    private fun placeId(value: String) = requireNotNull(PlaceId.parse(value))
     private fun savePlace(name: String, description: String, inhabitants: String?) =
         (SavePlace.parse(name, description, inhabitants) as ParseResult.Valid).value
 }

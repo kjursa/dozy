@@ -10,7 +10,7 @@ Codes contain nine digits, expire after ten minutes, allow at most three verific
 
 ## Endpoints
 
-All endpoints are under `/api/v1` and use JSON unless the response is empty.
+All endpoints are under `/api/v1` and use JSON unless the response is empty. Owner IDs use `owner-<uuidv7>`, email sessions use `sess-<uuidv7>`, and refresh tokens use `ref-<uuidv4>`.
 
 | Method | Path | Request | Response |
 | --- | --- | --- | --- |
@@ -24,8 +24,7 @@ All endpoints are under `/api/v1` and use JSON unless the response is empty.
 
 The backend stores accounts, code sessions, and hashed refresh tokens in SQLite. Access tokens are signed and verified with JJWT and expire after 20 minutes.
 `AuthSecretProvider` derives separate keys with HMAC-SHA256 using `v1:jwt` and
-`v1:hash`. Refresh tokens stored under the former `v1:refresh` key remain valid
-until expiry or rotation. JWT signing keys are further derived for each UTC month. Ktor requires an access token for logout, all feature routes, and asset reads, including avatars. It derives the owner from the JWT subject. Guest creation, the two email endpoints, and the `/hello` health check are accessible before sign-in. Refresh is authenticated by the refresh token in the request body.
+`v1:hash`. The refresh verifier also checks hashes derived with the former `v1:refresh` key for tokens in the current format. JWT signing keys are further derived for each UTC month. Ktor requires an access token for logout, all feature routes, and asset reads, including avatars. It derives the owner from the JWT subject. Guest creation, the two email endpoints, and the `/hello` health check are accessible before sign-in. Refresh is authenticated by the refresh token in the request body.
 
 Set `DOZY_AUTH_SECRET` to a random secret of at least 32 characters and keep it stable across restarts. Without a configured secret, the process generates a temporary one and existing tokens become invalid after restart. The fixed email code is for local development.
 

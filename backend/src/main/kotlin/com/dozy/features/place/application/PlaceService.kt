@@ -1,25 +1,27 @@
 package com.dozy.features.place.application
 
-import com.dozy.features.installation.domain.model.InstallationId
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 
 class PlaceService(private val repository: PlaceRepository) {
-    suspend fun list(installation: InstallationId) = repository.list(installation).sortedWith(
+    suspend fun list(installation: OwnerId) = repository.list(installation).sortedWith(
         compareBy<Place> { it.origin != Place.Origin.USER }
             .thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
     )
 
     suspend fun create(
-        installation: InstallationId,
+        installation: OwnerId,
         command: SavePlace,
-        requestKey: String? = null
+        requestKey: IdempotencyKey? = null
     ) = repository.create(installation, command, requestKey)
 
-    suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult {
-        if (id.value.startsWith("builtin:")) return SavePlaceResult.Forbidden
+    suspend fun save(installation: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult {
+        if (id.isBuiltIn) return SavePlaceResult.Forbidden
         return repository.save(installation, id, command)
     }
 }

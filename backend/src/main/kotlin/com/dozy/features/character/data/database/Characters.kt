@@ -1,10 +1,12 @@
 package com.dozy.features.character.data.database
 
+import com.dozy.domain.id.AssetId
+import com.dozy.domain.id.CharacterId
 import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.installation.data.database.Installations
-import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.Table
 
 internal object Characters : Table("characters") {
     val id = text("id")
@@ -20,7 +22,7 @@ internal object Characters : Table("characters") {
 }
 
 internal fun ResultRow.toCharacter() = Character(
-    Character.Id(this[Characters.id]), this[Characters.name], this[Characters.personality],
+    requireNotNull(CharacterId.parse(this[Characters.id])), this[Characters.name], this[Characters.personality],
     this[Characters.appearance], this[Characters.type],
-    this[Characters.avatarId]?.let { Character.Avatar(it, requireNotNull(this[Characters.avatarUrl])) },
+    this[Characters.avatarId]?.let { Character.Avatar(requireNotNull(AssetId.parse(it)), requireNotNull(this[Characters.avatarUrl])) },
 )

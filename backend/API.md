@@ -35,10 +35,26 @@ For example, characters now support deletion, and full story responses include
   Ktor validates the JWT and uses its subject as the owner for reads and writes.
   Missing or invalid credentials return `401`. Pre-authentication routes and refresh
   are described in [Authentication](login.md).
-- Character IDs are canonical UUIDv7 strings (case normalized at the boundary).
-  Custom place IDs are opaque strings; predefined places use `builtin:` IDs. Encode path IDs as
-  one path segment. New story/job/asset IDs are backend-generated UUIDv7 strings. Avatar job IDs use
-  the same alphabet; a 128-character cap is a proposed server convention.
+- Identifiers are strings. Encode IDs as single path segments and pass them back
+  unchanged. The backend uses the following prefixes for generated values:
+
+  | Value | Format |
+  | --- | --- |
+  | Owner | `owner-<uuidv7>` |
+  | Email verification session | `sess-<uuidv7>` |
+  | Refresh token | `ref-<uuidv4>` |
+  | Character | `char-<uuidv7>` |
+  | Custom place | `place-<uuidv7>` |
+  | Asset | `asset-<uuidv7>` |
+  | Avatar job | `avjob-<uuidv7>` |
+  | Story generation job | `job-<uuidv7>` |
+  | Story | `story-<uuidv7>` |
+  | Library cursor | `cur-<uuidv4>` |
+
+  Built-in places retain their `builtin:` IDs. Clients send an unprefixed UUIDv4
+  in `Idempotency-Key`. Internal execution IDs, snapshot IDs and lease tokens use
+  `genid-`, `snap-` and `lease-`, respectively. Start with a fresh SQLite database
+  and fresh development sessions when switching from unprefixed IDs.
 - Enum wire values are uppercase. Optional nullable fields can be omitted or null
   unless a specific operation requires omission. Responses must preserve required
   fields even if the server serializer normally omits defaults.
@@ -107,12 +123,12 @@ owner identified by the access token; access JWTs remain valid until their 20-mi
 
 ```json
 {
-  "id": "hero-1",
+  "id": "char-019a0000-0000-7000-8000-000000000001",
   "name": "Luna",
   "personality": "Kind and curious",
   "appearance": "Red hair and a green coat",
   "type": "CHILD",
-  "avatar": {"id":"asset-1","url":"https://assets.example.test/asset-1.png"}
+  "avatar": {"id":"asset-019a0000-0000-7000-8000-000000000002","url":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000002.png"}
 }
 ```
 
@@ -146,7 +162,7 @@ structural error. A minimal request is:
 {"name":"Luna","personality":"Kind","appearance":"Green coat","type":"CHILD"}
 ```
 
-POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. An optional UUIDv4
+POST assigns a character ID and returns `201 {"id":"char-<uuidv7>"}`. An optional UUIDv4
 `Idempotency-Key` header returns the original ID on a retry with the same
 normalized values. A different payload with the same key returns
 `409 IDEMPOTENCY_CONFLICT`. Keys are scoped to the owner and resource type.
@@ -185,7 +201,7 @@ Implemented with an injected deterministic PNG fake; no external model is called
 Name is not submitted. Validate type and current description rules. Return `202`:
 
 ```json
-{"jobId":"avatar-job-1","status":"QUEUED","asset":null,"error":null}
+{"jobId":"avjob-019a0000-0000-7000-8000-000000000003","status":"QUEUED","asset":null,"error":null}
 ```
 
 Persist the job and request before acknowledging. Generation is asynchronous and
@@ -199,7 +215,7 @@ provider execution or charges. Retrying/polling limits do not cancel server work
 Return `200` with the same envelope. Status: `QUEUED`, `RUNNING`, `READY`, `FAILED`.
 
 ```json
-{"jobId":"avatar-job-1","status":"READY","asset":{"id":"asset-1","url":"https://assets.example.test/asset-1.png"},"error":null}
+{"jobId":"avjob-019a0000-0000-7000-8000-000000000003","status":"READY","asset":{"id":"asset-019a0000-0000-7000-8000-000000000002","url":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000002.png"},"error":null}
 ```
 
 READY requires a complete durable asset; FAILED carries the contract code in **`error`**
@@ -252,7 +268,7 @@ known local data; there is no GET-by-ID requirement.
 Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
 Both methods accept `name`, `description`, and optional `inhabitants`.
-POST assigns a UUIDv7 and returns `201 {"id":"<uuidv7>"}`. The backend assigns
+POST assigns a place ID and returns `201 {"id":"place-<uuidv7>"}`. The backend assigns
 `origin: "USER"` and computes `editable`. POST supports the same optional
 `Idempotency-Key` header as character creation.
 
@@ -304,7 +320,7 @@ multi-device reconciliation is not defined; no version precondition is submitted
 
 ```json
 {
-  "cast":[{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
+  "cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
   "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","inhabitants":null,"origin":"SYSTEM","editable":false},
@@ -330,7 +346,7 @@ requests rather than silently making hidden fields affect generation.
 ### POST /api/v1/story-generations
 
 Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
-`202 {"jobId":"job-1","status":"QUEUED"}` after durable acceptance.
+`202 {"jobId":"job-019a0000-0000-7000-8000-000000000004","status":"QUEUED"}` after durable acceptance.
 
 - Atomically bind the installation/key to the accepted request and job. Identical replays
   return 202 with the same job and current execution status, even after completion.
@@ -351,7 +367,7 @@ Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
 No body. Return 200 with a stage, not a percentage:
 
 ```json
-{"jobId":"job-1","status":"CREATING_TEXT"}
+{"jobId":"job-019a0000-0000-7000-8000-000000000004","status":"CREATING_TEXT"}
 ```
 
 Allowed stages: `QUEUED`, `CREATING_TEXT`, `CREATING_COVER`, `READY`, `FAILED`.
@@ -388,11 +404,11 @@ Return 200:
 
 ```json
 {
-  "id":"story-1",
+  "id":"story-019a0000-0000-7000-8000-000000000005",
   "title":"A lost star",
   "text":"Once upon a time…",
-  "coverUrl":"https://assets.example.test/story-1.png",
-  "configuration":{"cast":[{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],"mode":"AUTOMATIC","length":"SHORT"},
+  "coverUrl":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png",
+  "configuration":{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],"mode":"AUTOMATIC","length":"SHORT"},
   "createdAt":1794355200000
 }
 ```
@@ -410,7 +426,7 @@ No body. First page omits cursor. Return 200:
 
 ```json
 {
-  "stories":[{"id":"story-1","title":"A lost star","coverUrl":"https://assets.example.test/story-1.png","readingMinutes":4,"createdAt":1794355200000}],
+  "stories":[{"id":"story-019a0000-0000-7000-8000-000000000005","title":"A lost star","coverUrl":"https://assets.example.test/asset-019a0000-0000-7000-8000-000000000006.png","readingMinutes":4,"createdAt":1794355200000}],
   "nextCursor":null
 }
 ```

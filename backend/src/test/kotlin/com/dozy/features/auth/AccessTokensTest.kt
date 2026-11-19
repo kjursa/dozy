@@ -1,6 +1,7 @@
 package com.dozy.features.auth
 
 import com.dozy.config.AuthSecretProvider
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.auth.application.AccessTokens
 import java.time.Clock
 import java.time.Instant
@@ -13,7 +14,7 @@ class AccessTokensTest {
     @Test
     fun acceptsCurrentOwnerAcrossKeyRotationUntilExpiry() {
         val secrets = AuthSecretProvider("test-signing-key-with-at-least-32-characters")
-        val owner = "019a0000-0000-7000-8000-000000000003"
+        val owner = OwnerId.generate()
         val issuedAt = Instant.parse("2026-11-30T23:55:00Z")
         val token = AccessTokens(secrets, fixedClock(issuedAt)).issue(owner)
 
@@ -24,7 +25,7 @@ class AccessTokensTest {
     }
 
     @Test
-    fun verifiesLegacyAccessTokens() {
+    fun rejectsAccessTokensWithAnUnprefixedSubject() {
         val secrets = AuthSecretProvider("test-signing-key-with-at-least-32-characters")
         val tokens = AccessTokens(secrets, fixedClock(Instant.parse("2026-12-01T00:00:00Z")))
         val legacyToken =
@@ -32,10 +33,7 @@ class AccessTokensTest {
                 "eyJzdWIiOiIwMTlhMDAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMiLCJpc3MiOiJkb3p5IiwiYXVkIjoiZG96eS1tb2JpbGUiLCJpYXQiOjE3OTYwODI5MDAsImV4cCI6MTc5NjA4NDEwMH0." +
                 "1ByG_cPawaO623QGS6-1SqNq4A3LgvXTAxxYv-OZG74"
 
-        assertEquals(
-            "019a0000-0000-7000-8000-000000000003",
-            tokens.ownerId(legacyToken),
-        )
+        assertNull(tokens.ownerId(legacyToken))
     }
 
     private fun fixedClock(time: Instant): Clock = Clock.fixed(time, ZoneOffset.UTC)

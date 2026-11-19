@@ -1,20 +1,21 @@
 package com.dozy.infrastructure.database
 
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.installation.data.database.Installations
-import com.dozy.features.installation.domain.model.InstallationId
-import java.security.MessageDigest
-import java.util.HexFormat
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import java.security.MessageDigest
+import java.util.HexFormat
 
 internal class ResourceCreation(
-    private val installation: InstallationId,
+    private val installation: OwnerId,
     private val resourceType: String,
-    private val key: String,
+    private val key: IdempotencyKey,
     fields: List<String?>
 ) {
     private val requestHash = HexFormat.of().formatHex(
@@ -26,7 +27,7 @@ internal class ResourceCreation(
     fun previous(): Previous? = ResourceCreations.selectAll().where {
         (ResourceCreations.installationId eq installation.value) and
             (ResourceCreations.type eq resourceType) and
-            (ResourceCreations.key eq key)
+            (ResourceCreations.key eq key.value)
     }.singleOrNull()?.let {
         Previous(it[ResourceCreations.resourceId], it[ResourceCreations.requestHash] == requestHash)
     }
@@ -35,7 +36,7 @@ internal class ResourceCreation(
         ResourceCreations.insert {
             it[installationId] = installation.value
             it[type] = resourceType
-            it[ResourceCreations.key] = this@ResourceCreation.key
+            it[ResourceCreations.key] = this@ResourceCreation.key.value
             it[ResourceCreations.requestHash] = this@ResourceCreation.requestHash
             it[resourceId] = id
         }

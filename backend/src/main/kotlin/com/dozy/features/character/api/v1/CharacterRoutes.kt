@@ -10,6 +10,8 @@ import com.dozy.api.contracts.v1.character.CharactersDeleteError
 import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
+import com.dozy.domain.id.AssetId
+import com.dozy.domain.id.CharacterId
 import com.dozy.features.character.application.CharacterService
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
@@ -17,7 +19,7 @@ import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.idempotencyKey
-import com.dozy.plugins.ownerPartition
+import com.dozy.plugins.ownerId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -31,14 +33,13 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
-import java.util.UUID
 
 fun Route.characterV1Routes() {
     val service: CharacterService by application.dependencies
     route("/characters") {
-        get { call.respond(service.list(call.ownerPartition()).map { it.toDto() }) }
+        get { call.respond(service.list(call.ownerId()).map { it.toDto() }) }
         post {
-            val installation = call.ownerPartition()
+            val installation = call.ownerId()
             val requestKey = call.idempotencyKey()
             call.respondToSave(
                 service.create(
@@ -49,14 +50,14 @@ fun Route.characterV1Routes() {
             )
         }
         put("/{id}") {
-            val installation = call.ownerPartition()
+            val installation = call.ownerId()
             val id = requireCharacterId(call.parameters["id"])
             call.respondToSave(
                 service.save(installation, id, call.receive<SaveCharacterRequest>().toCommand())
             )
         }
         delete("/{id}") {
-            val installation = call.ownerPartition()
+            val installation = call.ownerId()
             if (!service.delete(installation, requireCharacterId(call.parameters["id"]))) {
                 throw BusinessApiException(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
             }
@@ -71,7 +72,13 @@ private fun SaveCharacterRequest.toCommand(): SaveCharacter = when (
         personality,
         appearance,
         type,
-        avatar?.let { Character.Avatar(it.id, it.url) }
+        avatar?.let {
+            val id = AssetId.parse(it.id) ?: throw BusinessApiException(
+                HttpStatusCode.UnprocessableEntity,
+                CharactersSaveError.ReferenceUnavailable,
+            )
+            Character.Avatar(id, it.url)
+        }
     )
 ) {
     is SaveCharacter.Result.Valid -> parsed.command
@@ -104,15 +111,8 @@ private suspend fun ApplicationCall.respondToSave(result: SaveCharacterResult) {
     }
 }
 
-private fun requireCharacterId(raw: String?): Character.Id {
-    val uuid = raw?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-    if (uuid == null || !uuid.toString().equals(raw, ignoreCase = true) || uuid.version() != 7 ||
-        uuid.variant() != 2
-    ) {
-        throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
-    }
-    return Character.Id(uuid.toString())
-}
+private fun requireCharacterId(raw: String?): CharacterId =
+    CharacterId.parse(raw) ?: throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
 
 private fun SaveCharacter.Result.Invalid.toApiException(): BusinessApiException {
     val field = CharacterField.valueOf(field.name)
@@ -131,6 +131,6 @@ private fun Character.toDto() = CharacterDto(
     appearance,
     CharacterType.valueOf(type.name).name,
     avatar?.let {
-        AvatarDto(it.id, it.url)
+        AvatarDto(it.id.value, it.url)
     }
 )

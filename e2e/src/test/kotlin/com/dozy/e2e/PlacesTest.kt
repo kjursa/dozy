@@ -13,6 +13,7 @@ import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -22,7 +23,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
 
 class PlacesTest {
     private lateinit var http: HttpClient
@@ -58,7 +58,8 @@ class PlacesTest {
     fun `save normalizes fields and repeated replacement keeps one editable place`() = runBlocking {
         val request = SavePlaceRequest("  Moon garden  ", "  A quiet garden  ", "  Owls  ")
         val id = assertIs<PlacesCreateResult.Success>(places.create(request)).response.id
-        assertEquals(7, UUID.fromString(id).version())
+        assertTrue(id.startsWith("place-"))
+        assertEquals(7, UUID.fromString(id.removePrefix("place-")).version())
         val created = places.snapshot().single { it.id == id }
         assertEquals("Moon garden", created.name)
         assertEquals("A quiet garden", created.description)

@@ -1,19 +1,13 @@
 package com.dozy.plugins
 
 import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.domain.id.IdempotencyKey
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
-import java.util.UUID
 
-internal fun ApplicationCall.idempotencyKey(): String? {
+internal fun ApplicationCall.idempotencyKey(): IdempotencyKey? {
     val values = request.headers.getAll("Idempotency-Key")
     if (values == null) return null
-    val raw = values?.singleOrNull()
-    val uuid = raw?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-    if (uuid == null || uuid.version() != 4 || uuid.variant() != 2 ||
-        !uuid.toString().equals(raw, ignoreCase = true)
-    ) {
-        throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
-    }
-    return uuid.toString()
+    return IdempotencyKey.parse(values.singleOrNull())
+        ?: throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
 }

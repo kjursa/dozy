@@ -1,13 +1,18 @@
 package com.dozy.features.place.api
 
-import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlaceResponse
-import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
+import com.dozy.asOwner
 import com.dozy.databaseConfig
+import com.dozy.domain.id.AvatarJobId
+import com.dozy.domain.id.CharacterId
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.asset.domain.repository.AssetRepository
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
@@ -16,7 +21,6 @@ import com.dozy.features.character.domain.repository.CharacterRepository
 import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
-import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
@@ -39,6 +43,9 @@ import io.ktor.http.contentType
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.SQLException
@@ -47,14 +54,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import org.junit.jupiter.api.io.TempDir
 
 class PlaceRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "019a0000-0000-7000-8000-000000000001"
-    private val stranger = "019a0000-0000-7000-8000-000000000002"
+    private val owner = "owner-019a0000-0000-7000-8000-000000000001"
+    private val stranger = "owner-019a0000-0000-7000-8000-000000000002"
     private val collection = "/api/v1/places"
 
     @Test
@@ -64,12 +68,12 @@ class PlaceRoutesTest {
         assertEquals(3, initial.size)
         assertEquals(setOf("builtin:village", "builtin:island", "builtin:woods"), initial.map { it.id }.toSet())
         initial.forEach { assertFalse(it.editable); assertEquals("SYSTEM", it.origin) }
-        assertError(client.save("019a0000-0000-7000-8000-000000000003"), HttpStatusCode.NotFound, "place.not_found")
+        assertError(client.save("place-019a0000-0000-7000-8000-000000000003"), HttpStatusCode.NotFound, "place.not_found")
         assertEquals(3, client.places().size)
         val created = client.create(body = body(name = "  Garden  ", inhabitants = "Owls"))
         assertEquals(HttpStatusCode.Created, created.status)
         val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
-        assertEquals(7, UUID.fromString(id).version())
+        assertEquals(7, UUID.fromString(id.removePrefix("place-")).version())
         val saved = client.places().first()
         assertEquals(id, saved.id)
         assertEquals("Garden", saved.name)
@@ -119,7 +123,7 @@ class PlaceRoutesTest {
     @Test
     fun `accepts canonical UUID case and retains origin isolation`() = testApplication {
         configurePlacesTest()
-        val uppercase = "019A0000-0000-7000-8000-00000000000A"
+        val uppercase = "owner-019A0000-0000-7000-8000-00000000000A"
         val created = client.create(installation = uppercase)
         assertEquals(HttpStatusCode.Created, created.status)
         val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
@@ -178,8 +182,8 @@ class PlaceRoutesTest {
             dependencies.provide<AvatarJobs> { object : AvatarJobs {
                 override suspend fun recover() = Unit
                 override suspend fun claim(): AvatarJob? = null
-                override suspend fun create(owner: InstallationId, input: AvatarInput): AvatarJob = error("Unexpected call")
-                override suspend fun find(owner: InstallationId, id: String): AvatarJob? = error("Unexpected call")
+                override suspend fun create(owner: OwnerId, input: AvatarInput): AvatarJob = error("Unexpected call")
+                override suspend fun find(owner: OwnerId, id: AvatarJobId): AvatarJob? = error("Unexpected call")
                 override suspend fun complete(job: AvatarJob, success: Boolean) = error("Unexpected call")
             } }
             dependencies.provide<PlaceRepository> { FailingRepository() }
@@ -255,21 +259,21 @@ class PlaceRoutesTest {
     }
 
     private class FailingCharacterRepository : CharacterRepository {
-        override suspend fun list(installation: InstallationId): List<Character> = throw SQLException("Private database path")
-        override suspend fun create(installation: InstallationId, command: SaveCharacter, requestKey: String?): SaveCharacterResult =
+        override suspend fun list(installation: OwnerId): List<Character> = throw SQLException("Private database path")
+        override suspend fun create(installation: OwnerId, command: SaveCharacter, requestKey: IdempotencyKey?): SaveCharacterResult =
             throw SQLException("Private database path")
 
-        override suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter): SaveCharacterResult =
+        override suspend fun save(installation: OwnerId, id: CharacterId, command: SaveCharacter): SaveCharacterResult =
             throw SQLException("Private database path")
-        override suspend fun delete(installation: InstallationId, id: Character.Id): Boolean = throw SQLException("Private database path")
+        override suspend fun delete(installation: OwnerId, id: CharacterId): Boolean = throw SQLException("Private database path")
     }
 
     private class FailingRepository : PlaceRepository {
-        override suspend fun list(installation: InstallationId): List<Place> = throw SQLException("Private database path")
-        override suspend fun create(installation: InstallationId, command: SavePlace, requestKey: String?): SavePlaceResult =
+        override suspend fun list(installation: OwnerId): List<Place> = throw SQLException("Private database path")
+        override suspend fun create(installation: OwnerId, command: SavePlace, requestKey: IdempotencyKey?): SavePlaceResult =
             throw SQLException("Private database path")
 
-        override suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult =
+        override suspend fun save(installation: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult =
             throw SQLException("Private database path")
     }
 }

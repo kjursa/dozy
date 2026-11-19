@@ -1,7 +1,9 @@
 package com.dozy.features.place.data.repository
 
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.installation.data.database.registerInstallation
-import com.dozy.features.installation.domain.model.InstallationId
 import com.dozy.features.place.data.database.existingPlace
 import com.dozy.features.place.data.database.insertPlace
 import com.dozy.features.place.data.database.updatePlace
@@ -12,18 +14,17 @@ import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.infrastructure.database.ResourceCreation
 import com.dozy.infrastructure.database.SqliteDatabase
-import com.dozy.infrastructure.id.Uuids
 
 class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceRepository {
-    override suspend fun list(installation: InstallationId): List<Place> = database.write {
+    override suspend fun list(installation: OwnerId): List<Place> = database.write {
         registerInstallation(installation)
         visiblePlaces(installation)
     }
 
     override suspend fun create(
-        installation: InstallationId,
+        installation: OwnerId,
         command: SavePlace,
-        requestKey: String?
+        requestKey: IdempotencyKey?
     ): SavePlaceResult = database.write {
         val creation = requestKey?.let {
             ResourceCreation(
@@ -35,9 +36,9 @@ class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceReposit
         }
         creation?.previous()?.let {
             if (!it.sameInput) return@write SavePlaceResult.IdempotencyConflict
-            return@write SavePlaceResult.Created(Place.Id(it.id))
+            return@write SavePlaceResult.Created(requireNotNull(PlaceId.parse(it.id)))
         }
-        val id = Place.Id(Uuids.v7())
+        val id = PlaceId.generate()
         registerInstallation(installation)
         insertPlace(installation, id, command)
         creation?.record(id.value)
@@ -45,15 +46,15 @@ class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceReposit
     }
 
     override suspend fun save(
-        installation: InstallationId,
-        id: Place.Id,
+        installation: OwnerId,
+        id: PlaceId,
         command: SavePlace
     ): SavePlaceResult = database.write {
         val existing = existingPlace(id)
         when {
-            id.value.startsWith("builtin:") -> SavePlaceResult.Forbidden
+            id.isBuiltIn -> SavePlaceResult.Forbidden
             existing == null -> SavePlaceResult.NotFound
-            existing.installationId != installation.value -> SavePlaceResult.Conflict
+            existing.ownerId != installation -> SavePlaceResult.Conflict
             else -> {
                 updatePlace(id, command)
                 SavePlaceResult.Updated

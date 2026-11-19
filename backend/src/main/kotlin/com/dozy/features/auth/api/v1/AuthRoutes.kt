@@ -1,13 +1,16 @@
 package com.dozy.features.auth.api.v1
 
-import com.dozy.api.contracts.v1.auth.AuthError
 import com.dozy.api.contracts.v1.auth.AnonymousOwnerResponse
+import com.dozy.api.contracts.v1.auth.AuthError
 import com.dozy.api.contracts.v1.auth.AuthTokensResponse
 import com.dozy.api.contracts.v1.auth.RefreshTokensRequest
 import com.dozy.api.contracts.v1.auth.RefreshTokensResponse
 import com.dozy.api.contracts.v1.auth.RequestEmailCodeRequest
 import com.dozy.api.contracts.v1.auth.RequestEmailCodeResponse
 import com.dozy.api.contracts.v1.auth.VerifyEmailCodeRequest
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.RefreshToken
 import com.dozy.features.auth.application.AuthService
 import com.dozy.features.auth.application.EmailRequest
 import com.dozy.features.auth.application.TokenResult
@@ -29,12 +32,12 @@ fun Route.authV1Routes() {
     post("/auth/anonymous") {
         val service = call.application.dependencies.resolve<AuthService>()
         val tokens = service.anonymous()
-        call.respond(HttpStatusCode.Created, AnonymousOwnerResponse(tokens.ownerId, tokens.accessToken, tokens.refreshToken))
+        call.respond(HttpStatusCode.Created, AnonymousOwnerResponse(tokens.ownerId.value, tokens.accessToken, tokens.refreshToken.value))
     }
     post("/auth/email") {
         val service = call.application.dependencies.resolve<AuthService>()
         when (val result = service.requestCode(call.receive<RequestEmailCodeRequest>().email)) {
-            is EmailRequest.Accepted -> call.respond(HttpStatusCode.Accepted, RequestEmailCodeResponse(result.sessionId))
+            is EmailRequest.Accepted -> call.respond(HttpStatusCode.Accepted, RequestEmailCodeResponse(result.sessionId.value))
             EmailRequest.InvalidEmail -> throw BusinessApiException(HttpStatusCode.UnprocessableEntity, AuthError.InvalidEmail)
             EmailRequest.RateLimited -> throw BusinessApiException(HttpStatusCode.TooManyRequests, AuthError.RateLimited)
         }
@@ -42,8 +45,10 @@ fun Route.authV1Routes() {
     post("/auth/email/code") {
         val request = call.receive<VerifyEmailCodeRequest>()
         val service = call.application.dependencies.resolve<AuthService>()
-        when (val result = service.verify(request.sessionId, request.code)) {
-            is VerifyResult.Success -> result.tokens.let { call.respond(HttpStatusCode.OK, AuthTokensResponse(it.ownerId, it.accessToken, it.refreshToken)) }
+        val sessionId = EmailSessionId.parse(request.sessionId)
+            ?: throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
+        when (val result = service.verify(sessionId, request.code)) {
+            is VerifyResult.Success -> result.tokens.let { call.respond(HttpStatusCode.OK, AuthTokensResponse(it.ownerId.value, it.accessToken, it.refreshToken.value)) }
             VerifyResult.InvalidCode -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidCode)
             VerifyResult.TooManyAttempts -> throw BusinessApiException(HttpStatusCode.TooManyRequests, AuthError.TooManyAttempts)
             VerifyResult.SessionExpired -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
@@ -52,8 +57,13 @@ fun Route.authV1Routes() {
     post("/auth/refresh") {
         val request = call.receive<RefreshTokensRequest>()
         val service = call.application.dependencies.resolve<AuthService>()
-        when (val result = service.refresh(request.ownerId, request.refreshToken)) {
-            is TokenResult.Valid -> call.respond(HttpStatusCode.OK, RefreshTokensResponse(result.accessToken, result.refreshToken))
+        val ownerId = OwnerId.parse(request.ownerId)
+        val refreshToken = RefreshToken.parse(request.refreshToken)
+        if (ownerId == null || refreshToken == null) {
+            throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
+        }
+        when (val result = service.refresh(ownerId, refreshToken)) {
+            is TokenResult.Valid -> call.respond(HttpStatusCode.OK, RefreshTokensResponse(result.accessToken, result.refreshToken.value))
             TokenResult.Invalid -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
         }
     }

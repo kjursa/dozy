@@ -1,11 +1,11 @@
 package com.dozy.features.character.api
 
-import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
+import com.dozy.asOwner
 import com.dozy.databaseConfig
 import com.dozy.module
 import io.ktor.client.HttpClient
@@ -20,18 +20,18 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
+import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.io.TempDir
 
 class CharacterRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "019a0000-0000-7000-8000-000000000001"
-    private val stranger = "019a0000-0000-7000-8000-000000000002"
+    private val owner = "owner-019a0000-0000-7000-8000-000000000001"
+    private val stranger = "owner-019a0000-0000-7000-8000-000000000002"
     private val collection = "/api/v1/characters"
     private val input = SaveCharacterRequest("  Oliver  ", "Curious", "Green eyes", "CHILD")
     private suspend fun HttpClient.create(
@@ -61,13 +61,14 @@ class CharacterRoutesTest {
         application { module() }
         assertEquals(emptyList(), client.list())
         val minimal = """{"name":" Oliver ","personality":"Curious","appearance":"Green eyes","type":"CHILD"}"""
-        val missingId = "019a0000-0000-7000-8000-000000000003"
+        val missingId = "char-019a0000-0000-7000-8000-000000000003"
         assertEquals(HttpStatusCode.NotFound, client.save(missingId).status)
         assertTrue(client.list().isEmpty())
         val created = client.create(minimal)
         assertEquals(HttpStatusCode.Created, created.status)
         val id = Json.decodeFromString<CreatedCharacterResponse>(created.bodyAsText()).id
-        assertEquals(7, UUID.fromString(id).version())
+        assertTrue(id.startsWith("char-"))
+        assertEquals(7, UUID.fromString(id.removePrefix("char-")).version())
         assertEquals(id, client.list().single().id)
         val path = "$collection/$id"
         assertEquals("Oliver", client.list().single().name)
@@ -92,7 +93,7 @@ class CharacterRoutesTest {
         }
         assertTrue(client.list().isEmpty())
         assertEquals(HttpStatusCode.Conflict, client.save(id).status)
-        val missing = client.delete("/api/v1/characters/019a0000-0000-7000-8000-000000000009") { asOwner(owner) }
+        val missing = client.delete("/api/v1/characters/char-019a0000-0000-7000-8000-000000000009") { asOwner(owner) }
         assertEquals("CHARACTER_NOT_FOUND", Json.decodeFromString<ApiErrorResponse>(missing.bodyAsText()).code)
     }
 

@@ -1,21 +1,23 @@
 package com.dozy.features.character.domain.repository
 
+import com.dozy.domain.id.CharacterId
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
-import com.dozy.features.installation.domain.model.InstallationId
 
 interface CharacterRepository {
-    suspend fun list(installation: InstallationId): List<Character>
+    suspend fun list(installation: OwnerId): List<Character>
     suspend fun create(
-        installation: InstallationId,
+        installation: OwnerId,
         command: SaveCharacter,
-        requestKey: String? = null
+        requestKey: IdempotencyKey? = null
     ): SaveCharacterResult
     suspend fun save(
-        installation: InstallationId,
-        id: Character.Id,
+        installation: OwnerId,
+        id: CharacterId,
         command: SaveCharacter
     ): SaveCharacterResult
-    suspend fun delete(installation: InstallationId, id: Character.Id): Boolean
+    suspend fun delete(installation: OwnerId, id: CharacterId): Boolean
 }

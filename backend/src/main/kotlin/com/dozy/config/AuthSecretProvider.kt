@@ -1,5 +1,6 @@
 package com.dozy.config
 
+import com.dozy.domain.id.RefreshToken
 import io.ktor.server.config.ApplicationConfig
 import java.security.SecureRandom
 import java.util.Base64
@@ -20,10 +21,10 @@ class AuthSecretProvider(
 
     fun jwtSecret(period: String): SecretKey = SecretKeySpec(hmac(jwtSecret, period), ALGORITHM)
 
-    fun hashRefreshToken(token: String): String = hash(hashSecret, token)
+    fun hashRefreshToken(token: RefreshToken): String = hash(hashSecret, token.value)
 
     // A successful rotation writes only the current hash.
-    fun refreshTokenLookupHashes(token: String): Set<String> = setOf(hashRefreshToken(token), hash(legacyRefreshSecret, token))
+    fun refreshTokenLookupHashes(token: RefreshToken): Set<String> = setOf(hashRefreshToken(token), hash(legacyRefreshSecret, token.value))
 
     private fun hash(
         key: ByteArray,

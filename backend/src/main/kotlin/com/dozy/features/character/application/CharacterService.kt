@@ -1,20 +1,22 @@
 package com.dozy.features.character.application
 
+import com.dozy.domain.id.CharacterId
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.repository.CharacterRepository
-import com.dozy.features.installation.domain.model.InstallationId
 
 class CharacterService(private val repository: CharacterRepository) {
-    suspend fun list(installation: InstallationId) = repository.list(installation)
+    suspend fun list(installation: OwnerId) = repository.list(installation)
         .sortedWith(compareBy<Character> { it.name.lowercase() }.thenBy { it.id.value })
     suspend fun create(
-        installation: InstallationId,
+        installation: OwnerId,
         command: SaveCharacter,
-        requestKey: String? = null
+        requestKey: IdempotencyKey? = null
     ) = repository.create(installation, command, requestKey)
 
-    suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter) =
+    suspend fun save(installation: OwnerId, id: CharacterId, command: SaveCharacter) =
         repository.save(installation, id, command)
-    suspend fun delete(installation: InstallationId, id: Character.Id) = repository.delete(installation, id)
+    suspend fun delete(installation: OwnerId, id: CharacterId) = repository.delete(installation, id)
 }

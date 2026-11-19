@@ -1,26 +1,30 @@
 package com.dozy.features.place.application
 
-import com.dozy.features.installation.domain.model.InstallationId
-import com.dozy.features.place.domain.model.Place
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.place.domain.model.ParseResult
+import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlinx.coroutines.runBlocking
 
 class PlaceServiceTest {
-    private val installation = InstallationId("installation")
+    private val installation = OwnerId.generate()
     private val command = (SavePlace.parse("Woods", "Forest", null) as ParseResult.Valid).value
 
     @Test
     fun `orders custom places first with deterministic name and ID ties`() = runBlocking {
         val repository = FakeRepository(listOf(
             place("builtin:woods", "A", Place.Origin.SYSTEM),
-            place("c", "Zoo"), place("b", "alpha"), place("a", "Alpha"),
+            place("place-019a0000-0000-7000-8000-000000000003", "Zoo"),
+            place("place-019a0000-0000-7000-8000-000000000002", "alpha"),
+            place("place-019a0000-0000-7000-8000-000000000001", "Alpha"),
         ))
-        assertEquals(listOf("a", "b", "c", "builtin:woods"),
+        assertEquals(listOf("place-019a0000-0000-7000-8000-000000000001", "place-019a0000-0000-7000-8000-000000000002", "place-019a0000-0000-7000-8000-000000000003", "builtin:woods"),
             PlaceService(repository).list(installation).map { it.id.value })
         assertEquals(installation, repository.lastInstallation)
     }
@@ -36,7 +40,7 @@ class PlaceServiceTest {
     @Test
     fun `forwards input and repository outcome`() = runBlocking {
         val repository = FakeRepository()
-        val id = placeId("custom")
+        val id = PlaceId.generate()
         assertEquals(SavePlaceResult.Conflict, PlaceService(repository).save(installation, id, command))
         assertEquals(Triple(installation, id, command), repository.saved)
     }
@@ -44,26 +48,26 @@ class PlaceServiceTest {
     private fun place(id: String, name: String, origin: Place.Origin = Place.Origin.USER) =
         Place(placeId(id), placeName(name), placeDescription("Forest"), null, origin)
 
-    private fun placeId(value: String) = Place.Id(value)
+    private fun placeId(value: String) = requireNotNull(PlaceId.parse(value))
     private fun placeName(value: String) = Place.Name(value)
     private fun placeDescription(value: String) = Place.Description(value)
 
     private class FakeRepository(private val places: List<Place> = emptyList()) : PlaceRepository {
-        var lastInstallation: InstallationId? = null
+        var lastInstallation: OwnerId? = null
         var saveCalls = 0
-        var saved: Triple<InstallationId, Place.Id, SavePlace>? = null
-        override suspend fun list(installation: InstallationId): List<Place> {
+        var saved: Triple<OwnerId, PlaceId, SavePlace>? = null
+        override suspend fun list(installation: OwnerId): List<Place> {
             lastInstallation = installation
             return places
         }
         override suspend fun create(
-            installation: InstallationId,
+            installation: OwnerId,
             command: SavePlace,
-            requestKey: String?
+            requestKey: IdempotencyKey?
         ): SavePlaceResult = error("Unexpected creation")
         override suspend fun save(
-            installation: InstallationId,
-            id: Place.Id,
+            installation: OwnerId,
+            id: PlaceId,
             command: SavePlace
         ): SavePlaceResult {
             saveCalls++

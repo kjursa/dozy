@@ -1,5 +1,8 @@
 package com.dozy.features.characteravatar.domain.model
 
+import com.dozy.domain.id.AssetId
+import com.dozy.domain.id.AvatarJobId
+import com.dozy.domain.id.OwnerId
 import com.dozy.features.character.domain.model.SaveCharacter
 
 class AvatarInput private constructor(val type: String, val personality: String, val appearance: String) {
@@ -16,4 +19,4 @@ class AvatarInput private constructor(val type: String, val personality: String,
     }
 }
 enum class AvatarState { QUEUED, RUNNING, READY, FAILED }
-data class AvatarJob(val id: String, val owner: String, val input: AvatarInput, val assetId: String, val url: String, val state: AvatarState)
+data class AvatarJob(val id: AvatarJobId, val owner: OwnerId, val input: AvatarInput, val assetId: AssetId, val url: String, val state: AvatarState)

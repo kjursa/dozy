@@ -1,20 +1,22 @@
 package com.dozy.features.place.domain.repository
 
-import com.dozy.features.installation.domain.model.InstallationId
+import com.dozy.domain.id.IdempotencyKey
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.PlaceId
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 
 interface PlaceRepository {
-    suspend fun list(installation: InstallationId): List<Place>
+    suspend fun list(installation: OwnerId): List<Place>
     suspend fun create(
-        installation: InstallationId,
+        installation: OwnerId,
         command: SavePlace,
-        requestKey: String? = null
+        requestKey: IdempotencyKey? = null
     ): SavePlaceResult
     suspend fun save(
-        installation: InstallationId,
-        id: Place.Id,
+        installation: OwnerId,
+        id: PlaceId,
         command: SavePlace
     ): SavePlaceResult
 }

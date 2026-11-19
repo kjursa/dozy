@@ -21,7 +21,6 @@ import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
-import java.util.UUID
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -35,24 +34,18 @@ internal fun canonicalJson(value: JsonElement): String = when (value) {
     else -> value.toString()
 }
 internal fun invalidRequest(): Nothing = throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
-internal fun requireUuid(raw: String?, version: Int): String {
-    val uuid = raw?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-    if (uuid == null || uuid.version() != version || uuid.variant() != 2 || !uuid.toString().equals(raw, true)) invalidRequest()
-    return uuid.toString()
-}
 internal fun JsonObject.command(): StartGeneration {
     val dto = try { Json.decodeFromJsonElement<GenerationRequestDto>(this) } catch (_: SerializationException) { invalidRequest() }
     if (GenerationMode.entries.none { it.name == dto.mode } || StoryLength.entries.none { it.name == dto.length }) invalidRequest()
     if (dto.mode == GenerationMode.AUTOMATIC.name && keys.any { it in setOf("place", "idea", "ending") }) invalidRequest()
     dto.cast.forEach {
-        requireUuid(it.id, 7)
         if (it.name.isBlank() || it.personality.isBlank() || it.appearance.isBlank() || CharacterType.entries.none { type -> type.name == it.type }) invalidRequest()
-        it.avatar?.let { avatar -> requireUuid(avatar.id, 7); if (avatar.url.isBlank()) invalidRequest() }
+        if (it.avatar?.url?.isBlank() == true) invalidRequest()
     }
     dto.place?.let {
         if (it.id.isBlank() || it.name.isBlank() || it.description.isBlank() || it.origin !in setOf("USER", "SYSTEM")) invalidRequest()
     }
-    return when (val parsed = StartGeneration.parse(dto.toDomain())) {
+    return when (val parsed = StartGeneration.parse(dto.toDomain() ?: invalidRequest())) {
         is StartGeneration.Result.Valid -> parsed.command
         is StartGeneration.Result.Invalid -> {
             val field = GenerationField.valueOf(parsed.field.name)
@@ -62,10 +55,10 @@ internal fun JsonObject.command(): StartGeneration {
         }
     }
 }
-internal fun Job.toDto() = GenerationStatusDto(id, stage.name, storyId, failure?.name)
-internal fun SavedStory.toDto() = StoryDto(id, title, text, coverUrl, configuration.toDto(), createdAt)
+internal fun Job.toDto() = GenerationStatusDto(id.value, stage.name, storyId?.value, failure?.name)
+internal fun SavedStory.toDto() = StoryDto(id.value, title, text, coverUrl, configuration.toDto(), createdAt)
 
 internal fun StoryPage.toDto() = StoryPageDto(
-    stories.map { StorySummaryDto(it.id, it.title, it.coverUrl, it.readingMinutes, it.createdAt) },
-    nextCursor,
+    stories.map { StorySummaryDto(it.id.value, it.title, it.coverUrl, it.readingMinutes, it.createdAt) },
+    nextCursor?.value,
 )

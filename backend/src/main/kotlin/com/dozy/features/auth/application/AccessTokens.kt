@@ -1,6 +1,7 @@
 package com.dozy.features.auth.application
 
 import com.dozy.config.AuthSecretProvider
+import com.dozy.domain.id.OwnerId
 import io.jsonwebtoken.JwsHeader
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
@@ -10,13 +11,12 @@ import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.util.Date
-import java.util.UUID
 
 class AccessTokens(
     private val secrets: AuthSecretProvider,
     private val clock: Clock,
 ) {
-    fun issue(ownerId: String): String {
+    fun issue(ownerId: OwnerId): String {
         val now = clock.instant()
         val period = periodKey(now)
         return Jwts
@@ -28,14 +28,14 @@ class AccessTokens(
             .issuer(ISSUER)
             .audience()
             .single(AUDIENCE)
-            .subject(ownerId)
+            .subject(ownerId.value)
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plusSeconds(LIFETIME)))
             .signWith(secrets.jwtSecret(period), Jwts.SIG.HS256)
             .compact()
     }
 
-    fun ownerId(token: String): String? {
+    fun ownerId(token: String): OwnerId? {
         if (token.length > 2048) return null
         val now = clock.instant()
         return try {
@@ -73,7 +73,7 @@ class AccessTokens(
             ) {
                 return null
             }
-            owner.takeIf { UUID.fromString(it).toString() == it }
+            OwnerId.parse(owner)?.takeIf { it.value == owner }
         } catch (_: JwtException) {
             null
         } catch (_: IllegalArgumentException) {

@@ -1,6 +1,10 @@
 package com.dozy.features.auth
 
 import com.dozy.databaseConfig
+import com.dozy.domain.id.EmailSessionId
+import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.RefreshToken
+import com.dozy.module
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -11,14 +15,13 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
-import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.io.TempDir
-import com.dozy.module
+import java.nio.file.Path
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class AuthRoutesTest {
     @TempDir lateinit var directory: Path
@@ -30,8 +33,7 @@ class AuthRoutesTest {
         val response = client.post("/api/v1/auth/anonymous")
         assertEquals(HttpStatusCode.Created, response.status)
         val ownerId = Json.parseToJsonElement(response.bodyAsText()).jsonObject.getValue("ownerId").jsonPrimitive.content
-        assertEquals(36, ownerId.length)
-        assertEquals('7', ownerId[14])
+        assertEquals(ownerId, OwnerId.parse(ownerId)?.value)
         val token = Json.parseToJsonElement(response.bodyAsText()).jsonObject.getValue("accessToken").jsonPrimitive.content
         assertEquals(HttpStatusCode.OK, client.get("/api/v1/places") { bearerAuth(token) }.status)
     }
@@ -52,8 +54,10 @@ class AuthRoutesTest {
         }
         assertEquals(HttpStatusCode.OK, login.status)
         val fields = Json.parseToJsonElement(login.bodyAsText()).jsonObject
+        assertEquals(sessionId, EmailSessionId.parse(sessionId)?.value)
         val ownerId = fields.getValue("ownerId").jsonPrimitive.content
         val refresh = fields.getValue("refreshToken").jsonPrimitive.content
+        assertEquals(refresh, RefreshToken.parse(refresh)?.value)
         val refreshed = client.post("/api/v1/auth/refresh") {
             contentType(ContentType.Application.Json)
             setBody("""{"ownerId":"$ownerId","refreshToken":"$refresh"}""")
