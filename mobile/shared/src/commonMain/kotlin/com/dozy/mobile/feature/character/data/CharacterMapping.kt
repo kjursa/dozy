@@ -70,11 +70,13 @@ fun CharacterDto.toDomain(allowLocalHttp: Boolean = false): Character {
     )
 }
 
-fun Character.toSaveRequest() =
+fun Character.toSaveRequest() = details.toSaveRequest(avatar)
+
+fun Character.Details.toSaveRequest(avatar: Character.Avatar?) =
     SaveCharacterRequest(
-        details.name.value,
-        details.personality.value,
-        details.appearance.value,
-        requireNotNull(details.type).name,
+        name.value,
+        personality.value,
+        appearance.value,
+        requireNotNull(type).name,
         avatar?.let { AvatarDto(it.id.value, it.url.value) },
     )

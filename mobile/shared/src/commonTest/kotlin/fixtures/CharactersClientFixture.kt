@@ -3,6 +3,7 @@ package fixtures
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.character.CharactersClients
 import com.dozy.api.client.character.v1.CharactersClient
+import com.dozy.api.client.character.v1.CharactersCreateResult
 import com.dozy.api.client.character.v1.CharactersDeleteResult
 import com.dozy.api.client.character.v1.CharactersListResult
 import com.dozy.api.client.character.v1.CharactersSaveResult
@@ -13,6 +14,9 @@ class CharactersClientFixture :
     CharactersClient {
     override val v1: CharactersClient get() = this
     var onList: suspend () -> CharactersListResult = { CharactersListResult.TechnicalError(TechnicalError.Server(503)) }
+    var onCreate: suspend (
+        SaveCharacterRequest,
+    ) -> CharactersCreateResult = { CharactersCreateResult.TechnicalError(TechnicalError.Server(503)) }
     var onSave: suspend (
         String,
         SaveCharacterRequest,
@@ -20,6 +24,11 @@ class CharactersClientFixture :
     var onDelete: suspend (String) -> CharactersDeleteResult = { CharactersDeleteResult.TechnicalError(TechnicalError.Server(503)) }
 
     override suspend fun list() = onList()
+
+    override suspend fun create(
+        request: SaveCharacterRequest,
+        requestKey: String?,
+    ) = onCreate(request)
 
     override suspend fun save(
         id: String,

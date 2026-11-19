@@ -1,6 +1,8 @@
 package com.dozy.mobile.feature.character.presentation.create
 
 import androidx.lifecycle.viewModelScope
+import com.dozy.mobile.core.presentation.CreationDraft
+import com.dozy.mobile.core.presentation.newCreationRequestKey
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterValidation
 import com.dozy.mobile.feature.character.domain.model.EditCharacterInput
@@ -24,13 +26,22 @@ class CreateCharacterViewModel(
     private val saveCharacter: SaveCharacter,
     private val generateAvatar: GenerateCharacterAvatar,
     private val observeCharacter: ObserveCharacter,
+    private val creationDraft: CreationDraft<CreateCharacterUiState>,
     private val initialId: String? = null,
 ) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, Nothing>(
         initialState = CreateCharacterUiState(),
         statePersistence = statePersistence,
     ) {
     init {
-        if (initialId != null) loadCharacter()
+        if (initialId != null) loadCharacter() else restoreCreationDraft(CreateCharacterUiState())
+    }
+
+    private fun restoreCreationDraft(emptyForm: CreateCharacterUiState) {
+        if (uiState.value != emptyForm) return
+        viewModelScope.launch {
+            val draft = runCatchingSuspend { creationDraft.load() }.getOrNull()
+            if (draft != null && uiState.value == emptyForm) updateState { draft }
+        }
     }
 
     private fun loadCharacter() {
@@ -105,10 +116,12 @@ class CreateCharacterViewModel(
 
     private fun generate() {
         val input = validatedInput() ?: return
+        val state = uiState.value
         val activeAttempt = ++attempt
         updateState { copy(generating = true, generationError = null) }
         generation =
             viewModelScope.launch {
+                if (state.editingId == null) runCatchingSuspend { creationDraft.save(state) }
                 val result = generateAvatar(input)
                 if (abandoned || activeAttempt != attempt) return@launch
                 updateState {
@@ -118,7 +131,8 @@ class CreateCharacterViewModel(
                                 generating = false,
                                 avatarId = result.avatar.id.value,
                                 avatarUrl = result.avatar.url.value,
-                                avatarDescription = uiState.value.descriptionKey,
+                                avatarDescription = descriptionKey,
+                                creationKey = null,
                             )
                         GenerateCharacterAvatar.Result.Unavailable ->
                             copy(
@@ -143,13 +157,19 @@ class CreateCharacterViewModel(
                 Character.Avatar.Id(state.avatarId ?: return),
                 Character.Avatar.Url(state.avatarUrl ?: return),
             )
-        updateState { copy(saveStatus = SaveStatus.SAVING) }
+        val requestKey = if (state.editingId == null) state.creationKey ?: newCreationRequestKey() else null
+        updateState { copy(saveStatus = SaveStatus.SAVING, creationKey = requestKey) }
         viewModelScope.launch {
+            if (state.editingId == null && runCatchingSuspend { creationDraft.save(state.copy(creationKey = requestKey)) }.isFailure) {
+                updateState { copy(saveStatus = SaveStatus.FAILURE) }
+                return@launch
+            }
             val result =
                 state.editingId?.let { saveCharacter(EditCharacterInput.from(Character.Id(it), input), avatar) }
-                    ?: saveCharacter(input, avatar)
+                    ?: saveCharacter(input, avatar, requestKey)
             when (result) {
                 is SaveCharacter.Result.Success -> {
+                    if (state.editingId == null) runCatchingSuspend { creationDraft.clear() }
                     saved = true
                     if (!abandoned) navigateTo(CreateCharacterDestination.Saved(result.saved.character.id))
                 }
@@ -166,7 +186,7 @@ class CreateCharacterViewModel(
                 is CreateCharacterValidation.Valid -> edited.withErrors()
                 is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
-        updateState { validated.copy(saveStatus = SaveStatus.EDITING, generationError = null) }
+        updateState { validated.copy(saveStatus = SaveStatus.EDITING, generationError = null, creationKey = null) }
     }
 
     private fun navigateTo(command: NavigationCommand) {

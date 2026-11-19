@@ -1,5 +1,6 @@
 package com.dozy.api.client
 
+import com.dozy.api.client.character.v1.CharactersCreateResult
 import com.dozy.api.client.character.v1.CharactersDeleteResult
 import com.dozy.api.client.character.v1.CharactersListResult
 import com.dozy.api.client.character.v1.CharactersSaveResult
@@ -47,6 +48,13 @@ class ClientResultsTest {
     )
     private val operations = listOf(
         Operation("CharactersList", { it.characters.v1.list() }, { (it as CharactersListResult.TechnicalError).error }, { (it as CharactersListResult.ApiError).error }, CharactersListError.known),
+        Operation(
+            "CharactersCreate",
+            { it.characters.v1.create(SaveCharacterRequest("Name", "Kind", "Eyes", "CHILD")) },
+            { (it as CharactersCreateResult.TechnicalError).error },
+            { (it as CharactersCreateResult.ApiError).error },
+            CharactersSaveError.known,
+        ),
         Operation("CharactersSave", { it.characters.v1.save("id", SaveCharacterRequest("Name", "Kind", "Eyes", "CHILD")) }, { (it as CharactersSaveResult.TechnicalError).error }, { (it as CharactersSaveResult.ApiError).error }, CharactersSaveError.known),
         Operation("CharactersDelete", { it.characters.v1.delete("id") }, { (it as CharactersDeleteResult.TechnicalError).error }, { (it as CharactersDeleteResult.ApiError).error }, CharactersDeleteError.known),
         Operation("AvatarStart", { it.characterAvatars.v1.start(AvatarRequestDto("CHILD", "Kind", "Eyes")) }, { (it as AvatarStartResult.TechnicalError).error }, { (it as AvatarStartResult.ApiError).error }, AvatarStartError.known),

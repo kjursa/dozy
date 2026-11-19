@@ -1,11 +1,10 @@
-@file:OptIn(ExperimentalUuidApi::class)
-
 package com.dozy.e2e
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.auth.v1.AnonymousResult
 import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.PlaceResponse
@@ -14,6 +13,7 @@ import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
+import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -22,8 +22,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 import kotlinx.coroutines.runBlocking
 
 class PlacesTest {
@@ -58,9 +56,9 @@ class PlacesTest {
 
     @Test
     fun `save normalizes fields and repeated replacement keeps one editable place`() = runBlocking {
-        val id = resourceId()
         val request = SavePlaceRequest("  Moon garden  ", "  A quiet garden  ", "  Owls  ")
-        repeat(2) { assertEquals(PlacesSaveResult.Success, places.save(id, request)) }
+        val id = assertIs<PlacesCreateResult.Success>(places.create(request)).response.id
+        assertEquals(7, UUID.fromString(id).version())
         val created = places.snapshot().single { it.id == id }
         assertEquals("Moon garden", created.name)
         assertEquals("A quiet garden", created.description)
@@ -69,7 +67,7 @@ class PlacesTest {
         assertTrue(created.editable)
 
         val update = SavePlaceRequest("Star garden", "A different adventure")
-        assertEquals(PlacesSaveResult.Success, places.save(id, update))
+        repeat(2) { assertEquals(PlacesSaveResult.Success, places.save(id, update)) }
         val updated = places.snapshot().single { it.id == id }
         assertEquals(update.name, updated.name)
         assertEquals(update.description, updated.description)
@@ -97,17 +95,15 @@ class PlacesTest {
             valid.copy(inhabitants = "i".repeat(501)) to PlacesSaveError.InhabitantsTooLong,
         )
         for ((request, expected) in cases) {
-            val id = resourceId()
-            assertEquals(PlacesSaveResult.ApiError(expected), places.save(id, request))
-            assertFalse(places.snapshot().any { it.id == id })
+            assertEquals(PlacesCreateResult.ApiError(expected), places.create(request))
+            assertTrue(places.snapshot().none { it.origin == "USER" })
         }
     }
 
     @Test
     fun `another guest cannot see or replace an owned place`() = runBlocking {
-        val id = resourceId()
         val request = SavePlaceRequest("Our garden", "Our quiet place")
-        assertEquals(PlacesSaveResult.Success, places.save(id, request))
+        val id = assertIs<PlacesCreateResult.Success>(places.create(request)).response.id
         val original = places.snapshot().single { it.id == id }
         client().use { other ->
             assertFalse(other.places.v1.snapshot().any { it.id == id })
@@ -132,6 +128,4 @@ class PlacesTest {
 
     private suspend fun PlacesClient.snapshot(): List<PlaceResponse> =
         assertIs<PlacesListResult.Success>(list(), "Expected a successful Places response").response.places
-
-    private fun resourceId(): String = Uuid.generateV7().toString()
 }

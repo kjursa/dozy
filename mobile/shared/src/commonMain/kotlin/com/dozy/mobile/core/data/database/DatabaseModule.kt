@@ -17,4 +17,5 @@ val databaseModule =
         single { get<DozyDatabase>().characters() }
         single { get<DozyDatabase>().places() }
         single { get<DozyDatabase>().generations() }
+        single { get<DozyDatabase>().creationDrafts() }
     }

@@ -2,6 +2,7 @@ package com.dozy.features.place.api
 
 import com.dozy.asOwner
 import com.dozy.api.contracts.v1.ApiErrorResponse
+import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
@@ -27,6 +28,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -40,6 +42,7 @@ import io.ktor.server.testing.testApplication
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.SQLException
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -52,7 +55,7 @@ class PlaceRoutesTest {
     @TempDir lateinit var directory: Path
     private val owner = "019a0000-0000-7000-8000-000000000001"
     private val stranger = "019a0000-0000-7000-8000-000000000002"
-    private val id = "019a0000-0000-7000-8000-000000000003"
+    private val collection = "/api/v1/places"
 
     @Test
     fun `lists builtins then saves and replaces a normalized custom place`() = testApplication {
@@ -61,23 +64,44 @@ class PlaceRoutesTest {
         assertEquals(3, initial.size)
         assertEquals(setOf("builtin:village", "builtin:island", "builtin:woods"), initial.map { it.id }.toSet())
         initial.forEach { assertFalse(it.editable); assertEquals("SYSTEM", it.origin) }
-        val created = client.save(body = body(name = "  Garden  ", inhabitants = "Owls"))
+        assertError(client.save("019a0000-0000-7000-8000-000000000003"), HttpStatusCode.NotFound, "place.not_found")
+        assertEquals(3, client.places().size)
+        val created = client.create(body = body(name = "  Garden  ", inhabitants = "Owls"))
         assertEquals(HttpStatusCode.Created, created.status)
-        assertEquals("", created.bodyAsText())
+        val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
+        assertEquals(7, UUID.fromString(id).version())
         val saved = client.places().first()
         assertEquals(id, saved.id)
         assertEquals("Garden", saved.name)
         assertEquals("USER", saved.origin)
         assertEquals(true, saved.editable)
         assertEquals("Owls", saved.inhabitants)
-        val updated = client.save()
+        val updated = client.save(id)
         assertEquals(HttpStatusCode.NoContent, updated.status)
         assertEquals("", updated.bodyAsText())
         val owned = client.places()
         assertEquals(4, owned.size)
         assertNull(owned.first().inhabitants)
-        assertEquals(HttpStatusCode.NoContent, client.save().status)
+        assertEquals(HttpStatusCode.NoContent, client.save(id).status)
         assertEquals(4, client.places().size)
+    }
+
+    @Test
+    fun `replays creation per owner and rejects reusing the key for different input`() = testApplication {
+        configurePlacesTest()
+        val key = UUID.randomUUID().toString()
+        val first = client.create(requestKey = key)
+        assertEquals(HttpStatusCode.Created, first.status)
+        val id = Json.decodeFromString<CreatedPlaceResponse>(first.bodyAsText()).id
+        val retry = client.create(body = body(name = " Garden "), requestKey = key)
+        assertEquals(HttpStatusCode.Created, retry.status)
+        assertEquals(id, Json.decodeFromString<CreatedPlaceResponse>(retry.bodyAsText()).id)
+        assertError(client.create(body = body(name = "Different"), requestKey = key), HttpStatusCode.Conflict, "IDEMPOTENCY_CONFLICT")
+        assertError(client.create(requestKey = "not-a-uuid"), HttpStatusCode.BadRequest, "INVALID_REQUEST")
+        val another = client.create(installation = stranger, requestKey = key)
+        assertEquals(HttpStatusCode.Created, another.status)
+        assertEquals(listOf(id), client.places().filter { it.origin == "USER" }.map { it.id })
+        assertFalse(client.places(stranger).any { it.id == id })
     }
 
     @Test
@@ -89,17 +113,19 @@ class PlaceRoutesTest {
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/v1/places") {
             bearerAuth("invalid")
         }.status)
-        assertEquals(HttpStatusCode.Unauthorized, client.save(installation = null).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.create(installation = null).status)
     }
 
     @Test
     fun `accepts canonical UUID case and retains origin isolation`() = testApplication {
         configurePlacesTest()
         val uppercase = "019A0000-0000-7000-8000-00000000000A"
-        assertEquals(HttpStatusCode.Created, client.save(installation = uppercase).status)
+        val created = client.create(installation = uppercase)
+        assertEquals(HttpStatusCode.Created, created.status)
+        val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
         assertEquals(4, client.places(uppercase.lowercase()).size)
         assertEquals(3, client.places(stranger).size)
-        assertError(client.save(installation = stranger), HttpStatusCode.Conflict, "place.conflict")
+        assertError(client.save(id, installation = stranger), HttpStatusCode.Conflict, "place.conflict")
         assertEquals(4, client.places(uppercase).size)
     }
 
@@ -118,9 +144,10 @@ class PlaceRoutesTest {
         val invalidBodies = listOf(
             "abc", "{", "{}", """{"name":"Garden"}""",
             """{"name":"Garden","description":"Quiet","origin":"SYSTEM","editable":true}""",
+            """{"id":"provided","name":"Garden","description":"Quiet"}""",
         )
         for (invalid in invalidBodies) {
-            assertError(client.save(body = invalid), HttpStatusCode.BadRequest, "INVALID_REQUEST")
+            assertError(client.create(body = invalid), HttpStatusCode.BadRequest, "INVALID_REQUEST")
         }
         assertEquals(3, client.places().size)
     }
@@ -136,7 +163,7 @@ class PlaceRoutesTest {
             body(inhabitants = "i".repeat(501)) to ("inhabitants" to "TOO_LONG"),
         )
         for ((invalid, expected) in invalidInputs) {
-            val response = client.save(body = invalid)
+            val response = client.create(body = invalid)
             assertFieldError(response, expected.first, expected.second)
         }
         assertEquals(3, client.places().size)
@@ -161,7 +188,7 @@ class PlaceRoutesTest {
         }
         assertError(client.get("/api/v1/places") { asOwner(owner) },
             HttpStatusCode.ServiceUnavailable, "UNAVAILABLE")
-        assertError(client.save(), HttpStatusCode.ServiceUnavailable, "UNAVAILABLE")
+        assertError(client.create(), HttpStatusCode.ServiceUnavailable, "UNAVAILABLE")
         assertFalse(Files.exists(directory.resolve("dozy.db")))
     }
 
@@ -177,11 +204,22 @@ class PlaceRoutesTest {
         return Json.decodeFromString<PlacesResponse>(response.bodyAsText()).places
     }
 
-    private suspend fun HttpClient.save(
+    private suspend fun HttpClient.create(
         installation: String? = owner,
-        path: String = id,
         body: String = body(),
-    ) = put("/api/v1/places/$path") {
+        requestKey: String? = null,
+    ) = post(collection) {
+        installation?.let { asOwner(it) }
+        contentType(ContentType.Application.Json)
+        requestKey?.let { header("Idempotency-Key", it) }
+        setBody(body)
+    }
+
+    private suspend fun HttpClient.save(
+        path: String,
+        installation: String? = owner,
+        body: String = body(),
+    ) = put("$collection/$path") {
         installation?.let { asOwner(it) }
         contentType(ContentType.Application.Json)
         setBody(body)
@@ -218,6 +256,9 @@ class PlaceRoutesTest {
 
     private class FailingCharacterRepository : CharacterRepository {
         override suspend fun list(installation: InstallationId): List<Character> = throw SQLException("Private database path")
+        override suspend fun create(installation: InstallationId, command: SaveCharacter, requestKey: String?): SaveCharacterResult =
+            throw SQLException("Private database path")
+
         override suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter): SaveCharacterResult =
             throw SQLException("Private database path")
         override suspend fun delete(installation: InstallationId, id: Character.Id): Boolean = throw SQLException("Private database path")
@@ -225,6 +266,9 @@ class PlaceRoutesTest {
 
     private class FailingRepository : PlaceRepository {
         override suspend fun list(installation: InstallationId): List<Place> = throw SQLException("Private database path")
+        override suspend fun create(installation: InstallationId, command: SavePlace, requestKey: String?): SavePlaceResult =
+            throw SQLException("Private database path")
+
         override suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult =
             throw SQLException("Private database path")
     }

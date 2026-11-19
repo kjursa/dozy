@@ -4,6 +4,7 @@ import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
 import com.dozy.mobile.feature.place.data.database.PlaceEntity
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.model.PlaceInput
 
 fun PlaceDto.toEntity(): PlaceEntity {
     require(id.isNotBlank() && name.isNotBlank() && description.isNotBlank())
@@ -28,3 +29,5 @@ fun Place.toEntity() = PlaceEntity(id.value, name.value, description.value, inha
 fun Place.toDto() = PlaceDto(id.value, name.value, description.value, origin.name, editable, inhabitants?.value)
 
 fun Place.toSaveRequest() = SavePlaceRequestDto(name.value, description.value, inhabitants?.value)
+
+fun PlaceInput.toSaveRequest() = SavePlaceRequestDto(name.value, description.value, inhabitants?.value)

@@ -56,9 +56,11 @@ class FakeAvatarGeneratorTest {
             val repository = LocalRepository()
             val generator = FakeAvatarGenerator(repository)
             val avatar = generator.generateAvatar(input())
-            val character = character().copy(avatar = avatar)
+            val input = input()
+            val character =
+                Character(Character.Id("server-id"), Character.Details(input.name, input.personality, input.appearance, input.type), avatar)
             assertEquals(character, character.toEntity(true).toDomain())
-            assertEquals(SavedCharacter(character, CharacterSync.PENDING), generator.save(character))
+            assertEquals(SavedCharacter(character, CharacterSync.PENDING), generator.create(input, avatar))
             assertEquals(listOf(character), repository.rows.value)
         }
 
@@ -75,7 +77,15 @@ class FakeAvatarGeneratorTest {
 
         override suspend fun delete(id: Character.Id): CharacterSync = error("Unexpected deletion")
 
-        override suspend fun save(character: Character): SavedCharacter {
+        override suspend fun update(character: Character): SavedCharacter? = error("Unexpected update")
+
+        override suspend fun create(
+            input: CreateCharacterInput,
+            avatar: Character.Avatar,
+            requestKey: String?,
+        ): SavedCharacter {
+            val character =
+                Character(Character.Id("server-id"), Character.Details(input.name, input.personality, input.appearance, input.type), avatar)
             rows.value = rows.value + character
             return SavedCharacter(character, CharacterSync.PENDING)
         }

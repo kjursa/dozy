@@ -2,8 +2,10 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
+import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
+import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
@@ -12,6 +14,7 @@ import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDomain
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.model.PlaceInput
 import com.dozy.mobile.feature.place.domain.usecase.ObservePlaces
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -34,6 +37,32 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 
 class PlaceDataTest {
+    @Test fun cachesTheServerIdOnlyAfterCreationSucceeds() =
+        runTest {
+            val dao = FakePlaceDao()
+            val input = (PlaceInput.validate("  Garden  ", " Quiet ", "Bees") as PlaceInput.Validation.Valid).input
+            var result: PlacesCreateResult = PlacesCreateResult.TechnicalError(TechnicalError.Server(503))
+            val api =
+                fakePlacesClient(create = { request ->
+                    assertTrue(dao.rows.value.isEmpty())
+                    assertEquals("Garden", request.name)
+                    assertEquals("Bees", request.inhabitants)
+                    result
+                }) { error("Creation must not list places") }
+            val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
+            assertFailsWith<IllegalStateException> { repository.create(input) }
+            assertTrue(dao.rows.value.isEmpty())
+            result = PlacesCreateResult.Success(CreatedPlaceResponse("server-place"))
+            val place = repository.create(input)
+            assertEquals(Place.Id("server-place"), place.id)
+            assertEquals(place, repository.observe().first().single())
+            assertFalse(
+                dao.rows.value
+                    .single()
+                    .pendingSync,
+            )
+        }
+
     @Test fun localReadsMergeFallbacksWithoutHttpAndOrderCustomFirst() =
         runTest {
             val dao = FakePlaceDao()

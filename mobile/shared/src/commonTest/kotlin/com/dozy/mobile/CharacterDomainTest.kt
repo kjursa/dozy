@@ -3,7 +3,6 @@ package com.dozy.mobile
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.EditCharacterInput
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
-import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.domain.usecase.ObserveCharacters
 import com.dozy.mobile.feature.character.domain.usecase.SaveCharacter
 import kotlinx.coroutines.CancellationException
@@ -41,7 +40,7 @@ class CharacterDomainTest {
     @Test fun editingPreservesIdAndDoesNotAllocateOrDuplicate() =
         runTest {
             val repository = FakeCharacterRepository()
-            val save = SaveCharacter(repository, CharacterIdGenerator { error("Editing cannot allocate an ID") })
+            val save = SaveCharacter(repository)
             val result = save(EditCharacterInput.from(Character.Id("1"), createInput("Edited")), avatar()) as SaveCharacter.Result.Success
             assertEquals(Character.Id("1"), result.saved.character.id)
             assertEquals(3, repository.characters.value.size)
@@ -63,5 +62,5 @@ class CharacterDomainTest {
             }
         }
 
-    private fun save(repository: CharacterRepository) = SaveCharacter(repository, CharacterIdGenerator { Character.Id("new") })
+    private fun save(repository: CharacterRepository) = SaveCharacter(repository)
 }

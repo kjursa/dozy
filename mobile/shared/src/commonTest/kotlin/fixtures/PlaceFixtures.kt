@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.model.PlaceInput
 import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,15 @@ internal class FakePlaceRepository : PlaceRepository {
     override suspend fun find(id: Place.Id): Place? {
         check(!findFailure)
         return places.value.find { it.id == id }
+    }
+
+    override suspend fun create(
+        input: PlaceInput,
+        requestKey: String?,
+    ): Place {
+        val place = Place(Place.Id("new"), input.name, input.description, input.inhabitants, Place.Origin.USER, true)
+        save(place)
+        return place
     }
 
     override suspend fun save(place: Place): PlaceSync {

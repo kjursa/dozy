@@ -8,6 +8,12 @@ import com.dozy.features.installation.domain.model.InstallationId
 class CharacterService(private val repository: CharacterRepository) {
     suspend fun list(installation: InstallationId) = repository.list(installation)
         .sortedWith(compareBy<Character> { it.name.lowercase() }.thenBy { it.id.value })
+    suspend fun create(
+        installation: InstallationId,
+        command: SaveCharacter,
+        requestKey: String? = null
+    ) = repository.create(installation, command, requestKey)
+
     suspend fun save(installation: InstallationId, id: Character.Id, command: SaveCharacter) =
         repository.save(installation, id, command)
     suspend fun delete(installation: InstallationId, id: Character.Id) = repository.delete(installation, id)

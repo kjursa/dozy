@@ -12,6 +12,12 @@ class PlaceService(private val repository: PlaceRepository) {
             .thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
     )
 
+    suspend fun create(
+        installation: InstallationId,
+        command: SavePlace,
+        requestKey: String? = null
+    ) = repository.create(installation, command, requestKey)
+
     suspend fun save(installation: InstallationId, id: Place.Id, command: SavePlace): SavePlaceResult {
         if (id.value.startsWith("builtin:")) return SavePlaceResult.Forbidden
         return repository.save(installation, id, command)

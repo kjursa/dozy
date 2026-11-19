@@ -99,16 +99,13 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   bundled images crop and remote images fit as before. Unsupported URL schemes
   never reach the network. The image loader is registered by `imageModule` and
   receives a platform `PlatformContext`.
-- `shared/schemas`: unchanged database package, version 8, identity hash and all
-  eight schemas; automatic migrations 1 through 8 are preserved. KSP runs per
+- `shared/schemas`: database version 9 adds local creation drafts. KSP runs per
   Android/iOS target. Android generated sources are wired explicitly for the
   pinned KSP/AGP versions, including on clean builds.
-- The future iOS host calls `initializeDozy(config, places, characterIds, placeIds,
-  requestKeys)` once, then embeds `DozyViewController()` from `DozyShared`.
-  The bootstrap composes `iosDataModule`, `iosPresentationModule` and injected ID
-  providers. Preserve resource IDs during updates; new character/place IDs must
-  be UUIDv7 and request keys UUIDv4, reused on uncertain retries. Supply the localized
-  bundled place catalog and API configuration at this boundary.
+- The future iOS host calls `initializeDozy(config, places, requestKeys)` once,
+  then embeds `DozyViewController()` from `DozyShared`. The backend assigns new
+  character and place IDs. Supply the localized bundled place catalog, story
+  request-key generator, and API configuration at this boundary.
   Shared Navigation supplies route-scoped SavedStateHandles and ViewModel owners.
   StatePersistence retains its STATE key/JSON format; iOS has no cross-relaunch
   restoration guarantee. Do not register a global empty SavedStateHandle.

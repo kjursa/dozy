@@ -2,14 +2,15 @@ package com.dozy.mobile
 
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
+import com.dozy.api.client.character.v1.CharactersCreateResult
 import com.dozy.api.client.character.v1.CharactersDeleteResult
 import com.dozy.api.client.character.v1.CharactersListResult
 import com.dozy.api.client.character.v1.CharactersSaveResult
 import com.dozy.api.client.characteravatar.v1.AvatarStartResult
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.CharactersSaveError
+import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
-import com.dozy.mobile.feature.character.data.UuidCharacterIdGenerator
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.data.toDomain
@@ -45,11 +46,31 @@ class CharacterDataTest {
         },
     )
 
-    @Test fun newIdsUseSharedUuidV7Facility() {
-        val ids = List(100) { UuidCharacterIdGenerator().next().value }
-        assertEquals(100, ids.distinct().size)
-        assertTrue(ids.all { it.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) })
-    }
+    @Test fun createsRemotelyBeforeCachingTheServerId() =
+        runTest {
+            val dao = FakeDao()
+            val client =
+                CharactersClientFixture().apply {
+                    onCreate = { request ->
+                        assertTrue(dao.rows.value.isEmpty())
+                        assertEquals("Oliver", request.name)
+                        CharactersCreateResult.Success(CreatedCharacterResponse("server-character"))
+                    }
+                    onSave = { _, _ -> error("Creation must use POST") }
+                }
+            val result = repository(dao, client).create(createInput(), avatar())
+            assertEquals(Character.Id("server-character"), result.character.id)
+            assertEquals(CharacterSync.SYNCED, result.sync)
+            assertEquals(result.character.toEntity(false), dao.rows.value.single())
+        }
+
+    @Test fun unsuccessfulCreationLeavesNoCharacterInTheCache() =
+        runTest {
+            val dao = FakeDao()
+            val repository = repository(dao)
+            assertFailsWith<IllegalStateException> { repository.create(createInput(), avatar()) }
+            assertTrue(dao.rows.value.isEmpty())
+        }
 
     @Test fun mapsAllFieldsAndPreservesHistoricalValues() {
         val original = character()
@@ -63,6 +84,7 @@ class CharacterDataTest {
     @Test fun persistsBeforeSendingAndOnlyAcknowledgedRowsBecomeSynced() =
         runTest {
             val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
             val client =
                 CharactersClientFixture().apply {
                     onSave = { id, request ->
@@ -77,7 +99,7 @@ class CharacterDataTest {
                     }
                 }
             val repository = repository(dao, client)
-            assertEquals(CharacterSync.SYNCED, repository.save(character()).sync)
+            assertEquals(CharacterSync.SYNCED, repository.update(character())?.sync)
             assertFalse(
                 dao.rows.value
                     .single()
@@ -90,11 +112,12 @@ class CharacterDataTest {
         runTest {
             for (failure in listOf(false, true)) {
                 val dao = FakeDao()
+                dao.upsert(character().toEntity(false))
                 val client =
                     CharactersClientFixture().apply {
                         onSave = { _, _ -> if (failure) CharactersSaveResult.TechnicalError(TechnicalError.Communication(IllegalStateException("offline"))) else CharactersSaveResult.ApiError(CharactersSaveError.Conflict) }
                     }
-                assertEquals(CharacterSync.PENDING, repository(dao, client).save(character()).sync)
+                assertEquals(CharacterSync.PENDING, repository(dao, client).update(character())?.sync)
                 assertTrue(
                     dao.rows.value
                         .single()
@@ -105,7 +128,9 @@ class CharacterDataTest {
 
     @Test fun diskFailurePreventsHttpAndMetadataFailureKeepsPending() =
         runTest {
-            val dao = FakeDao().apply { failAt = 1 }
+            val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
+            dao.failAt = 2
             var calls = 0
             val client =
                 CharactersClientFixture().apply {
@@ -114,10 +139,10 @@ class CharacterDataTest {
                         CharactersSaveResult.Success
                     }
                 }
-            assertFailsWith<IllegalStateException> { repository(dao, client).save(character()) }
+            assertFailsWith<IllegalStateException> { repository(dao, client).update(character()) }
             assertEquals(0, calls)
-            dao.failAt = 3
-            assertEquals(CharacterSync.PENDING, repository(dao, client).save(character()).sync)
+            dao.failAt = 4
+            assertEquals(CharacterSync.PENDING, repository(dao, client).update(character())?.sync)
             assertTrue(
                 dao.rows.value
                     .single()
@@ -128,8 +153,9 @@ class CharacterDataTest {
     @Test fun cancellationPropagatesAfterDurableSave() =
         runTest {
             val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
             val client = CharactersClientFixture().apply { onSave = { _, _ -> throw CancellationException() } }
-            assertFailsWith<CancellationException> { repository(dao, client).save(character()) }
+            assertFailsWith<CancellationException> { repository(dao, client).update(character()) }
             assertTrue(
                 dao.rows.value
                     .single()
@@ -229,7 +255,6 @@ class CharacterDataTest {
             assertNull(repository.observe(character().id).first())
             assertEquals(listOf("1"), dao.deletedIds())
             assertNull(repository.update(character()))
-            assertFailsWith<IllegalArgumentException> { repository.save(character()) }
         }
 
     @Test fun failedOrCancelledDeletionCannotResurrectRows() =
@@ -270,6 +295,7 @@ class CharacterDataTest {
     @Test fun lateSaveAcknowledgementCannotResurrectConcurrentDeletion() =
         runTest {
             val dao = FakeDao()
+            dao.upsert(character().toEntity(false))
             val started = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
             val client =
@@ -281,7 +307,7 @@ class CharacterDataTest {
                     }
                 }
             val repository = repository(dao, client)
-            val save = async { repository.save(character()) }
+            val save = async { repository.update(character()) }
             started.await()
             val delete = async { repository.delete(character().id) }
             release.complete(Unit)
@@ -307,8 +333,9 @@ class CharacterDataTest {
                 character().copy(
                     avatar = Character.Avatar(Character.Avatar.Id("fake:oliver"), Character.Avatar.Url("bundled-avatar://oliver")),
                 )
+            dao.upsert(preview.toEntity(false))
             val repository = repository(dao, client)
-            assertEquals(CharacterSync.PENDING, repository.save(preview).sync)
+            assertEquals(CharacterSync.PENDING, repository.update(preview)?.sync)
             assertTrue(repository.refresh())
             assertEquals(preview, repository.observe(preview.id).first())
         }

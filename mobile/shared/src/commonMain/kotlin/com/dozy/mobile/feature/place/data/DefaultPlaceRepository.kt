@@ -1,11 +1,13 @@
 package com.dozy.mobile.feature.place.data
 
+import com.dozy.api.client.place.PlacesClients
+import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
-import com.dozy.api.client.place.PlacesClients
 import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.data.database.PlaceEntity
 import com.dozy.mobile.feature.place.domain.model.Place
+import com.dozy.mobile.feature.place.domain.model.PlaceInput
 import com.dozy.mobile.feature.place.domain.model.PlaceSync
 import com.dozy.mobile.feature.place.domain.repository.PlaceRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
@@ -49,12 +51,25 @@ class DefaultPlaceRepository(
             true
         }
 
+    override suspend fun create(
+        input: PlaceInput,
+        requestKey: String?,
+    ): Place =
+        mutations.withLock {
+            val result = places.v1.create(input.toSaveRequest(), requestKey)
+            check(result is PlacesCreateResult.Success) { "Place creation failed" }
+            val id = Place.Id(result.response.id)
+            val place = Place(id, input.name, input.description, input.inhabitants, Place.Origin.USER, true)
+            dao.upsert(place.toEntity().copy(pendingSync = false))
+            place
+        }
+
     override suspend fun save(place: Place): PlaceSync =
         mutations.withLock {
             require(place.canEdit && !place.id.value.startsWith("builtin:"))
             // Check the stored authority too: caller-supplied origin cannot grant edit permission.
             val existing = find(place.id)
-            require(existing == null || existing.canEdit)
+            require(existing?.canEdit == true)
             val row = place.toEntity()
             dao.upsert(row)
             synchronize(row)

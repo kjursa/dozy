@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.character.di
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.core.data.database.RoomCreationDraft
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
@@ -25,6 +26,7 @@ val characterModule =
                 saveCharacter = get(),
                 generateAvatar = get(),
                 observeCharacter = get(),
+                creationDraft = RoomCreationDraft(get(), "character", CreateCharacterUiState.serializer()),
                 initialId = handle.get<String>("id"),
             )
         }

@@ -1,8 +1,6 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
-import com.dozy.mobile.feature.place.domain.model.Place
-import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
 import com.dozy.mobile.feature.place.domain.usecase.SavePlace
 import com.dozy.mobile.feature.place.domain.usecase.SelectPlace
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormUiState
@@ -19,6 +17,7 @@ import kotlin.test.BeforeTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal open class PlaceFormViewModelFixture {
+    protected val draft = MemoryCreationDraft<PlaceFormUiState>()
     protected val dispatcher = StandardTestDispatcher()
 
     @BeforeTest fun setup() {
@@ -37,13 +36,9 @@ internal open class PlaceFormViewModelFixture {
     ) = PlaceFormViewModel(
         navigator,
         SavedStatePersistence(handle, PlaceFormUiState.serializer()),
-        SavePlace(
-            repository,
-            PlaceIdGenerator {
-                Place.Id("new")
-            },
-        ),
+        SavePlace(repository),
         SelectPlace(repository),
+        draft,
         id,
     )
 }

@@ -14,7 +14,7 @@ This repository contains `backend/` and `mobile/` for Dozy, an app that generate
 
 ## Identifiers
 
-- Use UUIDv7 for new resource identifiers and UUIDv4 for idempotency keys. Generate character and custom-place IDs in the client to support offline creation; generate job, story, and asset IDs in the backend. Preserve an existing resource ID across updates and synchronization, and reuse the same idempotency key when retrying an uncertain request.
+- Use UUIDv7 for new resource identifiers and UUIDv4 for idempotency keys. Generate character, custom-place, job, story, and asset IDs in the backend. Preserve an existing resource ID across updates and synchronization, and reuse the same idempotency key when retrying an uncertain request.
 
 ## Language
 

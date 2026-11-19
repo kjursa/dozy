@@ -14,6 +14,33 @@ import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class PlaceFormViewModelTest : PlaceFormViewModelFixture() {
+    @Test fun failedCreateCanBeReopenedWithoutAPlaceId() =
+        runTest(dispatcher) {
+            val repository = FakePlaceRepository().apply { failure = true }
+            val initialPlaces = repository.places.value
+            val form = vm(repository)
+            form.dispatch(PlaceFormAction.Name("Moon garden"))
+            form.dispatch(PlaceFormAction.Description("Quiet garden"))
+            form.dispatch(PlaceFormAction.Save)
+            advanceUntilIdle()
+            assertEquals(UiText.Resource(Res.string.place_save_error), form.uiState.value.error)
+            assertEquals(initialPlaces, repository.places.value)
+
+            val key = assertNotNull(form.uiState.value.creationKey)
+            val reopened = vm(repository)
+            advanceUntilIdle()
+            assertEquals(key, reopened.uiState.value.creationKey)
+            assertEquals("Moon garden", reopened.uiState.value.name)
+            assertEquals("Quiet garden", reopened.uiState.value.description)
+            assertNull(reopened.uiState.value.id)
+
+            repository.failure = false
+            reopened.dispatch(PlaceFormAction.Save)
+            advanceUntilIdle()
+            assertEquals(PlaceFormDestination.Saved(Place.Id("new")), reopened.navigator.commands.first())
+            assertNull(draft.load())
+        }
+
     @Test fun editClearsInhabitantsUpdatesSameIdAndEmitsOnlyOneSave() =
         runTest(dispatcher) {
             val repository = FakePlaceRepository()

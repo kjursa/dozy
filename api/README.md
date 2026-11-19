@@ -38,11 +38,14 @@ val dozy = DozyClient(
     config = DozyClientConfig(baseUrl = "http://localhost:8080"),
     sessionStorage = platformAuthSessionStorage,
 )
-val places = dozy.places.v1.list()
-dozy.places.v1.save(
-    id = placeId,
+val result = dozy.places.v1.create(
     request = SavePlaceRequest("Garden", "Quiet garden", "Bees"),
+    requestKey = creationRequestKey,
 )
+if (result is PlacesCreateResult.Success) {
+    val placeId = result.response.id
+    // Use placeId for future edits via places.v1.save(placeId, request).
+}
 dozy.close()
 ```
 
@@ -63,6 +66,9 @@ Places is needed. The container exposes singular version interfaces (`places.v1.
 constructors; tests provide interface stubs without constructing production implementations. Mobile registers the root client in Koin and exposes its Places
 container to `DefaultPlaceRepository`.
 Authenticated requests use the JWT subject for resource ownership.
+The Places and Characters `create` methods submit fields without a resource ID
+and return the backend-assigned UUIDv7. Supply a UUIDv4 as the optional
+`requestKey` and reuse it for an uncertain retry with the same input.
 
 `contracts.v1.ApiErrorCode` defines common request/server and reusable machine codes.
 Operation error contracts define their known business cases and flat validation
@@ -70,10 +76,10 @@ codes. Shared serializers retain future codes as `Unknown(code)`.
 
 ### Places error handling
 
-Places returns operation-specific sealed results: `PlacesListResult` and
-`PlacesSaveResult`. Each exposes `Success`, `ApiError(error)` and
+Places returns operation-specific sealed results `PlacesListResult`,
+`PlacesCreateResult`, and `PlacesSaveResult`. Each exposes `Success`, `ApiError(error)` and
 `TechnicalError(error)`, so the caller handles one exhaustive `when`. List success
-contains `response: PlacesResponse`; save success is an object without a payload and accepts every HTTP 2xx status.
+contains `response: PlacesResponse`. Create success contains `response: CreatedPlaceResponse`. Save success has no payload and accepts every HTTP 2xx status.
 Business errors use serializable `contracts.v1.place.PlacesListError`/`PlacesSaveError`.
 Backend sends the shared error object and the client deserializes that exact type,
 just like success DTOs. The contract serializer owns the flat code lookup and

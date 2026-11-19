@@ -51,7 +51,17 @@ internal class FakeCharacterRepository : CharacterRepository {
 
     override fun observe() = characters
 
-    override suspend fun save(character: Character): SavedCharacter {
+    override suspend fun create(
+        input: CreateCharacterInput,
+        avatar: Character.Avatar,
+        requestKey: String?,
+    ): SavedCharacter =
+        save(Character(Character.Id("new"), Character.Details(input.name, input.personality, input.appearance, input.type), avatar))
+
+    override suspend fun update(character: Character): SavedCharacter? =
+        if (characters.value.any { it.id == character.id }) save(character) else null
+
+    suspend fun save(character: Character): SavedCharacter {
         saves++
         beforeSave()
         failure?.let { throw it }

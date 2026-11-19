@@ -5,13 +5,12 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
-import com.dozy.mobile.feature.character.data.FakeAvatarGenerator
+import com.dozy.mobile.core.data.database.CreationDraftDao
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
-import com.dozy.mobile.feature.character.domain.usecase.CharacterIdGenerator
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterDestination
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
@@ -24,7 +23,6 @@ import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.di.placeModule
 import com.dozy.mobile.feature.place.domain.model.Place
-import com.dozy.mobile.feature.place.domain.usecase.PlaceIdGenerator
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.di.storyModule
@@ -36,6 +34,8 @@ import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,10 +61,19 @@ class CharacterModuleTest {
         runTest {
             Dispatchers.setMain(StandardTestDispatcher(testScheduler))
             val dao = InMemoryDao()
-            val client = HttpClient(MockEngine { error("Sync must remain disabled") })
+            val client =
+                HttpClient(
+                    MockEngine { request ->
+                        when (request.method.value to request.url.encodedPath) {
+                            "POST" to "/api/v1/characters" -> respond("""{"id":"server-id"}""", HttpStatusCode.Created)
+                            "PUT" to "/api/v1/characters/server-id" -> respond("", HttpStatusCode.NoContent)
+                            else -> respond("""{"code":"UNAVAILABLE"}""", HttpStatusCode.ServiceUnavailable)
+                        }
+                    },
+                )
             val platformModule =
                 module {
-                    single { ApiConfig(baseUrl = null) }
+                    single { ApiConfig(baseUrl = "https://example.test") }
 
                     single<CharacterDao> { dao }
                     single<PlaceDao> { FakePlaceDao() }
@@ -72,13 +81,7 @@ class CharacterModuleTest {
                     single<GenerationKeyGenerator> { GenerationKeyGenerator { GenerationJob.RequestKey("injected-key") } }
                     single<GenerationDao> { FakeGenerationDao() }
                     single<HttpClient> { client }
-                    single<PlaceIdGenerator> {
-                        PlaceIdGenerator {
-                            Place
-                                .Id("place")
-                        }
-                    }
-                    single<CharacterIdGenerator> { CharacterIdGenerator { Character.Id("injected-id") } }
+                    single<CreationDraftDao> { FakeCreationDraftDao() }
                 }
             val app = koinApplication { modules(characterModule, homeModule, storyModule, placeModule, dozyClientModule, platformModule) }
             val owner = ViewModelStore()
@@ -115,7 +118,6 @@ class CharacterModuleTest {
                         )
                     }
                 assertSame(app.koin.get<CharacterRepository>(), app.koin.get<CharacterRepository>())
-                assertTrue(app.koin.get<CharacterRepository>() is FakeAvatarGenerator)
                 val home =
                     resolveViewModel(HomeViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
                 val characters =
@@ -128,9 +130,9 @@ class CharacterModuleTest {
                 resolveViewModel(StoriesViewModel::class, owner, extras = CreationExtras.Empty, scope = app.koin.scopeRegistry.rootScope)
                 form.dispatch(CreateCharacterAction.SaveClicked)
                 advanceUntilIdle()
-                assertEquals(CreateCharacterDestination.Saved(Character.Id("injected-id")), form.navigator.commands.first())
+                assertEquals(CreateCharacterDestination.Saved(Character.Id("server-id")), form.navigator.commands.first())
                 assertEquals(
-                    "injected-id",
+                    "server-id",
                     dao.rows.value
                         .single()
                         .id,
@@ -153,14 +155,14 @@ class CharacterModuleTest {
                     }
                 assertEquals(null, placeForm.uiState.value.id)
                 app.koin.get<CharacterDetailsViewModel> {
-                    parametersOf(SavedStateHandle(mapOf("id" to "injected-id")))
+                    parametersOf(SavedStateHandle(mapOf("id" to "server-id")))
                 }
                 val storyForm =
                     app.koin.get<CreateStoryViewModel> {
-                        parametersOf(SavedStateHandle(mapOf("cast" to "[\"injected-id\"]")))
+                        parametersOf(SavedStateHandle(mapOf("cast" to "[\"server-id\"]")))
                     }
                 advanceUntilIdle()
-                assertEquals(listOf("injected-id"), storyForm.uiState.value.selectedHeroes)
+                assertEquals(listOf("server-id"), storyForm.uiState.value.selectedHeroes)
                 app.koin.get<ReaderViewModel> {
                     parametersOf(SavedStateHandle(mapOf("storyId" to "story")))
                 }

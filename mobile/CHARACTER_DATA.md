@@ -5,25 +5,27 @@ Room DAO and repository. CRUD now uses `DozyClient.characters.v1` through an inj
 `CharactersClients` container. Wire models (`CharacterDto`, `AvatarDto`,
 `SaveCharacterRequest`) live in `api/contracts`; domain types remain independent.
 
-## Installation-scoped CRUD
+## Owner-scoped CRUD
 
-Every request sends the persisted `X-Installation-Id` UUID. This supplies an
-installation namespace without accounts or authentication.
+The API client attaches a bearer token to authenticated requests. The backend
+uses the token subject as the resource owner.
 
 - `GET /api/v1/characters` returns a complete bare array of non-deleted owned
   characters. An empty array is authoritative. Historical field values are read
   without applying current write limits.
-- `PUT /api/v1/characters/{id}` accepts name, personality, appearance, type and an
-  optional nullable avatar. The UUIDv7 ID is supplied only in the path. Android
-  injects the common `UuidCharacterIdGenerator`, using Kotlin `Uuid.generateV7`;
-  updates and retries retain the original ID. Success is 201 creation or 204
-  replacement, both with empty bodies. Omitted/null avatars clear the reference.
-- PUT trims required names (single line, at most 50 UTF-16 units), personality and
+- `POST /api/v1/characters` accepts name, personality, appearance, type and an
+  optional avatar. The backend generates a UUIDv7 and returns it in the 201
+  response. Mobile persists a UUIDv4 request key with the draft and reuses it
+  when retrying the same creation.
+- `PUT /api/v1/characters/{id}` replaces an existing character and returns an
+  empty 204. Omitted/null avatars clear the reference. Updates retain the
+  original ID.
+- Both writes trim required names (single line, at most 50 UTF-16 units), personality and
   appearance (at most 2000 each). Types are CHILD, ANIMAL, FANTASY and OTHER.
   Contract-owned `CharacterField` and `ValidationReason` specify field errors.
   Unknown types return the shared validation error with code `validation.type.invalid_value`.
 - Avatar ID and URL must exactly match an owned READY entry in the backend asset
-  registry; otherwise PUT returns `REFERENCE_UNAVAILABLE`. Nullable avatars support
+  registry; otherwise the write returns `REFERENCE_UNAVAILABLE`. Nullable avatars support
   historical records; new mobile forms still require an avatar.
 - An inaccessible or permanently deleted PUT ID returns 409 `CONFLICT` and can
   never be claimed or revived. DELETE returns 204 for owned live/already-deleted
@@ -37,9 +39,12 @@ all other Exceptions become TechnicalError.Communication. Cancellation propagate
 Known error codes are localized or mapped to generic UI states; backend diagnostic
 text is never displayed.
 
-## Local-first synchronization
+## Local drafts and existing-record updates
 
-Saves and edits persist pending rows before HTTP. Only acknowledged writes become
+Mobile stores one creation draft per form type in Room. A draft remains local
+until the user submits it and receives a server ID. The form restores the latest
+draft when reopened. New characters and places enter the resource cache after
+the server acknowledges creation. Existing edits persist pending rows before HTTP. Only acknowledged writes become
 synced. Failed writes remain durable and pending. Repository mutations, refreshes
 and acknowledgements are serialized so a late response cannot overwrite a newer
 edit or resurrect a deleted row. Missing/deleted rows cannot be edited or revived.
@@ -56,7 +61,7 @@ pending local rows and tombstones win, synced absent rows disappear, and remote
 rows replace synced records. Duplicate IDs or malformed transport data reject the
 entire snapshot. Tombstones remain even after acknowledgement, across database
 reopening, and are never uploaded as PUTs. They protect against stale snapshots.
-Room schema v8 and existing migrations are unchanged.
+Room schema v9 adds the local creation drafts table.
 
 ## API2 avatar generation
 

@@ -1,14 +1,21 @@
 package com.dozy.api.client.place.v1
 
 import com.dozy.api.client.TechnicalError as SharedTechnicalError
+import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesListError
-import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.PlacesResponse
+import com.dozy.api.contracts.v1.place.PlacesSaveError
 
 sealed interface PlacesListResult {
     data class Success(val response: PlacesResponse) : PlacesListResult
     data class ApiError(val error: PlacesListError) : PlacesListResult
     data class TechnicalError(val error: SharedTechnicalError) : PlacesListResult
+}
+
+sealed interface PlacesCreateResult {
+    data class Success(val response: CreatedPlaceResponse) : PlacesCreateResult
+    data class ApiError(val error: PlacesSaveError) : PlacesCreateResult
+    data class TechnicalError(val error: SharedTechnicalError) : PlacesCreateResult
 }
 
 sealed interface PlacesSaveResult {

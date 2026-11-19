@@ -21,3 +21,6 @@ data class PlaceResponse(
 
 @Serializable
 data class PlacesResponse(val places: List<PlaceResponse>)
+
+@Serializable
+data class CreatedPlaceResponse(val id: String)

@@ -14,8 +14,10 @@ data class Character(
 }
 
 sealed interface SaveCharacterResult {
-    data object Created : SaveCharacterResult
+    data class Created(val id: Character.Id) : SaveCharacterResult
+    data object NotFound : SaveCharacterResult
     data object Updated : SaveCharacterResult
+    data object IdempotencyConflict : SaveCharacterResult
     data object Conflict : SaveCharacterResult
     data object ReferenceUnavailable : SaveCharacterResult
 }

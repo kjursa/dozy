@@ -5,6 +5,7 @@ import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesClient
+import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.PlacesResponse
@@ -44,9 +45,17 @@ internal fun apiFailure(result: PlacesSaveResult): Any =
         PlacesSaveResult.Success -> error("Expected failure")
     }
 
-internal fun fakePlacesClient(list: suspend () -> PlacesListResult): PlacesClient =
+internal fun fakePlacesClient(
+    create: suspend (SavePlaceRequest) -> PlacesCreateResult = { error("Unexpected place creation") },
+    list: suspend () -> PlacesListResult,
+): PlacesClient =
     object : PlacesClient {
         override suspend fun list() = list.invoke()
+
+        override suspend fun create(
+            request: SavePlaceRequest,
+            requestKey: String?,
+        ) = create.invoke(request)
 
         override suspend fun save(
             id: String,

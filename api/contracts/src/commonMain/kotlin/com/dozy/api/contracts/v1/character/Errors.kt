@@ -24,12 +24,31 @@ sealed interface CharactersSaveError : ApiBusinessError {
         init { require(reason in field.reasons) }
         override val code: String get() = "validation.${this.field.value}.${reason.value.lowercase()}"
     }
-    data object ReferenceUnavailable : CharactersSaveError { override val code = ApiErrorCode.REFERENCE_UNAVAILABLE.value }
-    data object Conflict : CharactersSaveError { override val code = ApiErrorCode.CONFLICT.value }
+    data object ReferenceUnavailable : CharactersSaveError {
+        override val code = ApiErrorCode.REFERENCE_UNAVAILABLE.value
+    }
+    data object NotFound : CharactersSaveError {
+        override val code = ApiErrorCode.CHARACTER_NOT_FOUND.value
+    }
+    data object IdempotencyConflict : CharactersSaveError {
+        override val code = ApiErrorCode.IDEMPOTENCY_CONFLICT.value
+    }
+    data object Conflict : CharactersSaveError {
+        override val code = ApiErrorCode.CONFLICT.value
+    }
     data class Unknown(override val code: String) : CharactersSaveError
 
     companion object {
-        val known: List<CharactersSaveError> = listOf<CharactersSaveError>(ReferenceUnavailable, Conflict) + CharacterField.entries.flatMap { field -> field.reasons.map { Validation(field, it) } }
+        val known: List<CharactersSaveError> =
+            listOf<CharactersSaveError>(
+                ReferenceUnavailable,
+                NotFound,
+                Conflict,
+                IdempotencyConflict
+            ) +
+                CharacterField.entries.flatMap { field ->
+                    field.reasons.map { Validation(field, it) }
+                }
     }
 }
 

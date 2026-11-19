@@ -7,6 +7,7 @@ import kotlinx.serialization.Transient
 @Serializable
 data class PlaceFormUiState(
     val id: String? = null,
+    val creationKey: String? = null,
     val initialized: Boolean = false,
     val name: String = "",
     val description: String = "",
