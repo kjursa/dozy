@@ -16,6 +16,7 @@ import com.dozy.features.story.domain.model.TextGenerator
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
 import java.nio.file.Path
+import java.time.Clock
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,6 +37,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.io.TempDir
 
 class GenerationWorkerTest {
+    private val clock = Clock.systemUTC()
     @TempDir lateinit var directory: Path
     private val options = GenerationConfig(delayMillis = 0, leaseMillis = 300, concurrency = 2)
     private val installation = InstallationId("019a0000-0000-7000-8000-000000000010")
@@ -43,7 +45,7 @@ class GenerationWorkerTest {
 
     @Test fun `long generator renews claim and stages expose no premature result`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, options)
+            val repository = SqliteGenerationRepository(db, options, clock)
             val job = assertIs<Submission.Accepted>(repository.start(installation, UUID.randomUUID().toString(), "request", command())).job
             val started = CompletableDeferred<Unit>()
             val finish = CompletableDeferred<Unit>()
@@ -70,7 +72,7 @@ class GenerationWorkerTest {
     }
     @Test fun `cancellation and publication storage failures remain recoverable instead of failed`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, options)
+            val repository = SqliteGenerationRepository(db, options, clock)
             val job = assertIs<Submission.Accepted>(repository.start(installation, UUID.randomUUID().toString(), "request", command())).job
             val cancelling = GenerationWorker(repository, TextGenerator { throw CancellationException("process stopped") }, FakeCoverGenerator(options), options)
             assertFailsWith<CancellationException> { cancelling.runOne() }
@@ -91,7 +93,7 @@ class GenerationWorkerTest {
     }
     @Test fun `configured concurrency bounds active generator calls across installations`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, options)
+            val repository = SqliteGenerationRepository(db, options, clock)
             val jobs = (1..5).map { index ->
                 val owner = InstallationId("019a0000-0000-7000-8000-00000000000$index")
                 owner to assertIs<Submission.Accepted>(repository.start(owner, UUID.randomUUID().toString(), "request", command())).job

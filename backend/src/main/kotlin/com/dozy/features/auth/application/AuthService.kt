@@ -5,27 +5,27 @@ import com.dozy.features.auth.domain.model.CodeVerification
 import com.dozy.features.auth.domain.model.EmailChallenge
 import com.dozy.features.auth.domain.model.RefreshCredential
 import com.dozy.features.auth.domain.repository.AuthRepository
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import com.dozy.infrastructure.id.Uuids
+import java.time.Clock
 
-@OptIn(ExperimentalUuidApi::class)
 class AuthService(
     private val repository: AuthRepository,
     private val secrets: AuthSecretProvider,
     private val accessTokens: AccessTokens,
+    private val clock: Clock,
 ) {
     suspend fun anonymous(): TokenResult.Valid {
-        val ownerId = Uuid.generateV7().toString()
-        val refreshToken = Uuid.random().toString()
-        repository.createAnonymous(ownerId, refreshCredential(refreshToken, System.currentTimeMillis()))
+        val ownerId = Uuids.v7()
+        val refreshToken = Uuids.v4()
+        repository.createAnonymous(ownerId, refreshCredential(refreshToken, clock.millis()))
         return tokens(ownerId, refreshToken)
     }
 
     suspend fun requestCode(emailValue: String): EmailRequest {
         val email = emailValue.trim().lowercase()
         if (!EMAIL.matches(email) || email.endsWith("@invalid.dozy")) return EmailRequest.InvalidEmail
-        val now = System.currentTimeMillis()
-        val challenge = EmailChallenge(Uuid.generateV7().toString(), email, FAKE_CODE, now, now + CODE_LIFETIME)
+        val now = clock.millis()
+        val challenge = EmailChallenge(Uuids.v7(), email, FAKE_CODE, now, now + CODE_LIFETIME)
         return if (repository.storeChallenge(challenge, countSince = now - HOUR, limit = 5)) {
             EmailRequest.Accepted(challenge.sessionId)
         } else {
@@ -37,8 +37,8 @@ class AuthService(
         sessionId: String,
         code: String,
     ): VerifyResult {
-        val now = System.currentTimeMillis()
-        val refreshToken = Uuid.random().toString()
+        val now = clock.millis()
+        val refreshToken = Uuids.v4()
         return when (
             val result =
                 repository.verifyChallenge(
@@ -46,7 +46,7 @@ class AuthService(
                     code = code,
                     now = now,
                     maxAttempts = 3,
-                    newOwnerId = Uuid.generateV7().toString(),
+                    newOwnerId = Uuids.v7(),
                     refresh = refreshCredential(refreshToken, now),
                 )
         ) {
@@ -61,8 +61,8 @@ class AuthService(
         ownerId: String,
         refreshToken: String,
     ): TokenResult {
-        val now = System.currentTimeMillis()
-        val replacement = Uuid.random().toString()
+        val now = clock.millis()
+        val replacement = Uuids.v4()
         val rotated =
             repository.rotateRefreshToken(
                 ownerId = ownerId,

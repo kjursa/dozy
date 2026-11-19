@@ -35,15 +35,17 @@ import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
+import java.time.Clock
 
 fun Application.configureDependencies() {
     val configuration = environment.config
     dependencies {
+        provide<Clock> { Clock.systemUTC() }
         provide<AuthSecretProvider> { AuthSecretProvider.from(configuration) }
-        provide<AccessTokens> { AccessTokens(resolve()) }
+        provide<AccessTokens> { AccessTokens(resolve(), resolve()) }
         provide<AssetRepository> { SqliteAssetRepository(resolve(), resolve()) }
         provide<GenerationConfig> { GenerationConfig.from(configuration) }
-        provide<GenerationRepository> { SqliteGenerationRepository(resolve(), resolve()) }
+        provide<GenerationRepository> { SqliteGenerationRepository(resolve(), resolve(), resolve()) }
         provide<TextGenerator> { FakeTextGenerator(resolve()) }
         provide<CoverGenerator> { FakeCoverGenerator(resolve()) }
         provide<StoryService> { StoryService(resolve()) }
@@ -57,7 +59,7 @@ fun Application.configureDependencies() {
         provide<DatabaseConfig> { resolve<AppConfig>().database }
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
         provide<AuthRepository> { SqliteAuthRepository(resolve()) }
-        provide<AuthService> { AuthService(resolve(), resolve(), resolve()) }
+        provide<AuthService> { AuthService(resolve(), resolve(), resolve(), resolve()) }
         provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }
         provide<CharacterService> { CharacterService(resolve()) }
         provide<PlaceRepository> { SqlitePlaceRepository(resolve()) }
