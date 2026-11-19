@@ -9,8 +9,8 @@ import com.dozy.features.character.data.database.Characters
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
-import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.registerOwnerPartition
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
@@ -59,10 +59,10 @@ class SqliteCharacterRepositoryTest {
         database().use { db ->
             val assets = listOf("ready", "pending", "failed", "foreign", "missing").associateWith { AssetId.generate() }
             db.write {
-                registerInstallation(owner)
-                registerInstallation(stranger)
-                for ((assetId, installation, state) in listOf(Triple("ready", owner, "READY"), Triple("pending", owner, "PENDING"), Triple("failed", owner, "FAILED"), Triple("foreign", stranger, "READY"))) {
-                    Assets.insert { it[id] = assets.getValue(assetId).value; it[installationId] = installation.value; it[url] = "https://example.test/$assetId"; it[status] = state }
+                registerOwnerPartition(owner)
+                registerOwnerPartition(stranger)
+                for ((assetId, ownerId, state) in listOf(Triple("ready", owner, "READY"), Triple("pending", owner, "PENDING"), Triple("failed", owner, "FAILED"), Triple("foreign", stranger, "READY"))) {
+                    Assets.insert { it[id] = assets.getValue(assetId).value; it[Assets.ownerId] = ownerId.value; it[url] = "https://example.test/$assetId"; it[status] = state }
                 }
             }
             val repository = SqliteCharacterRepository(db)
@@ -92,8 +92,8 @@ class SqliteCharacterRepositoryTest {
         database().use { first ->
             database().use { second ->
                 val repositories = listOf(SqliteCharacterRepository(first) to owner, SqliteCharacterRepository(second) to stranger)
-                val ids = repositories.map { (repository, installation) ->
-                    async { assertIs<SaveCharacterResult.Created>(repository.create(installation, command())).id }
+                val ids = repositories.map { (repository, ownerId) ->
+                    async { assertIs<SaveCharacterResult.Created>(repository.create(ownerId, command())).id }
                 }.awaitAll()
                 assertEquals(2, ids.distinct().size)
                 repositories.zip(ids).forEach { (entry, id) ->

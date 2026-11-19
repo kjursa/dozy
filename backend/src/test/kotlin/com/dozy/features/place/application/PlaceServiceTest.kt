@@ -13,7 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PlaceServiceTest {
-    private val installation = OwnerId.generate()
+    private val ownerId = OwnerId.generate()
     private val command = (SavePlace.parse("Woods", "Forest", null) as ParseResult.Valid).value
 
     @Test
@@ -25,15 +25,15 @@ class PlaceServiceTest {
             place("place-019a0000-0000-7000-8000-000000000001", "Alpha"),
         ))
         assertEquals(listOf("place-019a0000-0000-7000-8000-000000000001", "place-019a0000-0000-7000-8000-000000000002", "place-019a0000-0000-7000-8000-000000000003", "builtin:woods"),
-            PlaceService(repository).list(installation).map { it.id.value })
-        assertEquals(installation, repository.lastInstallation)
+            PlaceService(repository).list(ownerId).map { it.id.value })
+        assertEquals(ownerId, repository.lastOwnerId)
     }
 
     @Test
     fun `rejects entire predefined namespace without touching repository`() = runBlocking {
         val repository = FakeRepository()
         assertEquals(SavePlaceResult.Forbidden,
-            PlaceService(repository).save(installation, placeId("builtin:unknown"), command))
+            PlaceService(repository).save(ownerId, placeId("builtin:unknown"), command))
         assertEquals(0, repository.saveCalls)
     }
 
@@ -41,8 +41,8 @@ class PlaceServiceTest {
     fun `forwards input and repository outcome`() = runBlocking {
         val repository = FakeRepository()
         val id = PlaceId.generate()
-        assertEquals(SavePlaceResult.Conflict, PlaceService(repository).save(installation, id, command))
-        assertEquals(Triple(installation, id, command), repository.saved)
+        assertEquals(SavePlaceResult.Conflict, PlaceService(repository).save(ownerId, id, command))
+        assertEquals(Triple(ownerId, id, command), repository.saved)
     }
 
     private fun place(id: String, name: String, origin: Place.Origin = Place.Origin.USER) =
@@ -53,25 +53,25 @@ class PlaceServiceTest {
     private fun placeDescription(value: String) = Place.Description(value)
 
     private class FakeRepository(private val places: List<Place> = emptyList()) : PlaceRepository {
-        var lastInstallation: OwnerId? = null
+        var lastOwnerId: OwnerId? = null
         var saveCalls = 0
         var saved: Triple<OwnerId, PlaceId, SavePlace>? = null
-        override suspend fun list(installation: OwnerId): List<Place> {
-            lastInstallation = installation
+        override suspend fun list(ownerId: OwnerId): List<Place> {
+            lastOwnerId = ownerId
             return places
         }
         override suspend fun create(
-            installation: OwnerId,
+            ownerId: OwnerId,
             command: SavePlace,
             requestKey: IdempotencyKey?
         ): SavePlaceResult = error("Unexpected creation")
         override suspend fun save(
-            installation: OwnerId,
+            ownerId: OwnerId,
             id: PlaceId,
             command: SavePlace
         ): SavePlaceResult {
             saveCalls++
-            saved = Triple(installation, id, command)
+            saved = Triple(ownerId, id, command)
             return SavePlaceResult.Conflict
         }
     }

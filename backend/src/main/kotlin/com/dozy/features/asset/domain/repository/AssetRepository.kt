@@ -5,5 +5,5 @@ import com.dozy.domain.id.OwnerId
 
 
 fun interface AssetRepository {
-    suspend fun read(installation: OwnerId, id: AssetId): ByteArray?
+    suspend fun read(ownerId: OwnerId, id: AssetId): ByteArray?
 }

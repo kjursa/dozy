@@ -10,9 +10,9 @@ import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.features.character.domain.repository.CharacterRepository
-import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.infrastructure.database.ResourceCreation
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.registerOwnerPartition
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
@@ -22,21 +22,21 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
 class SqliteCharacterRepository(private val database: SqliteDatabase) : CharacterRepository {
-    override suspend fun list(installation: OwnerId): List<Character> = database.write {
-        registerInstallation(installation)
+    override suspend fun list(ownerId: OwnerId): List<Character> = database.write {
+        registerOwnerPartition(ownerId)
         Characters.selectAll().where {
-            (Characters.installationId eq installation.value) and (Characters.deleted eq false)
+            (Characters.ownerId eq ownerId.value) and (Characters.deleted eq false)
         }.map { it.toCharacter() }
     }
 
     override suspend fun create(
-        installation: OwnerId,
+        ownerId: OwnerId,
         command: SaveCharacter,
         requestKey: IdempotencyKey?
     ): SaveCharacterResult = database.write {
         val creation = requestKey?.let {
             ResourceCreation(
-                installation,
+                ownerId,
                 "character",
                 it,
                 listOf(
@@ -56,33 +56,33 @@ class SqliteCharacterRepository(private val database: SqliteDatabase) : Characte
             return@write SaveCharacterResult.Created(requireNotNull(CharacterId.parse(it.id)))
         }
         if (!avatarAvailable(
-                installation,
+                ownerId,
                 command.avatar
             )
         ) {
             return@write SaveCharacterResult.ReferenceUnavailable
         }
         val id = CharacterId.generate()
-        registerInstallation(installation)
+        registerOwnerPartition(ownerId)
         Characters.insert {
             it[Characters.id] = id.value
-            it[installationId] = installation.value
+            it[Characters.ownerId] = ownerId.value
             it.setFields(command)
         }
         creation?.record(id.value)
         SaveCharacterResult.Created(id)
     }
 
-    override suspend fun save(installation: OwnerId, id: CharacterId, command: SaveCharacter): SaveCharacterResult = database.write {
+    override suspend fun save(ownerId: OwnerId, id: CharacterId, command: SaveCharacter): SaveCharacterResult = database.write {
         val existing = Characters.selectAll().where { Characters.id eq id.value }.singleOrNull()
             ?: return@write SaveCharacterResult.NotFound
-        if (existing[Characters.installationId] != installation.value ||
+        if (existing[Characters.ownerId] != ownerId.value ||
             existing[Characters.deleted]
         ) {
             return@write SaveCharacterResult.Conflict
         }
         if (!avatarAvailable(
-                installation,
+                ownerId,
                 command.avatar
             )
         ) {
@@ -93,10 +93,10 @@ class SqliteCharacterRepository(private val database: SqliteDatabase) : Characte
     }
 
     private fun JdbcTransaction.avatarAvailable(
-        installation: OwnerId,
+        ownerId: OwnerId,
         avatar: Character.Avatar?
     ): Boolean = avatar == null || Assets.selectAll().where {
-        (Assets.id eq avatar.id.value) and (Assets.installationId eq installation.value) and
+        (Assets.id eq avatar.id.value) and (Assets.ownerId eq ownerId.value) and
             (Assets.url eq avatar.url) and (Assets.status eq "READY")
     }.any()
 
@@ -109,10 +109,10 @@ class SqliteCharacterRepository(private val database: SqliteDatabase) : Characte
         this[Characters.avatarUrl] = command.avatar?.url
     }
 
-    override suspend fun delete(installation: OwnerId, id: CharacterId): Boolean = database.write {
+    override suspend fun delete(ownerId: OwnerId, id: CharacterId): Boolean = database.write {
         // Keep the row permanently: its ID can never be reused, including by its original owner.
         val existing = Characters.selectAll().where { Characters.id eq id.value }.singleOrNull()
-        if (existing == null || existing[Characters.installationId] != installation.value) return@write false
+        if (existing == null || existing[Characters.ownerId] != ownerId.value) return@write false
         Characters.update({ Characters.id eq id.value }) { it[deleted] = true }
         true
     }

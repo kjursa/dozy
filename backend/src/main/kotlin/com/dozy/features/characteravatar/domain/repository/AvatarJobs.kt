@@ -7,8 +7,8 @@ import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 
 interface AvatarJobs {
-    suspend fun create(owner: OwnerId, input: AvatarInput): AvatarJob
-    suspend fun find(owner: OwnerId, id: AvatarJobId): AvatarJob?
+    suspend fun create(ownerId: OwnerId, input: AvatarInput): AvatarJob
+    suspend fun find(ownerId: OwnerId, id: AvatarJobId): AvatarJob?
     suspend fun recover()
     suspend fun claim(): AvatarJob?
     suspend fun complete(job: AvatarJob, success: Boolean)

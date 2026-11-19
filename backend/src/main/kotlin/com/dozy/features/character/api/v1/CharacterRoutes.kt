@@ -39,26 +39,26 @@ fun Route.characterV1Routes() {
     route("/characters") {
         get { call.respond(service.list(call.ownerId()).map { it.toDto() }) }
         post {
-            val installation = call.ownerId()
+            val ownerId = call.ownerId()
             val requestKey = call.idempotencyKey()
             call.respondToSave(
                 service.create(
-                    installation,
+                    ownerId,
                     call.receive<SaveCharacterRequest>().toCommand(),
                     requestKey
                 )
             )
         }
         put("/{id}") {
-            val installation = call.ownerId()
+            val ownerId = call.ownerId()
             val id = requireCharacterId(call.parameters["id"])
             call.respondToSave(
-                service.save(installation, id, call.receive<SaveCharacterRequest>().toCommand())
+                service.save(ownerId, id, call.receive<SaveCharacterRequest>().toCommand())
             )
         }
         delete("/{id}") {
-            val installation = call.ownerId()
-            if (!service.delete(installation, requireCharacterId(call.parameters["id"]))) {
+            val ownerId = call.ownerId()
+            if (!service.delete(ownerId, requireCharacterId(call.parameters["id"]))) {
                 throw BusinessApiException(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
             }
             call.respond(HttpStatusCode.NoContent)

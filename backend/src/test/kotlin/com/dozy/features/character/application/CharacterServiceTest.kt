@@ -20,21 +20,21 @@ class CharacterServiceTest {
         val characters = listOf(historical, historical.copy(id = second, name = "Oliver"),
             historical.copy(id = first, name = "oliver"))
         val repository = object : CharacterRepository {
-            override suspend fun list(installation: OwnerId): List<Character> {
-                assertEquals(owner, installation)
+            override suspend fun list(ownerId: OwnerId): List<Character> {
+                assertEquals(owner, ownerId)
                 return characters
             }
             override suspend fun create(
-                installation: OwnerId,
+                ownerId: OwnerId,
                 command: SaveCharacter,
                 requestKey: IdempotencyKey?
             ): SaveCharacterResult = error("Unexpected creation")
             override suspend fun save(
-                installation: OwnerId,
+                ownerId: OwnerId,
                 id: CharacterId,
                 command: SaveCharacter
             ): SaveCharacterResult = error("Unexpected save")
-            override suspend fun delete(installation: OwnerId, id: CharacterId): Boolean =
+            override suspend fun delete(ownerId: OwnerId, id: CharacterId): Boolean =
                 error("Unexpected delete")
         }
         val result = CharacterService(repository).list(owner)

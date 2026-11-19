@@ -18,12 +18,12 @@ import com.dozy.features.story.domain.repository.GenerationRepository
 
 /** Keeps unrelated route DI tests independent of background storage. */
 class UnusedGenerationRepository : GenerationRepository {
-    override suspend fun list(installation: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage? = error("unused")
+    override suspend fun list(ownerId: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage? = error("unused")
     override suspend fun claim(): Execution? = null
-    override suspend fun start(installation: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
-    override suspend fun retry(installation: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = error("Unused")
-    override suspend fun status(installation: OwnerId, id: JobId): Job? = error("Unused")
-    override suspend fun read(installation: OwnerId, id: StoryId): SavedStory? = error("Unused")
+    override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
+    override suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = error("Unused")
+    override suspend fun status(ownerId: OwnerId, id: JobId): Job? = error("Unused")
+    override suspend fun read(ownerId: OwnerId, id: StoryId): SavedStory? = error("Unused")
     override suspend fun renew(execution: Execution): Boolean = error("Unused")
     override suspend fun saveText(execution: Execution, text: GeneratedText): Boolean = error("Unused")
     override suspend fun publish(execution: Execution, cover: ByteArray): Boolean = error("Unused")

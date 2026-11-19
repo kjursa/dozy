@@ -2,7 +2,6 @@ package com.dozy.infrastructure.database
 
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
-import com.dozy.features.installation.data.database.Installations
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
@@ -13,7 +12,7 @@ import java.security.MessageDigest
 import java.util.HexFormat
 
 internal class ResourceCreation(
-    private val installation: OwnerId,
+    private val ownerId: OwnerId,
     private val resourceType: String,
     private val key: IdempotencyKey,
     fields: List<String?>
@@ -25,7 +24,7 @@ internal class ResourceCreation(
     )
 
     fun previous(): Previous? = ResourceCreations.selectAll().where {
-        (ResourceCreations.installationId eq installation.value) and
+        (ResourceCreations.ownerId eq ownerId.value) and
             (ResourceCreations.type eq resourceType) and
             (ResourceCreations.key eq key.value)
     }.singleOrNull()?.let {
@@ -34,7 +33,7 @@ internal class ResourceCreation(
 
     fun record(id: String) {
         ResourceCreations.insert {
-            it[installationId] = installation.value
+            it[ResourceCreations.ownerId] = this@ResourceCreation.ownerId.value
             it[type] = resourceType
             it[ResourceCreations.key] = this@ResourceCreation.key.value
             it[ResourceCreations.requestHash] = this@ResourceCreation.requestHash
@@ -46,10 +45,10 @@ internal class ResourceCreation(
 }
 
 private object ResourceCreations : Table("resource_creations") {
-    val installationId = reference("installation_id", Installations.id)
+    val ownerId = reference("installation_id", OwnerPartitions.id)
     val type = text("resource_type")
     val key = text("request_key")
     val requestHash = text("request_hash")
     val resourceId = text("resource_id")
-    override val primaryKey = PrimaryKey(installationId, type, key)
+    override val primaryKey = PrimaryKey(ownerId, type, key)
 }

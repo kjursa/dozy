@@ -10,8 +10,8 @@ import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.model.AvatarState
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
-import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.registerOwnerPartition
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -20,14 +20,14 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
 class SqliteAvatarJobs(private val database: SqliteDatabase, private val config: AvatarConfig) : AvatarJobs {
-    override suspend fun create(owner: OwnerId, input: AvatarInput): AvatarJob = database.write {
-        registerInstallation(owner)
+    override suspend fun create(ownerId: OwnerId, input: AvatarInput): AvatarJob = database.write {
+        registerOwnerPartition(ownerId)
         val id = AvatarJobId.generate()
         val asset = AssetId.generate()
-        val job = AvatarJob(id, owner, input, asset, "${config.publicBaseUrl.trimEnd('/')}/assets/${asset.value}", AvatarState.QUEUED)
+        val job = AvatarJob(id, ownerId, input, asset, "${config.publicBaseUrl.trimEnd('/')}/assets/${asset.value}", AvatarState.QUEUED)
         Jobs.insert {
             it[Jobs.id] = id.value
-            it[Jobs.owner] = owner.value
+            it[Jobs.ownerId] = ownerId.value
             it[type] = input.type
             it[personality] = input.personality
             it[appearance] = input.appearance
@@ -37,8 +37,8 @@ class SqliteAvatarJobs(private val database: SqliteDatabase, private val config:
         }
         job
     }
-    override suspend fun find(owner: OwnerId, id: AvatarJobId): AvatarJob? = database.write {
-        Jobs.selectAll().where { (Jobs.id eq id.value) and (Jobs.owner eq owner.value) }.singleOrNull()?.toJob()
+    override suspend fun find(ownerId: OwnerId, id: AvatarJobId): AvatarJob? = database.write {
+        Jobs.selectAll().where { (Jobs.id eq id.value) and (Jobs.ownerId eq ownerId.value) }.singleOrNull()?.toJob()
     }
     override suspend fun recover() {
         database.write {
@@ -57,7 +57,7 @@ class SqliteAvatarJobs(private val database: SqliteDatabase, private val config:
             if (success) {
                 Assets.insert {
                     it[id] = job.assetId.value
-                    it[installationId] = job.owner.value
+                    it[ownerId] = job.ownerId.value
                     it[url] = job.url
                     it[status] = "READY"
                 }
@@ -70,5 +70,5 @@ class SqliteAvatarJobs(private val database: SqliteDatabase, private val config:
 }
 private fun ResultRow.toJob(): AvatarJob {
     val input = AvatarInput.parse(this[Jobs.type], this[Jobs.personality], this[Jobs.appearance]) as AvatarInput.Result.Valid
-    return AvatarJob(requireNotNull(AvatarJobId.parse(this[Jobs.id])), requireNotNull(OwnerId.parse(this[Jobs.owner])), input.input, requireNotNull(AssetId.parse(this[Jobs.assetId])), this[Jobs.url], AvatarState.valueOf(this[Jobs.state]))
+    return AvatarJob(requireNotNull(AvatarJobId.parse(this[Jobs.id])), requireNotNull(OwnerId.parse(this[Jobs.ownerId])), input.input, requireNotNull(AssetId.parse(this[Jobs.assetId])), this[Jobs.url], AvatarState.valueOf(this[Jobs.state]))
 }

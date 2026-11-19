@@ -15,23 +15,23 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-internal fun JdbcTransaction.visiblePlaces(installation: OwnerId): List<Place> =
+internal fun JdbcTransaction.visiblePlaces(ownerId: OwnerId): List<Place> =
     Places.selectAll().where {
-        (Places.installationId eq installation.value) or (Places.origin eq Place.Origin.SYSTEM)
+        (Places.ownerId eq ownerId.value) or (Places.origin eq Place.Origin.SYSTEM)
     }.map { it.toPlace() }
 
 internal fun JdbcTransaction.existingPlace(id: PlaceId): ExistingPlace? =
     Places.selectAll().where { Places.id eq id.value }
-        .singleOrNull()?.let { ExistingPlace(it[Places.installationId]?.let { value -> requireNotNull(OwnerId.parse(value)) }) }
+        .singleOrNull()?.let { ExistingPlace(it[Places.ownerId]?.let { value -> requireNotNull(OwnerId.parse(value)) }) }
 
 internal fun JdbcTransaction.insertPlace(
-    installation: OwnerId,
+    ownerId: OwnerId,
     id: PlaceId,
     command: SavePlace
 ) {
     Places.insert {
         it[Places.id] = id.value
-        it[installationId] = installation.value
+        it[Places.ownerId] = ownerId.value
         it[origin] = Place.Origin.USER
         it.setFields(command)
     }

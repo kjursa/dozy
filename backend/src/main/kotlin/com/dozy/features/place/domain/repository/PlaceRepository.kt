@@ -8,14 +8,14 @@ import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 
 interface PlaceRepository {
-    suspend fun list(installation: OwnerId): List<Place>
+    suspend fun list(ownerId: OwnerId): List<Place>
     suspend fun create(
-        installation: OwnerId,
+        ownerId: OwnerId,
         command: SavePlace,
         requestKey: IdempotencyKey? = null
     ): SavePlaceResult
     suspend fun save(
-        installation: OwnerId,
+        ownerId: OwnerId,
         id: PlaceId,
         command: SavePlace
     ): SavePlaceResult

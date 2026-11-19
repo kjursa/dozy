@@ -32,21 +32,21 @@ fun Route.placeV1Routes(service: PlaceService) {
             call.respond(PlacesResponse(places.map { it.toResponse() }))
         }
         post {
-            val installation = call.ownerId()
+            val ownerId = call.ownerId()
             val requestKey = call.idempotencyKey()
             call.respondToSave(
                 service.create(
-                    installation,
+                    ownerId,
                     call.receive<SavePlaceRequest>().toCommand(),
                     requestKey
                 )
             )
         }
         put("/{id}") {
-            val installation = call.ownerId()
+            val ownerId = call.ownerId()
             val id = requirePlaceId(call.parameters["id"])
             call.respondToSave(
-                service.save(installation, id, call.receive<SavePlaceRequest>().toCommand())
+                service.save(ownerId, id, call.receive<SavePlaceRequest>().toCommand())
             )
         }
     }

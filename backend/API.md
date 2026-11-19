@@ -176,7 +176,7 @@ Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
 flat validation codes such as `validation.name.too_long` from the shared
 `CharactersSaveError` contract for business
 input; 404 `CHARACTER_NOT_FOUND` for a PUT to a missing ID; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
-READY asset's ID and URL; 409 `CONFLICT` for another installation's or permanently
+READY asset's ID and URL; 409 `CONFLICT` for another owner's or permanently
 deleted ID. The name reasons are REQUIRED, TOO_LONG and SINGLE_LINE; personality
 and appearance support REQUIRED / TOO_LONG; type supports INVALID_VALUE.
 
@@ -300,7 +300,7 @@ remain readable even if write limits change.
 | 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
 | 404 | `place.not_found` | PUT references a missing custom place |
 | 409 | `IDEMPOTENCY_CONFLICT` | The creation key was used with different input |
-| 409 | `place.conflict` | Custom ID belongs to another installation |
+| 409 | `place.conflict` | Custom ID belongs to another owner |
 | 503 | `UNAVAILABLE` | SQLite operation failed |
 
 Places SDK operations expose their own Success/ApiError/TechnicalError result.
@@ -348,14 +348,14 @@ requests rather than silently making hidden fields affect generation.
 Header `Idempotency-Key: <client UUID>`; body: request snapshot above. Return
 `202 {"jobId":"job-019a0000-0000-7000-8000-000000000004","status":"QUEUED"}` after durable acceptance.
 
-- Atomically bind the installation/key to the accepted request and job. Identical replays
+- Atomically bind the owner and idempotency key to the accepted request and job. Identical replays
   return 202 with the same job and current execution status, even after completion.
 - A different body for the same key returns `409 IDEMPOTENCY_CONFLICT`. Define a
   deterministic canonical representation preserving array order and omission;
   object key ordering must not affect equality. Store the request and fingerprint.
 - Retain bindings for the lifetime of the job/story. Check replay bindings **before**
   rejecting a new active job, so replaying an active job succeeds.
-- Allow at most one active story job per installation (`QUEUED`, `CREATING_TEXT`,
+- Allow at most one active story job per owner (`QUEUED`, `CREATING_TEXT`,
   `CREATING_COVER`); a new conflicting job returns `409 ACTIVE_JOB_EXISTS`.
 - Other documented errors: `400 INVALID_REQUEST`, `401 UNAUTHORIZED`,
   `404 REFERENCE_UNAVAILABLE`, `429 RATE_LIMITED`, `503 GENERATION_UNAVAILABLE`.
@@ -439,7 +439,7 @@ lexical ordering consistently rather than locale-dependent sorting.
 Mobile requests limit 100; the backend accepts 1–100 and defaults to 100. Malformed/out-of-range limits return 422 `validation.limit.invalid_value`. Every page belongs
 to the same stable snapshot, with no repeated IDs; stories published mid-pagination
 appear on a later refresh, not halfway through the current traversal. Cursor is
-opaque, URL-encoded, installation-bound and validated; last page omits it or returns null.
+opaque, URL-encoded, bound to the owner and validated; last page omits it or returns null.
 Errors: `400 INVALID_CURSOR`, `401` for missing or invalid access tokens, `422 validation.limit.invalid_value`, `503 UNAVAILABLE`. Refresh never triggers POST/generation. See DB.md for one
 concrete snapshot implementation.
 
@@ -489,24 +489,24 @@ even as null. Validation returns shared error objects with flat 422 codes, e.g.
 `validation.cast.required`: cast supports REQUIRED
 and INVALID_VALUE; idea/ending support TOO_LONG.
 
-Bindings include installation, operation, UUIDv4 key, original canonical request
+Bindings include the owner ID, operation, UUIDv4 key, original canonical request
 and UUIDv7 logical job. JSON object keys are sorted recursively; array order and
 null versus omission remain significant. Replay returns the same job's current
 status before checking the active limit or live references. Changed content under
 the key returns 409 `IDEMPOTENCY_CONFLICT`. Another key while a job is active returns
-409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per installation.
+409 `ACTIVE_JOB_EXISTS`. One active story job is allowed per owner.
 
 Stages are QUEUED → CREATING_TEXT → CREATING_COVER → READY, or FAILED. READY exposes
 storyId only after text, cover and story are committed together. FAILED carries
 `CONTENT_REJECTED` or `GENERATION_FAILED` in errorCode; no other stage carries it.
 Text/title/ID/configuration/createdAt/cover are immutable. createdAt is nonnegative
 UTC epoch milliseconds. The same cover URL serves the library thumbnail and reader.
-`GET /api/v1/assets/{assetId}` returns local `image/png` bytes, requires the installation
-header, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
+`GET /api/v1/assets/{assetId}` returns local `image/png` bytes, requires a bearer access
+token, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-installation and limit-mismatched tokens return INVALID_CURSOR.
+Stable paginated listing is implemented through the shared Stories client and persistent SQLite snapshots. Snapshots and cursor tokens are retained without expiry in this development phase; unknown, malformed, cross-owner and limit-mismatched tokens return INVALID_CURSOR.
 
 Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing
@@ -514,7 +514,7 @@ SUCCESS, FAILURE, CONTENT_REJECTED and cover modes remain available.
 
 ## API2 asset delivery and recovery
 
-Missing and other-installation avatar jobs both return 404 `AVATAR_JOB_NOT_FOUND`.
+Requests for missing avatar jobs or jobs owned by someone else return 404 `AVATAR_JOB_NOT_FOUND`.
 FAILED observations return HTTP 200 with `error: "GENERATION_FAILED"`, no asset,
 and no story `errorCode`. QUEUED/RUNNING contain neither asset nor error; READY
 contains one complete asset and no error. The shared client validates combinations.

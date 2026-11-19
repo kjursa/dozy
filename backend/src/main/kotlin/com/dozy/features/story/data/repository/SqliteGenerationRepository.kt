@@ -14,7 +14,6 @@ import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.StoryId
 import com.dozy.features.asset.data.database.AssetContents
 import com.dozy.features.asset.data.database.Assets
-import com.dozy.features.installation.data.database.registerInstallation
 import com.dozy.features.story.data.database.LibraryCursors
 import com.dozy.features.story.data.database.LibrarySnapshots
 import com.dozy.features.story.data.database.Stories
@@ -36,6 +35,7 @@ import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.features.story.domain.repository.GenerationRepository
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.registerOwnerPartition
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
@@ -52,21 +52,21 @@ class SqliteGenerationRepository(
     private val config: GenerationConfig,
     private val clock: Clock,
 ) : GenerationRepository {
-    override suspend fun list(installation: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage? = database.write {
+    override suspend fun list(ownerId: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage? = database.write {
         require(limit in 1..100)
         val snapshotId: LibrarySnapshotId
         val position: Int
         val summaries: List<StorySummaryDto>
         if (cursor == null) {
-            registerInstallation(installation)
+            registerOwnerPartition(ownerId)
             snapshotId = LibrarySnapshotId.generate()
             position = 0
-            summaries = Stories.selectAll().where { Stories.installation eq installation.value }.map {
+            summaries = Stories.selectAll().where { Stories.ownerId eq ownerId.value }.map {
                 StorySummaryDto(it[Stories.id], it[Stories.title], it[Stories.coverUrl], readingMinutes(it[Stories.text]), it[Stories.createdAt])
             }.sortedWith(compareByDescending<StorySummaryDto> { it.createdAt }.thenBy { it.id })
             LibrarySnapshots.insert {
                 it[id] = snapshotId.value
-                it[LibrarySnapshots.installation] = installation.value
+                it[LibrarySnapshots.ownerId] = ownerId.value
                 it[LibrarySnapshots.limit] = limit
                 it[LibrarySnapshots.summaries] = Json.encodeToString(summaries)
             }
@@ -74,7 +74,7 @@ class SqliteGenerationRepository(
             val savedCursor = LibraryCursors.selectAll().where { LibraryCursors.token eq cursor.value }.singleOrNull() ?: return@write null
             snapshotId = requireNotNull(LibrarySnapshotId.parse(savedCursor[LibraryCursors.snapshot]))
             position = savedCursor[LibraryCursors.position]
-            val saved = LibrarySnapshots.selectAll().where { (LibrarySnapshots.id eq snapshotId.value) and (LibrarySnapshots.installation eq installation.value) and (LibrarySnapshots.limit eq limit) }.singleOrNull() ?: return@write null
+            val saved = LibrarySnapshots.selectAll().where { (LibrarySnapshots.id eq snapshotId.value) and (LibrarySnapshots.ownerId eq ownerId.value) and (LibrarySnapshots.limit eq limit) }.singleOrNull() ?: return@write null
             summaries = Json.decodeFromString(saved[LibrarySnapshots.summaries])
         }
         val end = minOf(position + limit, summaries.size)
@@ -85,26 +85,26 @@ class SqliteGenerationRepository(
         StoryPage(summaries.subList(position, end).map { StorySummary(requireNotNull(StoryId.parse(it.id)), it.title, it.coverUrl, it.readingMinutes, it.createdAt) }, next)
     }
 
-    override suspend fun start(installation: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = database.write {
-        val existing = StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.key eq key.value) }.singleOrNull()
+    override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = database.write {
+        val existing = StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.key eq key.value) }.singleOrNull()
         if (existing != null) {
             return@write if (existing[StoryJobs.operation] == "START_STORY_V1" && existing[StoryJobs.canonical] == canonicalRequest) Submission.Accepted(existing.job())
             else Submission.IdempotencyConflict
         }
-        if (StoryExecutions.selectAll().where { (StoryExecutions.installation eq installation.value) and (StoryExecutions.key eq key.value) }.any()) return@write Submission.IdempotencyConflict
-        if (StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.stage inList active) }.any()) return@write Submission.ActiveJobExists
+        if (StoryExecutions.selectAll().where { (StoryExecutions.ownerId eq ownerId.value) and (StoryExecutions.key eq key.value) }.any()) return@write Submission.IdempotencyConflict
+        if (StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.stage inList active) }.any()) return@write Submission.ActiveJobExists
         for (hero in command.configuration.cast) {
             val avatar = hero.avatar ?: continue
-            if (!Assets.selectAll().where { (Assets.id eq avatar.id.value) and (Assets.installationId eq installation.value) and (Assets.url eq avatar.url) and (Assets.status eq "READY") }.any()) {
+            if (!Assets.selectAll().where { (Assets.id eq avatar.id.value) and (Assets.ownerId eq ownerId.value) and (Assets.url eq avatar.url) and (Assets.status eq "READY") }.any()) {
                 return@write Submission.ReferenceUnavailable
             }
         }
-        registerInstallation(installation)
+        registerOwnerPartition(ownerId)
         val id = JobId.generate()
         val executionId = GenerationId.generate()
         StoryJobs.insert {
             it[StoryJobs.id] = id.value
-            it[StoryJobs.installation] = installation.value
+            it[StoryJobs.ownerId] = ownerId.value
             it[operation] = "START_STORY_V1"
             it[StoryJobs.key] = key.value
             it[canonical] = canonicalRequest
@@ -120,7 +120,7 @@ class SqliteGenerationRepository(
         }
         StoryExecutions.insert {
             it[StoryExecutions.id] = executionId.value
-            it[StoryExecutions.installation] = installation.value
+            it[StoryExecutions.ownerId] = ownerId.value
             it[jobId] = id.value
             it[StoryExecutions.key] = key.value
             it[operation] = "START_STORY_V1"
@@ -129,22 +129,22 @@ class SqliteGenerationRepository(
         }
         Submission.Accepted(Job(id, Stage.QUEUED))
     }
-    override suspend fun retry(installation: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = database.write {
-        val binding = StoryExecutions.selectAll().where { (StoryExecutions.installation eq installation.value) and (StoryExecutions.key eq key.value) }.singleOrNull()
+    override suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = database.write {
+        val binding = StoryExecutions.selectAll().where { (StoryExecutions.ownerId eq ownerId.value) and (StoryExecutions.key eq key.value) }.singleOrNull()
         if (binding != null) {
             return@write if (binding[StoryExecutions.operation] == "RETRY_STORY_V1" && binding[StoryExecutions.jobId] == id.value) {
                 RetrySubmission.Accepted(Job(id, Stage.valueOf(binding[StoryExecutions.stage])))
             } else RetrySubmission.IdempotencyConflict
         }
-        val row = StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.id eq id.value) }.singleOrNull()
+        val row = StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.id eq id.value) }.singleOrNull()
             ?: return@write RetrySubmission.JobNotFound
         if (row[StoryJobs.stage] != Stage.FAILED.name) return@write RetrySubmission.JobNotFailed
-        if (StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.stage inList active) }.any()) return@write RetrySubmission.ActiveJobExists
+        if (StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.stage inList active) }.any()) return@write RetrySubmission.ActiveJobExists
         val executionId = GenerationId.generate()
         val ordinal = row[StoryJobs.ordinal] + 1
         StoryExecutions.insert {
             it[StoryExecutions.id] = executionId.value
-            it[StoryExecutions.installation] = installation.value
+            it[StoryExecutions.ownerId] = ownerId.value
             it[jobId] = id.value
             it[StoryExecutions.key] = key.value
             it[operation] = "RETRY_STORY_V1"
@@ -164,11 +164,11 @@ class SqliteGenerationRepository(
         val row = StoryJobs.selectAll().where { StoryJobs.id eq id.value }.single()
         StoryExecutions.update({ StoryExecutions.id eq row[StoryJobs.executionId] }) { it[stage] = row[StoryJobs.stage] }
     }
-    override suspend fun status(installation: OwnerId, id: JobId): Job? = database.write {
-        StoryJobs.selectAll().where { (StoryJobs.installation eq installation.value) and (StoryJobs.id eq id.value) }.singleOrNull()?.job()
+    override suspend fun status(ownerId: OwnerId, id: JobId): Job? = database.write {
+        StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.id eq id.value) }.singleOrNull()?.job()
     }
-    override suspend fun read(installation: OwnerId, id: StoryId): SavedStory? = database.write {
-        Stories.selectAll().where { (Stories.installation eq installation.value) and (Stories.id eq id.value) }.singleOrNull()?.let {
+    override suspend fun read(ownerId: OwnerId, id: StoryId): SavedStory? = database.write {
+        Stories.selectAll().where { (Stories.ownerId eq ownerId.value) and (Stories.id eq id.value) }.singleOrNull()?.let {
             SavedStory(requireNotNull(StoryId.parse(it[Stories.id])), it[Stories.title], it[Stories.text], it[Stories.coverUrl], decodeConfiguration(it[Stories.configuration]), it[Stories.createdAt])
         }
     }
@@ -206,7 +206,7 @@ class SqliteGenerationRepository(
         val url = "${config.assetBaseUrl.trimEnd('/')}/api/v1/assets/${row[StoryJobs.assetId]}"
         Assets.insert {
             it[id] = row[StoryJobs.assetId]
-            it[installationId] = row[StoryJobs.installation]
+            it[Assets.ownerId] = row[StoryJobs.ownerId]
             it[Assets.url] = url
             it[status] = "READY"
         }
@@ -214,7 +214,7 @@ class SqliteGenerationRepository(
         Stories.insert {
             it[id] = row[StoryJobs.storyId]
             it[jobId] = row[StoryJobs.id]
-            it[installation] = row[StoryJobs.installation]
+            it[Stories.ownerId] = row[StoryJobs.ownerId]
             it[title] = requireNotNull(row[StoryJobs.title])
             it[text] = requireNotNull(row[StoryJobs.text])
             it[coverUrl] = url

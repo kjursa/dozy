@@ -15,10 +15,10 @@ class SqliteAssetRepository(
     private val database: SqliteDatabase,
     private val avatarStorage: AvatarStorage? = null,
 ) : AssetRepository {
-    override suspend fun read(installation: OwnerId, id: AssetId): ByteArray? {
+    override suspend fun read(ownerId: OwnerId, id: AssetId): ByteArray? {
         val asset = database.write {
             if (!Assets.selectAll().where {
-                    (Assets.id eq id.value) and (Assets.installationId eq installation.value) and (Assets.status eq "READY")
+                    (Assets.id eq id.value) and (Assets.ownerId eq ownerId.value) and (Assets.status eq "READY")
                 }.any()
             ) return@write null
             OwnedAsset(AssetContents.selectAll().where { AssetContents.assetId eq id.value }.singleOrNull()?.get(AssetContents.bytes))

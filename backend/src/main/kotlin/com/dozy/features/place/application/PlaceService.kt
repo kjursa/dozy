@@ -9,19 +9,19 @@ import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 
 class PlaceService(private val repository: PlaceRepository) {
-    suspend fun list(installation: OwnerId) = repository.list(installation).sortedWith(
+    suspend fun list(ownerId: OwnerId) = repository.list(ownerId).sortedWith(
         compareBy<Place> { it.origin != Place.Origin.USER }
             .thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
     )
 
     suspend fun create(
-        installation: OwnerId,
+        ownerId: OwnerId,
         command: SavePlace,
         requestKey: IdempotencyKey? = null
-    ) = repository.create(installation, command, requestKey)
+    ) = repository.create(ownerId, command, requestKey)
 
-    suspend fun save(installation: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult {
+    suspend fun save(ownerId: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult {
         if (id.isBuiltIn) return SavePlaceResult.Forbidden
-        return repository.save(installation, id, command)
+        return repository.save(ownerId, id, command)
     }
 }

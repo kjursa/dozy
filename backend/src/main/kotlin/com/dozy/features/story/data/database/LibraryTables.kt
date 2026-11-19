@@ -4,7 +4,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object LibrarySnapshots : Table("library_snapshots") {
     val id = text("id")
-    val installation = text("installation_id")
+    val ownerId = text("installation_id")
     val limit = integer("page_limit")
     val summaries = text("summaries")
     override val primaryKey = PrimaryKey(id)

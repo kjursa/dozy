@@ -16,11 +16,11 @@ import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.domain.model.Submission
 
 interface GenerationRepository {
-    suspend fun list(installation: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage?
-    suspend fun start(installation: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission
-    suspend fun retry(installation: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission
-    suspend fun status(installation: OwnerId, id: JobId): Job?
-    suspend fun read(installation: OwnerId, id: StoryId): SavedStory?
+    suspend fun list(ownerId: OwnerId, limit: Int, cursor: LibraryCursor?): StoryPage?
+    suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission
+    suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission
+    suspend fun status(ownerId: OwnerId, id: JobId): Job?
+    suspend fun read(ownerId: OwnerId, id: StoryId): SavedStory?
     suspend fun claim(): Execution?
     suspend fun renew(execution: Execution): Boolean
     suspend fun saveText(execution: Execution, text: GeneratedText): Boolean

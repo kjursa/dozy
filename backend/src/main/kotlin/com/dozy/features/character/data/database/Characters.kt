@@ -4,13 +4,13 @@ import com.dozy.domain.id.AssetId
 import com.dozy.domain.id.CharacterId
 import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.character.domain.model.Character
-import com.dozy.features.installation.data.database.Installations
+import com.dozy.infrastructure.database.OwnerPartitions
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 
 internal object Characters : Table("characters") {
     val id = text("id")
-    val installationId = reference("installation_id", Installations.id)
+    val ownerId = reference("installation_id", OwnerPartitions.id)
     val name = text("name")
     val personality = text("personality")
     val appearance = text("appearance")

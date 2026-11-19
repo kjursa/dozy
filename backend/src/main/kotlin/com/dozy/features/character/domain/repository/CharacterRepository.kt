@@ -8,16 +8,16 @@ import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 
 interface CharacterRepository {
-    suspend fun list(installation: OwnerId): List<Character>
+    suspend fun list(ownerId: OwnerId): List<Character>
     suspend fun create(
-        installation: OwnerId,
+        ownerId: OwnerId,
         command: SaveCharacter,
         requestKey: IdempotencyKey? = null
     ): SaveCharacterResult
     suspend fun save(
-        installation: OwnerId,
+        ownerId: OwnerId,
         id: CharacterId,
         command: SaveCharacter
     ): SaveCharacterResult
-    suspend fun delete(installation: OwnerId, id: CharacterId): Boolean
+    suspend fun delete(ownerId: OwnerId, id: CharacterId): Boolean
 }

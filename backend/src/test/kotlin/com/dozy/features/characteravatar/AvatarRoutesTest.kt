@@ -9,6 +9,7 @@ import com.dozy.asOwner
 import com.dozy.config.AvatarConfig
 import com.dozy.config.FakeAvatarMode
 import com.dozy.databaseConfig
+import com.dozy.domain.id.OwnerId
 import com.dozy.module
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -33,8 +34,8 @@ import kotlin.test.assertNull
 
 class AvatarRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "owner-019a0000-0000-7000-8000-000000000001"
-    private val stranger = "owner-019a0000-0000-7000-8000-000000000002"
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000001"))
+    private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000002"))
     private val request = """{"type":"CHILD","personality":"Kind","appearance":"Green eyes"}"""
 
     @Test fun acceptedJobsServeValidPngAndOwnedCharacterReference() = testApplication {

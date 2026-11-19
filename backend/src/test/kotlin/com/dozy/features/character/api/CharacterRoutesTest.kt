@@ -7,6 +7,7 @@ import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
 import com.dozy.api.contracts.v1.character.SaveCharacterRequest
 import com.dozy.asOwner
 import com.dozy.databaseConfig
+import com.dozy.domain.id.OwnerId
 import com.dozy.module
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
@@ -30,8 +31,8 @@ import kotlin.test.assertTrue
 
 class CharacterRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "owner-019a0000-0000-7000-8000-000000000001"
-    private val stranger = "owner-019a0000-0000-7000-8000-000000000002"
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000001"))
+    private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000002"))
     private val collection = "/api/v1/characters"
     private val input = SaveCharacterRequest("  Oliver  ", "Curious", "Green eyes", "CHILD")
     private suspend fun HttpClient.create(
@@ -43,14 +44,14 @@ class CharacterRoutesTest {
         requestKey?.let { header("Idempotency-Key", it) }
         setBody(body)
     }
-    private suspend fun HttpClient.save(id: String, installation: String = owner) =
+    private suspend fun HttpClient.save(id: String, ownerId: OwnerId = owner) =
         put("$collection/$id") {
-            asOwner(installation)
+            asOwner(ownerId)
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(input))
         }
-    private suspend fun HttpClient.list(installation: String = owner): List<CharacterDto> {
-        val response = get("/api/v1/characters") { asOwner(installation) }
+    private suspend fun HttpClient.list(ownerId: OwnerId = owner): List<CharacterDto> {
+        val response = get("/api/v1/characters") { asOwner(ownerId) }
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(response.bodyAsText().startsWith("["))
         return Json.decodeFromString(response.bodyAsText())
@@ -80,7 +81,7 @@ class CharacterRoutesTest {
         }
         assertEquals(1, client.list().size)
         assertTrue(client.list(stranger).isEmpty())
-        val conflict = client.save(id, installation = stranger)
+        val conflict = client.save(id, ownerId = stranger)
         assertEquals(HttpStatusCode.Conflict, conflict.status)
         assertEquals("CONFLICT", Json.decodeFromString<ApiErrorResponse>(conflict.bodyAsText()).code)
         val foreignDelete = client.delete(path) { asOwner(stranger) }

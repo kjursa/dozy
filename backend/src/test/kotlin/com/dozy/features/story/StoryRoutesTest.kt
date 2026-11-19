@@ -7,6 +7,7 @@ import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.asOwner
 import com.dozy.databaseConfig
 import com.dozy.domain.id.JobId
+import com.dozy.domain.id.OwnerId
 import com.dozy.module
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -32,15 +33,15 @@ import kotlin.test.assertTrue
 
 class StoryRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "owner-019a0000-0000-7000-8000-000000000010"
-    private val stranger = "owner-019a0000-0000-7000-8000-000000000011"
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000010"))
+    private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000011"))
     private val request = """{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"builtin:woods","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
     private val json = Json { ignoreUnknownKeys = true }
     private suspend fun HttpClient.start(body: String = request, key: String = UUID.randomUUID().toString()) = post("/api/v1/story-generations") {
         asOwner(owner); header("Idempotency-Key", key)
         contentType(ContentType.Application.Json); setBody(body)
     }
-    private suspend fun HttpClient.read(path: String, installation: String = owner) = get(path) { asOwner(installation) }
+    private suspend fun HttpClient.read(path: String, ownerId: OwnerId = owner) = get(path) { asOwner(ownerId) }
 
     @Test fun `listing defaults empty and rejects invalid limits and cursors`() = testApplication {
         environment { config = databaseConfig(directory) }
@@ -59,8 +60,8 @@ class StoryRoutesTest {
         application { module() }
         val original = UUID.randomUUID().toString()
         val job = json.decodeFromString<GenerationAcceptedDto>(client.start(key = original).bodyAsText())
-        suspend fun retry(key: String, id: String = job.jobId, installation: String = owner) = client.post("/api/v1/story-generations/$id/retry") {
-            asOwner(installation)
+        suspend fun retry(key: String, id: String = job.jobId, ownerId: OwnerId = owner) = client.post("/api/v1/story-generations/$id/retry") {
+            asOwner(ownerId)
             header("Idempotency-Key", key)
         }
         suspend fun awaitStage(stage: String) = withTimeout(10000) {
@@ -72,7 +73,7 @@ class StoryRoutesTest {
         }
         awaitStage("FAILED")
         assertEquals("IDEMPOTENCY_CONFLICT", json.decodeFromString<ApiErrorResponse>(retry(original).bodyAsText()).code)
-        assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString(), installation = stranger).bodyAsText()).code)
+        assertEquals("JOB_NOT_FOUND", json.decodeFromString<ApiErrorResponse>(retry(UUID.randomUUID().toString(), ownerId = stranger).bodyAsText()).code)
         val key = UUID.randomUUID().toString()
         val response = retry(key)
         assertEquals(HttpStatusCode.Accepted, response.status)
@@ -128,7 +129,7 @@ class StoryRoutesTest {
             request.replace("MANUAL", "UNKNOWN"), request.replace("SHORT", "MEDIUM"), request.replace("ANIMAL", "ALIEN"),
             request.replace("char-", "asset-"), request.replace("MANUAL", "AUTOMATIC"), request.replace("\"Luna\"", "null"), request.replace("\"Kind\"", "false"),
         )) assertEquals(HttpStatusCode.BadRequest, client.start(body).status)
-        assertEquals(HttpStatusCode.BadRequest, client.start(key = owner).status)
+        assertEquals(HttpStatusCode.BadRequest, client.start(key = owner.value).status)
         val empty = request.replace(Regex("\\[.*?]"), "[]")
         val error = json.decodeFromString<ApiErrorResponse>(client.start(empty).bodyAsText())
         assertEquals(ApiErrorResponse("validation.cast.required"), error)

@@ -33,14 +33,14 @@ import io.ktor.server.routing.route
 fun Route.avatarV1Routes(jobs: AvatarJobs) {
     route("/character-avatars") {
         post {
-            val owner = call.ownerId()
+            val ownerId = call.ownerId()
             val request = call.receive<AvatarRequestDto>()
             val input = when (val parsed = AvatarInput.parse(request.type, request.personality, request.appearance)) {
                 is AvatarInput.Result.Valid -> parsed.input
                 is AvatarInput.Result.Invalid -> throw BusinessApiException(HttpStatusCode.UnprocessableEntity, AvatarStartError.Validation(
                     AvatarField.valueOf(parsed.field.name), ValidationReason.valueOf(parsed.reason.name)))
             }
-            call.respond(HttpStatusCode.Accepted, jobs.create(owner, input).toDto())
+            call.respond(HttpStatusCode.Accepted, jobs.create(ownerId, input).toDto())
         }
         get("/{jobId}") {
             val job = AvatarJobId.parse(call.parameters["jobId"])?.let { jobs.find(call.ownerId(), it) }

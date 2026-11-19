@@ -2,7 +2,7 @@
 
 ## Current SQLite implementation
 
-The initial backend stores installations, places, characters, asset metadata/bytes, story jobs and immutable stories in a local SQLite file.
+The initial backend stores owner partitions, places, characters, asset metadata/bytes, story jobs and immutable stories in a local SQLite file.
 `application.yaml` supplies the path and lock timeout through typed `AppConfig` /
 `DatabaseConfig`; use `DOZY_DATABASE_PATH` and `DOZY_DATABASE_BUSY_TIMEOUT_MS` to
 override them. Defaults are `data/dozy.db` and 5000 ms. The path is relative to the
@@ -13,7 +13,8 @@ requests. Flyway discovers versioned SQL in `classpath:db/migration`, applies
 pending migrations in order, and tracks versions and checksums in
 `flyway_schema_history`. Applied script checksum mismatches fail startup.
 `V1__places.sql` creates `installations` and `places`, including an owner index and the three
-read-only `builtin:` places. These SQLite IDs are TEXT, and timestamps use
+read-only `builtin:` places. The SQL table `installations` and columns named
+`installation_id` store owner IDs. SQLite IDs are TEXT, and timestamps use
 `CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
 
 Data access uses Exposed 1.6.1 SQL DSL over the SQLite JDBC driver, without ORM
@@ -35,8 +36,8 @@ Each operation uses a connection with foreign keys enabled and the configured
 busy timeout. Exposed manages transactions, statement execution, and connection
 cleanup on `Dispatchers.IO`. The SQLite driver uses `IMMEDIATE` transaction mode
 to acquire the write reservation before reading ownership. These transactions make owner checks and upserts
-atomic, including concurrent claims of an ID. Reads register the installation
-and collect its custom places plus shared places in one transaction. This simple
+atomic, including concurrent claims of an ID. Reads register the owner partition
+and collect the owner’s custom places plus shared places in one transaction. This simple
 single-file implementation is intended for the initial local backend, not as a
 production capacity claim. Keep the file on persistent writable storage.
 
@@ -52,13 +53,13 @@ future PostgreSQL implementation can replace them through DI.
 
 `V2__characters_and_assets.sql` adds `characters` and `assets`, owned by the
 existing `installations` namespace. Character IDs are globally reserved TEXT
-primary keys: an installation cannot claim another owner's ID. Records contain
+primary keys. Every ID is reserved for its owner. Records contain
 name, personality, appearance, type, nullable avatar ID/URL and a deleted flag.
 DELETE marks a permanent tombstone; collection reads exclude deleted rows. There
 is no cleanup/reuse or cascade into story snapshots. Full PUT replacements check
 ownership and deletion before upserting, within the same IMMEDIATE transaction.
 
-`assets` is the minimal shared metadata registry: ID, installation ID, URL and
+`assets` is the minimal shared metadata registry: ID, owner ID, URL and
 PENDING/READY/FAILED status. A non-null character avatar must exactly match an
 owned READY asset ID and URL. The avatar ID has a foreign key; application checks
 ownership/readiness and paired ID/URL values atomically. No external provider is included. API2 populates this registry after durable local PNG storage. Null avatars remain valid for
@@ -67,9 +68,9 @@ historical records. Read mapping never applies current write length limits.
 ### Durable story execution (V3/V4)
 
 `story_jobs` stores the original canonical request, normalized accepted configuration,
-operation, installation/key binding, preallocated UUIDv7 story/asset IDs, stage,
+operation, owner and idempotency key binding, preallocated UUIDv7 story/asset IDs, stage,
 persisted generated text, lease token/expiry, and execution count. A unique
-installation/key constraint and a partial unique index on active installation jobs
+constraint on owner and idempotency key and a partial unique index on active owner jobs
 make concurrent submissions atomic. Replays precede the active-limit check.
 
 Workers claim in short IMMEDIATE transactions and run injected generators outside
@@ -78,7 +79,7 @@ renewed during generation. On process death another worker recovers the stored
 stage when its lease expires, reusing persisted text at CREATING_COVER. Lease tokens
 fence old executions. Storage failures leave work recoverable; generator failures
 alone produce terminal failure codes. V4 adds `story_executions`: a UUIDv7 identity,
-installation-wide operation/key reservation, job ID, ordinal and durable stage for
+operation and key reservation per owner, job ID, ordinal and durable stage for
 each accepted execution, including CREATE. Acceptance atomically inserts the binding
 and resets only the failed current job to QUEUED, clearing intermediate text and
 leases. Archived stages remain replayable even after newer executions. Workers
@@ -89,7 +90,7 @@ Publishing inserts `assets`, `asset_contents` (local PNG bytes), and immutable
 `stories` and transitions the job to READY in one transaction. A unique story job
 reference and fenced publication prevent multiple successful results. Publication
 sets the immutable UTC epoch-millisecond createdAt. No update/read path mutates a
-saved result or invokes a generator. All job/story/asset reads filter by installation.
+saved result or invokes a generator. All job/story/asset reads filter by owner ID.
 
 
 ## Proposed PostgreSQL database

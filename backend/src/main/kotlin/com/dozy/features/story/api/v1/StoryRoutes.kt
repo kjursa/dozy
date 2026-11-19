@@ -28,11 +28,11 @@ import kotlinx.serialization.json.JsonObject
 
 fun Route.storyV1Routes(service: StoryService) {
     post("/story-generations") {
-        val installation = call.ownerId()
+        val ownerId = call.ownerId()
         val key = call.idempotencyKey() ?: invalidRequest()
         val body = call.receive<JsonObject>()
         val command = body.command()
-        when (val result = service.start(installation, key, canonicalJson(body), command)) {
+        when (val result = service.start(ownerId, key, canonicalJson(body), command)) {
             is Submission.Accepted -> call.respond(HttpStatusCode.Accepted, GenerationAcceptedDto(result.job.id.value, result.job.stage.name))
             Submission.IdempotencyConflict -> throw BusinessApiException(HttpStatusCode.Conflict, GenerationStartError.IdempotencyConflict)
             Submission.ActiveJobExists -> throw BusinessApiException(HttpStatusCode.Conflict, GenerationStartError.ActiveJobExists)
@@ -40,11 +40,11 @@ fun Route.storyV1Routes(service: StoryService) {
         }
     }
     post("/story-generations/{id}/retry") {
-        val installation = call.ownerId()
+        val ownerId = call.ownerId()
         val key = call.idempotencyKey() ?: invalidRequest()
         val id = JobId.parse(call.parameters["id"])
             ?: throw BusinessApiException(HttpStatusCode.NotFound, GenerationRetryError.JobNotFound)
-        when (val result = service.retry(installation, id, key)) {
+        when (val result = service.retry(ownerId, id, key)) {
             is RetrySubmission.Accepted -> call.respond(HttpStatusCode.Accepted, GenerationAcceptedDto(result.job.id.value, result.job.stage.name))
             RetrySubmission.JobNotFound -> throw BusinessApiException(HttpStatusCode.NotFound, GenerationRetryError.JobNotFound)
             RetrySubmission.JobNotFailed -> throw BusinessApiException(HttpStatusCode.Conflict, GenerationRetryError.JobNotFailed)
@@ -58,7 +58,7 @@ fun Route.storyV1Routes(service: StoryService) {
         call.respond(job.toDto())
     }
     get("/stories") {
-        val installation = call.ownerId()
+        val ownerId = call.ownerId()
         val limits = call.request.queryParameters.getAll("limit")
         val limit = if (limits == null) 100 else limits.singleOrNull()?.takeIf { it.matches(Regex("[0-9]+")) }?.toIntOrNull()
         if (limit == null || limit !in 1..100) throw BusinessApiException(HttpStatusCode.UnprocessableEntity, StoryListError.Validation(StoryListField.LIMIT, ValidationReason.INVALID_VALUE))
@@ -66,7 +66,7 @@ fun Route.storyV1Routes(service: StoryService) {
         val cursor = cursors?.let {
             LibraryCursor.parse(it.singleOrNull()) ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
         }
-        val page = service.list(installation, limit, cursor)
+        val page = service.list(ownerId, limit, cursor)
             ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
         call.respond(page.toDto())
     }

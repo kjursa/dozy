@@ -57,8 +57,8 @@ import kotlin.test.assertNull
 
 class PlaceRoutesTest {
     @TempDir lateinit var directory: Path
-    private val owner = "owner-019a0000-0000-7000-8000-000000000001"
-    private val stranger = "owner-019a0000-0000-7000-8000-000000000002"
+    private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000001"))
+    private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000002"))
     private val collection = "/api/v1/places"
 
     @Test
@@ -102,7 +102,7 @@ class PlaceRoutesTest {
         assertEquals(id, Json.decodeFromString<CreatedPlaceResponse>(retry.bodyAsText()).id)
         assertError(client.create(body = body(name = "Different"), requestKey = key), HttpStatusCode.Conflict, "IDEMPOTENCY_CONFLICT")
         assertError(client.create(requestKey = "not-a-uuid"), HttpStatusCode.BadRequest, "INVALID_REQUEST")
-        val another = client.create(installation = stranger, requestKey = key)
+        val another = client.create(ownerId = stranger, requestKey = key)
         assertEquals(HttpStatusCode.Created, another.status)
         assertEquals(listOf(id), client.places().filter { it.origin == "USER" }.map { it.id })
         assertFalse(client.places(stranger).any { it.id == id })
@@ -112,25 +112,26 @@ class PlaceRoutesTest {
     fun `reads and writes require valid bearer credentials`() = testApplication {
         configurePlacesTest()
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/v1/places") {
-            header("X-Installation-Id", owner)
+            header("X-Installation-Id", owner.value)
         }.status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/v1/places") {
             bearerAuth("invalid")
         }.status)
-        assertEquals(HttpStatusCode.Unauthorized, client.create(installation = null).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.create(ownerId = null).status)
     }
 
     @Test
     fun `accepts canonical UUID case and retains origin isolation`() = testApplication {
         configurePlacesTest()
         val uppercase = "owner-019A0000-0000-7000-8000-00000000000A"
-        val created = client.create(installation = uppercase)
+        val ownerId = requireNotNull(OwnerId.parse(uppercase))
+        val created = client.create(ownerId = ownerId)
         assertEquals(HttpStatusCode.Created, created.status)
         val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
-        assertEquals(4, client.places(uppercase.lowercase()).size)
+        assertEquals(4, client.places(requireNotNull(OwnerId.parse(uppercase.lowercase()))).size)
         assertEquals(3, client.places(stranger).size)
-        assertError(client.save(id, installation = stranger), HttpStatusCode.Conflict, "place.conflict")
-        assertEquals(4, client.places(uppercase).size)
+        assertError(client.save(id, ownerId = stranger), HttpStatusCode.Conflict, "place.conflict")
+        assertEquals(4, client.places(ownerId).size)
     }
 
     @Test
@@ -182,8 +183,8 @@ class PlaceRoutesTest {
             dependencies.provide<AvatarJobs> { object : AvatarJobs {
                 override suspend fun recover() = Unit
                 override suspend fun claim(): AvatarJob? = null
-                override suspend fun create(owner: OwnerId, input: AvatarInput): AvatarJob = error("Unexpected call")
-                override suspend fun find(owner: OwnerId, id: AvatarJobId): AvatarJob? = error("Unexpected call")
+                override suspend fun create(ownerId: OwnerId, input: AvatarInput): AvatarJob = error("Unexpected call")
+                override suspend fun find(ownerId: OwnerId, id: AvatarJobId): AvatarJob? = error("Unexpected call")
                 override suspend fun complete(job: AvatarJob, success: Boolean) = error("Unexpected call")
             } }
             dependencies.provide<PlaceRepository> { FailingRepository() }
@@ -201,19 +202,19 @@ class PlaceRoutesTest {
         application { module() }
     }
 
-    private suspend fun HttpClient.places(installation: String = owner): List<PlaceResponse> {
-        val response = get("/api/v1/places") { asOwner(installation) }
+    private suspend fun HttpClient.places(ownerId: OwnerId = owner): List<PlaceResponse> {
+        val response = get("/api/v1/places") { asOwner(ownerId) }
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("application/json", response.headers["Content-Type"]?.substringBefore(';'))
         return Json.decodeFromString<PlacesResponse>(response.bodyAsText()).places
     }
 
     private suspend fun HttpClient.create(
-        installation: String? = owner,
+        ownerId: OwnerId? = owner,
         body: String = body(),
         requestKey: String? = null,
     ) = post(collection) {
-        installation?.let { asOwner(it) }
+        ownerId?.let { asOwner(it) }
         contentType(ContentType.Application.Json)
         requestKey?.let { header("Idempotency-Key", it) }
         setBody(body)
@@ -221,10 +222,10 @@ class PlaceRoutesTest {
 
     private suspend fun HttpClient.save(
         path: String,
-        installation: String? = owner,
+        ownerId: OwnerId? = owner,
         body: String = body(),
     ) = put("$collection/$path") {
-        installation?.let { asOwner(it) }
+        ownerId?.let { asOwner(it) }
         contentType(ContentType.Application.Json)
         setBody(body)
     }
@@ -259,21 +260,21 @@ class PlaceRoutesTest {
     }
 
     private class FailingCharacterRepository : CharacterRepository {
-        override suspend fun list(installation: OwnerId): List<Character> = throw SQLException("Private database path")
-        override suspend fun create(installation: OwnerId, command: SaveCharacter, requestKey: IdempotencyKey?): SaveCharacterResult =
+        override suspend fun list(ownerId: OwnerId): List<Character> = throw SQLException("Private database path")
+        override suspend fun create(ownerId: OwnerId, command: SaveCharacter, requestKey: IdempotencyKey?): SaveCharacterResult =
             throw SQLException("Private database path")
 
-        override suspend fun save(installation: OwnerId, id: CharacterId, command: SaveCharacter): SaveCharacterResult =
+        override suspend fun save(ownerId: OwnerId, id: CharacterId, command: SaveCharacter): SaveCharacterResult =
             throw SQLException("Private database path")
-        override suspend fun delete(installation: OwnerId, id: CharacterId): Boolean = throw SQLException("Private database path")
+        override suspend fun delete(ownerId: OwnerId, id: CharacterId): Boolean = throw SQLException("Private database path")
     }
 
     private class FailingRepository : PlaceRepository {
-        override suspend fun list(installation: OwnerId): List<Place> = throw SQLException("Private database path")
-        override suspend fun create(installation: OwnerId, command: SavePlace, requestKey: IdempotencyKey?): SavePlaceResult =
+        override suspend fun list(ownerId: OwnerId): List<Place> = throw SQLException("Private database path")
+        override suspend fun create(ownerId: OwnerId, command: SavePlace, requestKey: IdempotencyKey?): SavePlaceResult =
             throw SQLException("Private database path")
 
-        override suspend fun save(installation: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult =
+        override suspend fun save(ownerId: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult =
             throw SQLException("Private database path")
     }
 }

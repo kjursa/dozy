@@ -19,4 +19,4 @@ class AvatarInput private constructor(val type: String, val personality: String,
     }
 }
 enum class AvatarState { QUEUED, RUNNING, READY, FAILED }
-data class AvatarJob(val id: AvatarJobId, val owner: OwnerId, val input: AvatarInput, val assetId: AssetId, val url: String, val state: AvatarState)
+data class AvatarJob(val id: AvatarJobId, val ownerId: OwnerId, val input: AvatarInput, val assetId: AssetId, val url: String, val state: AvatarState)
