@@ -29,7 +29,13 @@ fun GenerationRequestDto.toRequestBody(): JsonObject {
 data class GenerationAcceptedDto(val jobId: String, val status: String)
 
 @Serializable
-data class GenerationStatusDto(val jobId: String, val status: String, val storyId: String? = null, val errorCode: String? = null)
+data class GenerationStatusDto(
+    val jobId: String,
+    val status: String,
+    val storyId: String? = null,
+    val errorCode: String? = null,
+    val story: StoryDto? = null,
+)
 
 @Serializable
 data class StoryDto(
@@ -39,6 +45,7 @@ data class StoryDto(
     val coverUrl: String,
     val configuration: GenerationRequestDto,
     val createdAt: Long = 0,
+    val jobId: String? = null,
 )
 
 enum class GenerationMode { MANUAL, AUTOMATIC }

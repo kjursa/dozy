@@ -17,10 +17,10 @@ import com.dozy.api.contracts.v1.story.StoryReadError
 import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.data.database.StoryEntity
 import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
-import com.dozy.mobile.feature.story.domain.model.StorySummary
 import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
 import com.kjursa.foundation.coroutines.runCatchingSuspend
 import kotlinx.coroutines.flow.first
@@ -37,23 +37,21 @@ class DefaultGenerationRepository(
 ) : GenerationRepository {
     private val mutex = Mutex()
 
-    override fun observe() = dao.observe().map { rows -> rows.mapNotNull { it.toJob() } }
+    override fun observe() = dao.observeProgress().map { rows -> rows.mapNotNull { it.toJob() } }
 
     override fun stories() =
-        dao.observe().map { rows ->
-            rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain() } }.distinctBy { it.id }
+        dao.observeStories().map { rows ->
+            rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain() } }
         }
 
     override fun summaries() =
-        dao.observe().map { rows ->
-            rows
-                .mapNotNull { row ->
-                    row.summary?.let { Json.decodeFromString<StorySummaryDto>(it).toDomain(allowDevelopmentHttp = true) }
-                        ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto().toDomain(allowDevelopmentHttp = true) }
-                }.groupBy { it.id }
-                .values
-                .map { versions -> versions.maxBy { it.createdAt.epochMillis } }
-                .sortedWith(compareByDescending<StorySummary> { it.createdAt.epochMillis }.thenBy { it.id.value })
+        dao.observeStories().map { rows ->
+            rows.mapNotNull { row ->
+                val summary =
+                    row.summary?.let { Json.decodeFromString<StorySummaryDto>(it) }
+                        ?: row.result?.let { Json.decodeFromString<StoryDto>(it).toSummaryDto() }
+                summary?.toDomain(allowDevelopmentHttp = true)
+            }
         }
 
     override suspend fun refreshStories(): Boolean =
@@ -81,7 +79,7 @@ class DefaultGenerationRepository(
             require(collected.distinctBy { it.id.lowercase() }.size == collected.size)
             dao.replaceLibrary(
                 collected.map { summary ->
-                    GenerationEntity(requestKey = "library:${summary.id}", configuration = "", summary = Json.encodeToString(summary))
+                    StoryEntity(summary.id, summary = Json.encodeToString(summary))
                 },
             )
             true
@@ -89,7 +87,7 @@ class DefaultGenerationRepository(
 
     override suspend fun readStory(id: Story.Id): Story? =
         mutex.withLock {
-            stories().first().find { it.id == id }?.let { return@withLock it }
+            dao.findStory(id.value)?.result?.let { return@withLock Json.decodeFromString<StoryDto>(it).toDomain() }
             val dto =
                 when (val response = reader.v1.read(id.value)) {
                     is StoryReadResult.Success -> response.response
@@ -105,22 +103,35 @@ class DefaultGenerationRepository(
                 }
             require(dto.id == id.value)
             val story = dto.toDomain()
-            dao.upsert(
-                GenerationEntity(
-                    requestKey = "story:${id.value}",
-                    configuration = Json.encodeToString(dto.configuration),
-                    result = Json.encodeToString(dto),
-                ),
-            )
+            saveStory(dto, dto.jobId?.let { dao.findJob(it) })
             story
         }
 
-    private suspend fun row(id: GenerationJob.Id) = dao.observe().first().find { it.jobId == id.value }
+    private suspend fun saveStory(
+        dto: StoryDto,
+        generation: GenerationEntity?,
+    ): StoryEntity {
+        val entity =
+            StoryEntity(
+                id = dto.id,
+                jobId = generation?.jobId ?: dto.jobId,
+                requestKey = generation?.requestKey,
+                result = Json.encodeToString(dto),
+                summary = dao.findStory(dto.id)?.summary,
+                createdOrder = generation?.createdOrder ?: 0,
+            )
+        if (generation == null) {
+            dao.upsertStory(entity)
+        } else {
+            dao.completeGeneration(generation.requestKey, entity)
+        }
+        return entity
+    }
 
     override suspend fun refresh(id: GenerationJob.Id): GenerationJob? =
         mutex.withLock {
-            val saved = row(id) ?: return@withLock null
-            if (saved.result != null || saved.retryKey != null) return@withLock saved.toJob()
+            val saved = dao.findJob(id.value) ?: return@withLock dao.findStoryForJob(id.value)?.toCompletedJob()
+            if (saved.retryKey != null) return@withLock saved.toJob()
             runCatchingSuspend {
                 val remote =
                     when (val response = generations.v1.status(id.value)) {
@@ -128,26 +139,17 @@ class DefaultGenerationRepository(
                         is GenerationStatusResult.ApiError, is GenerationStatusResult.TechnicalError -> error("Status unavailable")
                     }
                 require(remote.jobId == id.value)
-                val result =
-                    if (remote.status == "READY") {
-                        val story =
-                            when (val response = reader.v1.read(requireNotNull(remote.storyId))) {
-                                is StoryReadResult.Success -> response.response
-                                is StoryReadResult.ApiError, is StoryReadResult.TechnicalError -> error("Story unavailable")
-                            }
-                        require(story.id == remote.storyId)
-                        // Validate snapshots before committing READY. One row stores status and result atomically.
-                        story.toDomain()
-                        Json.encodeToString(story)
-                    } else {
-                        null
-                    }
+                if (remote.status == "READY") {
+                    val story = requireNotNull(remote.story)
+                    require(story.id == remote.storyId && story.jobId == id.value)
+                    story.toDomain()
+                    return@runCatchingSuspend saveStory(story, saved).toCompletedJob()
+                }
                 val updated =
                     saved.copy(
                         status = remote.status,
                         errorCode = remote.errorCode,
                         statusUnknown = false,
-                        result = result,
                         retryKey = if (remote.status == "FAILED") saved.retryKey else null,
                     )
                 updated.toJob().also { dao.upsert(updated) }
@@ -161,8 +163,8 @@ class DefaultGenerationRepository(
         key: GenerationJob.RequestKey,
     ): GenerationJob? =
         mutex.withLock {
-            val saved = row(id) ?: return@withLock null
-            if ((saved.status != "FAILED" && saved.retryKey == null) || saved.result != null) return@withLock saved.toJob()
+            val saved = dao.findJob(id.value) ?: return@withLock null
+            if (saved.status != "FAILED" && saved.retryKey == null) return@withLock saved.toJob()
             check(dao.observe().first().none { it.jobId != id.value && (it.status in activeStatuses || it.retryKey != null) })
             if (saved.statusUnknown && saved.retryKey == null) return@withLock null
             val pending = saved.copy(retryKey = saved.retryKey ?: key.value)
@@ -199,8 +201,7 @@ class DefaultGenerationRepository(
 
     override suspend fun notificationDelivered(id: GenerationJob.Id) =
         mutex.withLock {
-            row(id)?.let { dao.upsert(it.copy(notificationDelivered = true)) }
-            Unit
+            dao.markNotificationDelivered(id.value)
         }
 
     private val activeStatuses = setOf("QUEUED", "CREATING_TEXT", "CREATING_COVER")
@@ -208,20 +209,22 @@ class DefaultGenerationRepository(
     override suspend fun configuration(key: GenerationJob.RequestKey): GenerationConfiguration? =
         dao.find(key.value)?.let { Json.decodeFromString<GenerationRequestDto>(it.configuration).toDomain() }
 
-    override suspend fun accepted(key: GenerationJob.RequestKey) = dao.find(key.value)?.toJob()
+    override suspend fun accepted(key: GenerationJob.RequestKey) =
+        dao.find(key.value)?.toJob() ?: dao.findStoryForRequest(key.value)?.toCompletedJob()
 
     override suspend fun start(
         key: GenerationJob.RequestKey,
         configuration: GenerationConfiguration,
     ): GenerationJob? =
         mutex.withLock {
+            dao.findStoryForRequest(key.value)?.toCompletedJob()?.let { return@withLock it }
             val row =
                 dao.find(key.value)
                     ?: GenerationEntity(
                         key.value,
                         Json.encodeToString(configuration.toDto()),
                         createdOrder =
-                            (dao.observe().first().maxOfOrNull { it.createdOrder } ?: 0) + 1,
+                            (dao.observeProgress().first().maxOfOrNull { it.createdOrder } ?: 0) + 1,
                     ).also { dao.upsert(it) }
             row.toJob()?.let { return@withLock it }
             check(dao.observe().first().none { it.requestKey != key.value && (it.status in activeStatuses || it.retryKey != null) })

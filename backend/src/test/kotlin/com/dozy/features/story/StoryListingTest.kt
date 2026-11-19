@@ -2,8 +2,8 @@ package com.dozy.features.story
 
 import com.dozy.config.DatabaseConfig
 import com.dozy.config.GenerationConfig
-import com.dozy.domain.id.LibraryCursor
 import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.StoryId
 import com.dozy.features.story.data.database.Stories
 import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.GeneratedText
@@ -27,33 +27,35 @@ class StoryListingTest {
     private val other = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000011"))
     private val options = GenerationConfig(delayMillis = 0)
 
-    private suspend fun publish(repository: SqliteGenerationRepository) {
+    private suspend fun publish(repository: SqliteGenerationRepository): StoryId {
         repository.start(owner, requestKey(), "request", command())
         val execution = assertNotNull(repository.claim())
+        assertNull(repository.status(owner, execution.job.id)?.storyId)
         assertTrue(repository.saveText(execution, GeneratedText("Title", "word ".repeat(151))))
-        assertTrue(repository.publish(execution, byteArrayOf(1)))
+        return assertNotNull(repository.publish(execution, byteArrayOf(1)))
     }
 
-    @Test fun `snapshot freezes lexical ties across publication and database restart`() = runBlocking {
+    @Test fun `story ID cursor continues across new publication and database restart`() = runBlocking {
         val config = DatabaseConfig(directory.resolve("library.db").toString(), 5000)
-        var cursor: LibraryCursor? = null
+        var cursor: StoryId? = null
         lateinit var expected: List<String>
         SqliteDatabase(config).use { database ->
             val repository = SqliteGenerationRepository(database, options, clock)
             assertEquals(emptyList(), repository.list(owner, 2, null)?.stories)
-            repeat(5) { publish(repository) }
+            expected = List(5) { publish(repository).value }.sortedDescending()
             database.write { Stories.update { it[createdAt] = 123 } }
             val all = assertNotNull(repository.list(owner, 100, null))
-            expected = all.stories.map { it.id.value }
-            assertEquals(expected.sorted(), expected)
+            assertEquals(expected, all.stories.map { it.id.value })
             assertTrue(all.stories.all { it.readingMinutes == 2 && it.createdAt == 123L })
             val first = assertNotNull(repository.list(owner, 2, null))
             assertEquals(expected.take(2), first.stories.map { it.id.value })
             cursor = assertNotNull(first.nextCursor)
-            publish(repository)
+            assertEquals(first.stories.last().id, cursor)
+            val newer = publish(repository)
+            assertEquals(newer, repository.list(owner, 1, null)?.stories?.single()?.id)
             assertNull(repository.list(other, 2, cursor))
-            assertNull(repository.list(owner, 3, cursor))
-            assertNull(repository.list(owner, 2, LibraryCursor.generate()))
+            assertEquals(expected.drop(2), repository.list(owner, 3, cursor)?.stories?.map { it.id.value })
+            assertNull(repository.list(owner, 2, StoryId.generate()))
         }
         SqliteDatabase(config).use { database ->
             val repository = SqliteGenerationRepository(database, options, clock)

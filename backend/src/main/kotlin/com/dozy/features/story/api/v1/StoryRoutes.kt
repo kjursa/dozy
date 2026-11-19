@@ -9,7 +9,6 @@ import com.dozy.api.contracts.v1.story.StoryListError
 import com.dozy.api.contracts.v1.story.StoryListField
 import com.dozy.api.contracts.v1.story.StoryReadError
 import com.dozy.domain.id.JobId
-import com.dozy.domain.id.LibraryCursor
 import com.dozy.domain.id.StoryId
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.domain.model.RetrySubmission
@@ -53,9 +52,9 @@ fun Route.storyV1Routes(service: StoryService) {
         }
     }
     get("/story-generations/{id}") {
-        val job = JobId.parse(call.parameters["id"])?.let { service.status(call.ownerId(), it) }
+        val status = JobId.parse(call.parameters["id"])?.let { service.status(call.ownerId(), it) }
             ?: throw BusinessApiException(HttpStatusCode.NotFound, GenerationStatusError.NotFound)
-        call.respond(job.toDto())
+        call.respond(status.toDto())
     }
     get("/stories") {
         val ownerId = call.ownerId()
@@ -64,7 +63,7 @@ fun Route.storyV1Routes(service: StoryService) {
         if (limit == null || limit !in 1..100) throw BusinessApiException(HttpStatusCode.UnprocessableEntity, StoryListError.Validation(StoryListField.LIMIT, ValidationReason.INVALID_VALUE))
         val cursors = call.request.queryParameters.getAll("cursor")
         val cursor = cursors?.let {
-            LibraryCursor.parse(it.singleOrNull()) ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
+            StoryId.parse(it.singleOrNull()) ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
         }
         val page = service.list(ownerId, limit, cursor)
             ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)

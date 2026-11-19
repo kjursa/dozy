@@ -39,11 +39,11 @@ class StartGeneration private constructor(val configuration: StoryConfiguration)
 enum class Stage { QUEUED, CREATING_TEXT, CREATING_COVER, READY, FAILED }
 enum class Failure { CONTENT_REJECTED, GENERATION_FAILED }
 data class Job(val id: JobId, val stage: Stage, val storyId: StoryId? = null, val failure: Failure? = null)
-data class SavedStory(val id: StoryId, val title: String, val text: String, val coverUrl: String, val configuration: StoryConfiguration, val createdAt: Long)
+data class GenerationStatus(val job: Job, val story: SavedStory?)
+data class SavedStory(val id: StoryId, val jobId: JobId, val title: String, val text: String, val coverUrl: String, val configuration: StoryConfiguration, val createdAt: Long)
 data class Execution(
     val job: Job,
     val ownerId: OwnerId,
-    val storyId: StoryId,
     val token: LeaseToken,
     val configuration: StoryConfiguration,
     val title: String?,

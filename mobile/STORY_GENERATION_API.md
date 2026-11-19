@@ -67,8 +67,8 @@ uses the same key, never an automatic new execution. Coroutine cancellation prop
 ```
 
 Statuses are QUEUED (accepted), CREATING_TEXT, CREATING_COVER (exactly one image),
-READY, FAILED. These are stages, not percentages. READY requires `storyId`, e.g.
-`{"jobId":"job-1","status":"READY","storyId":"story-1"}`. FAILED requires
+READY, FAILED. A READY response includes `storyId` and the complete `story` DTO
+shown below. The response job ID matches the nested story’s `jobId`. FAILED requires
 `errorCode`: CONTENT_REJECTED or GENERATION_FAILED. These fields are absent in other
 states. No raw server error text is displayed. Unknown failure codes, malformed
 responses, 401, 404 JOB_NOT_FOUND, 429, 5xx, and transport errors mean **status
@@ -80,6 +80,7 @@ The server must serve consistent, monotonic stage reads for the current executio
 ```json
 {
   "id":"story-1",
+  "jobId":"job-1",
   "title":"A lost star",
   "text":"Once upon a time…",
   "coverUrl":"https://assets.example.test/story-1.png",
@@ -94,9 +95,10 @@ obey F9's URL-safe ID rules. 404 STORY_NOT_FOUND and 503 UNAVAILABLE are observa
 failures. Publish READY only after the complete text and cover are durably readable.
 The same logical job always returns the same immutable story ID and content.
 Story IDs are independent of job IDs. The client checks returned IDs and snapshots,
-then stores the complete DTO and READY status in **one atomic Room row update** in
-DozyDatabase v7. A failed story fetch leaves the previous local stage plus unknown
-status. Repeated reads do not re-download or duplicate an already saved story.
+then saves the complete DTO in `stories` and removes the matching
+`story_generations` row in one Room transaction. The generation screen can read
+completion from the stored story. An unavailable or invalid status response preserves
+the pending row and marks the status unknown. Repeated reads use the saved story.
 The shared repository exposes saved domain stories for Home, library, and a minimal
 reader. Text is local; cover bytes load from the durable asset URL when available.
 A full offline image cache and the remaining reader controls belong to F11/F12.
@@ -177,8 +179,8 @@ The reader reuses the exact `GET /api/v1/stories/{storyId}` and `StoryDto` above
 no request body, reader-specific content endpoint, or preferences endpoint. Reading
 time is a client estimate from text at 150 words/minute (minimum one). Saved text
 and cast snapshots are authoritative and are read before any HTTP request. A fetched
-story is validated and persisted in the existing story_generations table with a
-reserved `story:<id>` key and no job ID, making it available to the same library.
+story is validated and persisted in the `stories` table, making it available
+to the library.
 404 STORY_NOT_FOUND means missing; disabled ApiConfig, authentication errors,
 rate limits, malformed/ID-mismatched data, transport failures and 5xx mean unavailable.
 Retry is an explicit idempotent GET, with no concurrent duplicate reads per reader;
@@ -193,7 +195,7 @@ the restored navigation entry as described in SPEC §13, with no server synchron
 
 ## Saved library (F12)
 
-`GET /api/v1/stories?limit=100&cursor=<opaque cursor>` returns 200:
+`GET /api/v1/stories?limit=100&cursor=<storyId>` returns 200:
 
 ```json
 {
@@ -210,12 +212,12 @@ positive integer estimated at 150 words/minute, minimum one, consistent with the
 reader. `createdAt` is the immutable story creation timestamp in UTC epoch
 milliseconds (nonnegative). Add the same `createdAt` field to the full story DTO;
 legacy full results without it are supported as timestamp zero. New generation
-results must supply it. Sort newest first, then by ascending story ID to break ties.
+results must supply it. Order stories by descending StoryId.
 No series, editing or deletion operation is implied.
 
-Pages belong to a stable snapshot, have unique story IDs across pages, and use
-opaque URL-encoded cursors. The last page omits `nextCursor` or returns null. A
-refresh starts at the first page and follows all cursors; repeated/blank cursors,
+Each page uses the last returned StoryId as `nextCursor` when more items are
+available. Subsequent pages contain smaller IDs, and the last page returns
+`nextCursor: null`. A refresh starts at the first page and follows all cursors; repeated/blank cursors,
 duplicate IDs, invalid metadata or malformed pages fail the refresh. The client
 validates all pages before replacing remote summary rows in one Room transaction. Cancellation propagates. Retry is an explicit
 idempotent GET starting at page one; no generation, cover generation or POST occurs.
@@ -256,7 +258,7 @@ places are intentional offline content, not sample user data.
 
 The displayed job follows F10's active/pending-retry priority, otherwise the latest
 persisted job. Resume uses `GET /api/v1/story-generations/{jobId}` and the existing status DTO;
-READY still requires the full `GET /api/v1/stories/{storyId}` result to be saved atomically.
+READY includes the full story, which is saved atomically with removal of the pending row.
 An unavailable status remains unknown rather than failed. Retry explicitly uses
 `POST /api/v1/story-generations/{jobId}/retry` with the existing preserved configuration and
 durable Idempotency-Key; acceptance returns to generating. Repeated taps cannot

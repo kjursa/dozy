@@ -65,10 +65,10 @@ owned READY asset ID and URL. The avatar ID has a foreign key; application check
 ownership/readiness and paired ID/URL values atomically. No external provider is included. API2 populates this registry after durable local PNG storage. Null avatars remain valid for
 historical records. Read mapping never applies current write length limits.
 
-### Durable story execution (V3/V4)
+### Durable story execution (V3/V4/V9)
 
 `story_jobs` stores the original canonical request, normalized accepted configuration,
-operation, owner and idempotency key binding, preallocated UUIDv7 story/asset IDs, stage,
+operation, owner and idempotency key binding, a preallocated UUIDv7 asset ID, stage,
 persisted generated text, lease token/expiry, and execution count. A unique
 constraint on owner and idempotency key and a partial unique index on active owner jobs
 make concurrent submissions atomic. Replays precede the active-limit check.
@@ -84,19 +84,20 @@ each accepted execution, including CREATE. Acceptance atomically inserts the bin
 and resets only the failed current job to QUEUED, clearing intermediate text and
 leases. Archived stages remain replayable even after newer executions. Workers
 guard writes with both execution identity and lease token; recovery keeps the ordinal.
-The original configuration, job/story/asset IDs and CREATE key remain unchanged.
+The original configuration, job/asset IDs and CREATE key remain unchanged.
 
 Publishing inserts `assets`, `asset_contents` (local PNG bytes), and immutable
 `stories` and transitions the job to READY in one transaction. A unique story job
 reference and fenced publication prevent multiple successful results. Publication
-sets the immutable UTC epoch-millisecond createdAt. No update/read path mutates a
+assigns a UUIDv7 story ID and sets the immutable UTC epoch-millisecond createdAt. No update/read path mutates a
 saved result or invokes a generator. All job/story/asset reads filter by owner ID.
 
 The generation status endpoint uses a process-local key-value store with a
 five-minute TTL. The cache uses the namespace `story:job-status:v1` with the owner and
 job IDs. The repository writes it after creation and committed status transitions, resetting the TTL,
 so polling can use the cache from the first request. On a cache miss or failure,
-the endpoint reads the current status from SQLite. Worker leasing and recovery
+the endpoint reads the current status from SQLite. A READY response also reads
+and includes the immutable story. Worker leasing and recovery
 use SQLite.
 
 
@@ -138,14 +139,9 @@ registration endpoint. Future account linking is separate scope.
 | `story_attempts` | Each accepted initial/retry execution, stages and intermediate text |
 | `story_request_keys` | Durable initial/retry idempotency bindings |
 | `stories` | One immutable successful result per logical job |
-| `library_snapshots` | Stable story-list traversal across multiple HTTP requests |
-| `library_snapshot_items` | Frozen ordered story membership for a traversal |
 
-The last two tables are a concrete proposal for stable pagination, not a mobile
-requirement to use a particular storage technology. They may later be replaced by
-an equivalent durable snapshot/cursor mechanism. Home and reader settings need no
-additional tables. Do not copy Room's `pendingSync`, notification flags, reserved
-`library:`/`story:` row keys, or serialized UI state to the backend.
+Home and reader settings need no additional backend tables. Keep mobile
+notification and synchronization metadata in Room.
 
 ## Proposed DDL
 
@@ -308,32 +304,9 @@ CREATE TABLE stories (
     CHECK (created_at = date_trunc('milliseconds', created_at))
 );
 CREATE INDEX stories_library_idx
-    ON stories (installation_id, created_at DESC, id COLLATE "C" ASC);
+    ON stories (installation_id, id COLLATE "C" DESC);
 CREATE INDEX stories_cover_idx ON stories (cover_asset_id);
 
-CREATE TABLE library_snapshots (
-    id uuid PRIMARY KEY,
-    installation_id uuid NOT NULL REFERENCES installations(id),
-    page_size integer NOT NULL CHECK (page_size BETWEEN 1 AND 100),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    expires_at timestamptz,
-    UNIQUE (id, installation_id),
-    CHECK (expires_at IS NULL OR expires_at > created_at)
-);
-CREATE INDEX library_snapshots_expiry_idx ON library_snapshots (expires_at);
-
-CREATE TABLE library_snapshot_items (
-    snapshot_id uuid NOT NULL,
-    installation_id uuid NOT NULL,
-    position bigint NOT NULL CHECK (position > 0),
-    story_id text NOT NULL,
-    PRIMARY KEY (snapshot_id, position),
-    UNIQUE (snapshot_id, story_id),
-    FOREIGN KEY (snapshot_id, installation_id)
-        REFERENCES library_snapshots (id, installation_id) ON DELETE CASCADE,
-    FOREIGN KEY (story_id, installation_id) REFERENCES stories (id, installation_id)
-);
-CREATE INDEX library_snapshot_items_story_idx ON library_snapshot_items (story_id);
 ```
 
 ## Mapping and validation
@@ -438,22 +411,12 @@ READY assets can be attached only through explicit character PUT. Define quotas
 and garbage-collection rules separately; a client's abandoned polling is not proof
 that an asset is disposable.
 
-## Stable library pagination
+## Story library pagination
 
-On the first page, create a library snapshot and populate its ordered story IDs in
-one consistent transaction using `row_number() OVER (ORDER BY created_at DESC,
-id COLLATE "C" ASC)`. All results are already immutable. Return the first page and
-an opaque cursor containing/referencing snapshot ID and the last returned position.
-For subsequent pages, verify installation ownership and page size, then select
-positions greater than that position in ascending order. Cursor contents must be
-validated; do not trust a client-supplied owner or arbitrary SQL/order expression.
-
-New stories do not enter an existing traversal. A forged, missing or expired cursor
-returns INVALID_CURSOR, never silently starts a different snapshot. Snapshot expiry
-is an operational policy, not a decided product lifetime; configure it to allow a
-full library traversal and document it before production. Expiring a snapshot may
-delete its item rows but must not delete stories. This avoids relying on timestamp
-cutoffs alone, which can miss concurrent insert/commit ordering.
+Order finished stories by descending lexical StoryId and restrict every query to
+the authenticated owner. Validate cursor ownership and request one extra row to
+detect whether another page exists. When present, the cursor is the last returned
+StoryId; the next page uses an exclusive upper bound on that ID.
 
 ## Retention, security, and future scope
 
@@ -474,9 +437,12 @@ The schema uses composite foreign keys and partial unique indexes supported by
 Cross-row invariants described above require transactions/application checks;
 PostgreSQL CHECK constraints cannot enforce arbitrary cross-table conditions.
 
-## Stable library snapshots (API4)
+## SQLite story publication and paging (V9)
 
-`V6__library_snapshots.sql` stores installation-owned `library_snapshots` with the request limit and ordered summary JSON. The first page collects immutable stories in one SQLite transaction, ordered by createdAt descending and lexical ID ascending. `library_cursors` stores opaque random tokens bound to snapshot and position; subsequent pages validate owner and limit before reading. Issued tokens and summaries survive restart. New publication cannot change a traversal. Snapshots and cursors are retained without expiry for this development phase.
+`V9__story_publication.sql` removes reserved StoryIds from generation jobs and
+preserves existing completed stories and job executions. It drops the former
+pagination tables and adds an index on owner and descending StoryId. New IDs
+are assigned when the successful result is inserted.
 
 ## Implemented API2 SQLite jobs
 

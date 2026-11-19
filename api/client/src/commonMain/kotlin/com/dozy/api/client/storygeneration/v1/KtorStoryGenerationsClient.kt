@@ -4,6 +4,7 @@ import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.businessFailure
 import com.dozy.api.client.clientJson
 import com.dozy.api.client.communicate
+import com.dozy.api.client.story.v1.validateStory
 import com.dozy.api.contracts.ApiVersion
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationFailure
@@ -66,8 +67,13 @@ internal class KtorStoryGenerationsClient(
         if (response.status.value in 200..299) {
             val result = clientJson.decodeFromString<GenerationStatusDto>(response.bodyAsText())
             require(result.jobId == jobId && GenerationStage.entries.any { it.name == result.status })
-            require((result.status == "READY") == (result.storyId != null))
-            require(result.storyId == null || result.storyId!!.matches(Regex("[A-Za-z0-9_-]{1,128}")))
+            val ready = result.status == GenerationStage.READY.name
+            val story = result.story
+            require(ready == (result.storyId != null) && ready == (story != null))
+            if (story != null) {
+                require(story.id == result.storyId && story.jobId == jobId)
+                validateStory(story, config)
+            }
             require((result.status == "FAILED") == (result.errorCode != null))
             require(result.errorCode == null || GenerationFailure.entries.any { it.name == result.errorCode })
             return@communicate GenerationStatusResult.Success(result)

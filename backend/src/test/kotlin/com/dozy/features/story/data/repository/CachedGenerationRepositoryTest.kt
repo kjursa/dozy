@@ -102,8 +102,8 @@ class CachedGenerationRepositoryTest {
                 assertTrue(repository.saveText(current, GeneratedText("Title", "Text")))
                 assertEquals(Stage.CREATING_COVER, repository.status(ownerId, job.id)?.stage)
                 clock.advance(10.seconds)
-                assertTrue(repository.publish(current, byteArrayOf(1)))
-                val ready = Job(job.id, Stage.READY, storyId = current.storyId)
+                val storyId = assertNotNull(repository.publish(current, byteArrayOf(1)))
+                val ready = Job(job.id, Stage.READY, storyId = storyId)
                 assertEquals(ready, repository.status(ownerId, job.id))
 
                 // The previous stage's TTL has elapsed and READY is still cached.
