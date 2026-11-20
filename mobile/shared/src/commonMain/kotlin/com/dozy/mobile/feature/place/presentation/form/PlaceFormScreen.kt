@@ -10,16 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyFormField
+import com.dozy.mobile.ui.common.DozyLayout
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.UiText
 import com.kjursa.foundation.presentation.text.resolve
@@ -37,8 +37,8 @@ internal fun PlaceFormScreen(viewModel: PlaceFormViewModel) {
                 .imePadding()
                 .verticalScroll(
                     rememberScrollState(),
-                ).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                ).padding(DozyLayout.screenGutter),
+            verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap),
         ) {
             TextButton(onClick = {
                 dispatch(PlaceFormAction.Back)
@@ -75,7 +75,7 @@ internal fun PlaceFormScreen(viewModel: PlaceFormViewModel) {
             ) {
                 TextButton(onClick = { dispatch(PlaceFormAction.Retry) }) { Text(stringResource(Res.string.place_retry)) }
             }
-            Button(onClick = {
+            DozyActionButton(onClick = {
                 dispatch(PlaceFormAction.Save)
             }, enabled = state.initialized && !state.saving && !state.navigating) { Text(stringResource(Res.string.place_save)) }
             if (state.saving) CircularProgressIndicator()
@@ -91,13 +91,12 @@ private fun PlaceField(
     enabled: Boolean,
     onChange: (String) -> Unit,
 ) {
-    OutlinedTextField(
-        value,
-        onChange,
-        label = { Text(stringResource(label)) },
-        isError = error != null,
+    DozyFormField(
+        label = stringResource(label),
+        value = value,
+        onValueChange = onChange,
+        error = error?.resolve(),
         enabled = enabled,
-        supportingText = { error?.let { Text(it.resolve()) } },
         modifier = Modifier.fillMaxWidth(),
     )
 }

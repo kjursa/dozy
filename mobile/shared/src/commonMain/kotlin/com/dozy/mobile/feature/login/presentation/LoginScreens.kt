@@ -27,12 +27,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,9 +65,9 @@ import com.dozy.mobile.resources.login_pin_clear
 import com.dozy.mobile.resources.login_pin_delete_description
 import com.dozy.mobile.resources.login_pin_intro
 import com.dozy.mobile.resources.login_pin_resend
-import com.dozy.mobile.resources.login_request_error
 import com.dozy.mobile.resources.login_pin_title
 import com.dozy.mobile.resources.login_place
+import com.dozy.mobile.resources.login_request_error
 import com.dozy.mobile.resources.login_send_pin
 import com.dozy.mobile.resources.login_sending
 import com.dozy.mobile.resources.login_story
@@ -87,6 +84,11 @@ import com.dozy.mobile.resources.login_tutorial_subtitle
 import com.dozy.mobile.resources.login_tutorial_title
 import com.dozy.mobile.resources.login_use_email
 import com.dozy.mobile.resources.login_verifying
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyFootnote
+import com.dozy.mobile.ui.common.DozyFormField
+import com.dozy.mobile.ui.common.DozyLayout
+import com.dozy.mobile.ui.theme.DozyColors
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -101,7 +103,7 @@ internal fun LoginTutorialScreen(onContinue: () -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = DozyLayout.screenGutter, vertical = DozyLayout.contentGap),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -114,8 +116,8 @@ internal fun LoginTutorialScreen(onContinue: () -> Unit) {
         }
         Text(
             stringResource(Res.string.login_tutorial_kicker),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            style = MaterialTheme.typography.labelSmall,
+            color = DozyColors.textLink,
             fontWeight = FontWeight.Bold,
         )
         Text(
@@ -152,21 +154,13 @@ internal fun LoginTutorialScreen(onContinue: () -> Unit) {
                         .padding(horizontal = 4.dp)
                         .size(width = if (selected) 20.dp else 8.dp, height = 8.dp)
                         .clip(CircleShape)
-                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                        .background(if (selected) DozyColors.navigationAccent else MaterialTheme.colorScheme.outline)
                         .clickable { coroutineScope.launch { pagerState.animateScrollToPage(page) } },
                 )
             }
         }
-        Button(
-            onClick = onContinue,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Text(stringResource(Res.string.login_tutorial_continue), fontWeight = FontWeight.Bold)
+        DozyActionButton(onClick = onContinue) {
+            Text(stringResource(Res.string.login_tutorial_continue))
         }
     }
 }
@@ -266,69 +260,47 @@ internal fun LoginEmailScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .imePadding()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = DozyLayout.screenGutter, vertical = DozyLayout.cardPadding),
     ) {
         TextButton(onClick = onBack) { Text(stringResource(Res.string.login_pin_back)) }
         Text(
             stringResource(Res.string.login_address_title),
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
         )
         Text(
             stringResource(Res.string.login_address_intro),
-            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
+            modifier = Modifier.padding(top = DozyLayout.labelGap, bottom = DozyLayout.screenGutter),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        OutlinedTextField(
+        DozyFormField(
+            label = stringResource(Res.string.login_email_label),
             value = state.email,
             onValueChange = onEmailChanged,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(Res.string.login_email_label)) },
-            placeholder = { Text(stringResource(Res.string.login_email_placeholder)) },
+            placeholder = stringResource(Res.string.login_email_placeholder),
             singleLine = true,
-            isError = state.emailError,
+            error = if (state.emailError) stringResource(Res.string.login_email_error) else null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-            shape = RoundedCornerShape(16.dp),
         )
-        if (state.emailError) {
+        if (state.loginError) {
             Text(
-                stringResource(Res.string.login_email_error),
-                modifier = Modifier.padding(start = 8.dp, top = 5.dp),
+                stringResource(Res.string.login_request_error),
+                modifier = Modifier.padding(top = 5.dp),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-        }
-        if (state.loginError) {
-            Text(stringResource(Res.string.login_request_error), modifier = Modifier.padding(top = 5.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
         Text(
             stringResource(Res.string.login_account_note),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(vertical = 16.dp),
         )
-        Button(
-            onClick = onSubmit,
-            enabled = !state.sendingPin,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-            shape = RoundedCornerShape(18.dp),
-        ) {
-            Text(
-                stringResource(if (state.sendingPin) Res.string.login_sending else Res.string.login_send_pin),
-                fontWeight = FontWeight.Bold,
-            )
+        DozyActionButton(onClick = onSubmit, enabled = !state.sendingPin) {
+            Text(stringResource(if (state.sendingPin) Res.string.login_sending else Res.string.login_send_pin))
         }
         Spacer(Modifier.weight(1f))
-        Text(
-            stringResource(Res.string.login_terms),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        DozyFootnote(stringResource(Res.string.login_terms))
     }
 }
 
@@ -347,7 +319,7 @@ internal fun LoginPinScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = DozyLayout.screenGutter, vertical = 14.dp),
     ) {
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.Start)) {
             androidx.compose.material3.Icon(
@@ -357,10 +329,10 @@ internal fun LoginPinScreen(
         }
         Text(
             stringResource(Res.string.login_pin_check_mail),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            style = MaterialTheme.typography.labelSmall,
+            color = DozyColors.textLink,
         )
-        Text(stringResource(Res.string.login_pin_title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
+        Text(stringResource(Res.string.login_pin_title), style = MaterialTheme.typography.headlineLarge)
         Text(
             stringResource(Res.string.login_pin_intro, state.email),
             modifier = Modifier.padding(top = 6.dp),
@@ -368,7 +340,12 @@ internal fun LoginPinScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (state.loginError) {
-            Text(stringResource(Res.string.login_request_error), modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(
+                stringResource(Res.string.login_request_error),
+                modifier = Modifier.padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         PinIndicator(state.pin, state.verifyingPin, Modifier.padding(top = 28.dp))
         TextButton(
@@ -421,7 +398,7 @@ private fun PinIndicator(
                             .size(25.dp)
                             .then(
                                 if (focused) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    Modifier.border(2.dp, DozyColors.focus, CircleShape)
                                 } else {
                                     Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                 },
@@ -516,8 +493,8 @@ internal fun LoginWelcomeScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(DozyLayout.screenGutter),
+        verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap),
     ) {
         Image(painterResource(Res.drawable.dozy_cloud_logo), null, Modifier.size(42.dp))
         Image(
@@ -542,7 +519,7 @@ internal fun LoginWelcomeScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
-        Button(onClick = onEmail, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) {
+        DozyActionButton(onClick = onEmail) {
             Text(stringResource(Res.string.login_use_email))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -553,11 +530,6 @@ internal fun LoginWelcomeScreen(
         TextButton(onClick = onGuest, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text(stringResource(Res.string.login_continue_as_guest))
         }
-        Text(
-            stringResource(Res.string.login_terms),
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        DozyFootnote(stringResource(Res.string.login_terms))
     }
 }

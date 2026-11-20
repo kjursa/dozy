@@ -18,19 +18,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.theme.DozyColors
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun AmbientGlow(modifier: Modifier = Modifier) {
     Box(modifier) {
-        Box(Modifier.padding(top = 5.dp).size(190.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = .07f), CircleShape))
+        Box(Modifier.padding(top = 5.dp).size(190.dp).background(DozyColors.brandCoral.copy(alpha = .07f), CircleShape))
         Box(
             Modifier
                 .align(
                     Alignment.TopEnd,
                 ).offset(x = 90.dp, y = 145.dp)
                 .size(220.dp)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = .09f), CircleShape),
+                .background(DozyColors.brandTeal.copy(alpha = .09f), CircleShape),
         )
         Box(
             Modifier
@@ -63,8 +64,8 @@ internal fun SectionHeading(
         }
         Text(
             stringResource(Res.string.see_all),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.secondary,
+            style = MaterialTheme.typography.labelLarge,
+            color = DozyColors.textLink,
             modifier = Modifier.padding(bottom = 3.dp).clickable(onClick = onSeeAll),
         )
     }

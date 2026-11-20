@@ -1,14 +1,38 @@
 package com.dozy.mobile.feature.story.presentation.generation
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.generation_background
+import com.dozy.mobile.resources.generation_enable_notifications
+import com.dozy.mobile.resources.generation_heading
+import com.dozy.mobile.resources.generation_read
+import com.dozy.mobile.resources.generation_refresh
+import com.dozy.mobile.resources.generation_unavailable
+import com.dozy.mobile.resources.place_retry
+import com.dozy.mobile.resources.story_back_home
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyLayout
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
@@ -29,22 +53,34 @@ internal fun GenerationScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(DozyLayout.screenGutter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap),
         ) {
-            Text(stringResource(Res.string.generation_heading), style = MaterialTheme.typography.headlineLarge)
+            Text(
+                stringResource(Res.string.generation_heading),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.headlineLarge,
+                textAlign = TextAlign.Center,
+            )
             if (state.loading) CircularProgressIndicator()
             val job = state.jobs.find { it.id.value == jobId }
             if (!state.loading && job == null) Text(stringResource(Res.string.generation_unavailable))
             job?.let { GenerationCard(it, state.busy, dispatch) }
             state.error?.let { Text(it.resolve()) }
-            if (backgroundCompletionSupported) Text(stringResource(Res.string.generation_background))
+            if (backgroundCompletionSupported) {
+                Text(
+                    stringResource(Res.string.generation_background),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
             if (requestNotifications != null) {
                 TextButton(onClick = { requestNotifications() }) {
                     Text(stringResource(Res.string.generation_enable_notifications))
                 }
             }
-            Button(onClick = onHome) { Text(stringResource(Res.string.story_back_home)) }
+            DozyActionButton(onClick = onHome) { Text(stringResource(Res.string.story_back_home)) }
         }
     }
 }

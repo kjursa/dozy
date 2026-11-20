@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -25,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -52,11 +50,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyFormField
+import com.dozy.mobile.ui.common.DozyLayout
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.UiText
@@ -314,82 +313,33 @@ private fun CharacterDetails(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
         modifier = Modifier.shadow(6.dp, MaterialTheme.shapes.large),
     ) {
-        Column(Modifier.padding(UiSpacing.x3), verticalArrangement = Arrangement.spacedBy(UiSpacing.x3)) {
-            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(
-                    stringResource(Res.string.character_name),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                CharacterInput(
-                    enabled = enabled,
-                    placeholder = stringResource(Res.string.character_name_placeholder),
-                    value = name,
-                    onValueChange = onNameChange,
-                    singleLine = true,
-                )
-                nameError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(
-                    stringResource(Res.string.personality),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                CharacterInput(
-                    enabled = enabled,
-                    placeholder = stringResource(Res.string.character_personality_placeholder),
-                    value = personality,
-                    onValueChange = onPersonalityChange,
-                    minimumHeight = 96.dp,
-                )
-                personalityError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                Text(
-                    stringResource(Res.string.appearance),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                CharacterInput(
-                    enabled = enabled,
-                    placeholder = stringResource(Res.string.character_appearance_placeholder),
-                    value = appearance,
-                    onValueChange = onAppearanceChange,
-                    minimumHeight = 112.dp,
-                )
-                appearanceError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CharacterInput(
-    enabled: Boolean,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    singleLine: Boolean = false,
-    minimumHeight: Dp = 48.dp,
-) {
-    Surface(
-        shape = if (singleLine) CircleShape else MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
-    ) {
-        Box(
-            Modifier.fillMaxWidth().heightIn(min = minimumHeight).padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            if (value.isEmpty()) Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            BasicTextField(
+        Column(Modifier.padding(DozyLayout.cardPadding), verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap)) {
+            DozyFormField(
+                label = stringResource(Res.string.character_name),
                 enabled = enabled,
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = singleLine,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                placeholder = stringResource(Res.string.character_name_placeholder),
+                value = name,
+                onValueChange = onNameChange,
+                error = nameError?.resolve(),
+                singleLine = true,
+            )
+            DozyFormField(
+                label = stringResource(Res.string.personality),
+                enabled = enabled,
+                placeholder = stringResource(Res.string.character_personality_placeholder),
+                value = personality,
+                onValueChange = onPersonalityChange,
+                error = personalityError?.resolve(),
+                minimumHeight = 96.dp,
+            )
+            DozyFormField(
+                label = stringResource(Res.string.appearance),
+                enabled = enabled,
+                placeholder = stringResource(Res.string.character_appearance_placeholder),
+                value = appearance,
+                onValueChange = onAppearanceChange,
+                error = appearanceError?.resolve(),
+                minimumHeight = 112.dp,
             )
         }
     }

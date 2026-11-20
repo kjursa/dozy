@@ -1,0 +1,101 @@
+/* Shared app components. Screen-specific layout and variants belong in their screen stylesheet. */
+button, input, textarea { font: inherit; }
+
+h1 {
+  font: 900 var(--screen-title-size) / var(--screen-title-line) var(--font-ui);
+  letter-spacing: -1px;
+}
+
+h2 {
+  font: 900 var(--section-title-size) / var(--section-title-line) var(--font-ui);
+  letter-spacing: -.5px;
+}
+
+h3 { font: 900 var(--card-title-size) / var(--card-title-line) var(--font-ui); }
+
+.eyebrow {
+  color: var(--muted);
+  font: 900 var(--eyebrow-size) / var(--eyebrow-line) var(--font-ui);
+  letter-spacing: var(--eyebrow-tracking);
+}
+
+.intro {
+  margin: var(--content-gap) 0 28px;
+  color: var(--muted);
+  font: 600 var(--intro-size) / var(--intro-line) var(--font-ui);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: var(--body-medium-size);
+  line-height: var(--body-medium-line);
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  min-height: var(--action-height);
+  padding: 14px 22px;
+  border-radius: var(--action-radius);
+  font: 900 var(--label-size) / var(--label-line) var(--font-ui);
+  text-align: center;
+}
+
+.button.primary { background: var(--action); color: var(--on-action); box-shadow: 0 8px 20px #ff6b6b20; }
+.button.secondary { background: var(--selected-surface); color: var(--link); }
+.button.light { width: max-content; min-height: 46px; background: var(--white); color: var(--action); }
+.button:disabled { background: var(--line); color: var(--muted); box-shadow: none; cursor: default; }
+
+.text-link {
+  display: inline-block;
+  padding: 12px 0;
+  color: var(--link);
+  font: 900 var(--label-size) / var(--label-line) var(--font-ui);
+}
+
+.footnote, .fine-print {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: var(--footnote-size);
+  line-height: var(--footnote-line);
+  text-align: center;
+}
+
+.form-label { display: block; margin: 0 0 var(--label-gap); font: 700 var(--field-label-size) / var(--field-label-line) var(--font-ui); }
+
+.form-field, textarea {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 16px;
+  border: 1px solid var(--field-outline);
+  border-radius: var(--field-radius);
+  background: var(--white);
+  color: var(--ink);
+  font: 400 15px / 27px var(--font-ui);
+}
+
+textarea { min-height: 170px; border-radius: var(--multiline-field-radius); resize: vertical; }
+
+.form-field::placeholder, textarea::placeholder { color: var(--placeholder); }
+.form-field:focus, textarea:focus {
+  border-color: var(--focus-ring);
+  outline: 1px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.form-field[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--error); }
+.form-field[aria-invalid="true"]:focus, textarea[aria-invalid="true"]:focus { outline-color: var(--error); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+.form-card, .book-row {
+  border: 1px solid var(--line);
+  border-radius: var(--card-radius);
+  background: var(--white);
+}
+
+.form-card { padding: var(--card-padding); }
+.book-row { display: flex; gap: var(--content-gap); padding: 12px; }

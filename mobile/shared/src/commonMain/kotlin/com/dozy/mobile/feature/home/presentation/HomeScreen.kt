@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
@@ -31,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -43,6 +45,10 @@ import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.generation.GenerationCard
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyLayout
+import com.dozy.mobile.ui.common.DozyTextStyles
+import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
@@ -80,8 +86,8 @@ private fun HomeContent(
                 return@Column
             }
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
+                Modifier.fillMaxWidth().padding(horizontal = DozyLayout.screenGutter),
+                verticalArrangement = Arrangement.spacedBy(DozyLayout.sectionGap),
             ) {
                 HomeJob(state, onAction)
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
@@ -120,23 +126,27 @@ private fun HomeContent(
 @Composable
 private fun HomeHeader() {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
+        Modifier.fillMaxWidth().padding(horizontal = DozyLayout.screenGutter, vertical = UiSpacing.x2),
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
         Text(
             stringResource(Res.string.tuesday_14_october),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
-        Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(Res.string.home_header_subtitle), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            stringResource(Res.string.home_header_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
 @Composable
 private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x4),
+        Modifier.fillMaxWidth().padding(horizontal = DozyLayout.screenGutter, vertical = UiSpacing.x4),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(UiSpacing.x2),
     ) {
@@ -152,20 +162,24 @@ private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
         }
         Text(
             stringResource(Res.string.home_first_visit_eyebrow),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary,
         )
         Text(
             stringResource(Res.string.home_first_visit_title),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             stringResource(Res.string.home_first_visit),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        androidx.compose.material3.Button(onClick = onCreateCharacter) {
+        DozyActionButton(onClick = onCreateCharacter) {
             Text(stringResource(Res.string.home_first_character))
         }
     }
@@ -173,10 +187,12 @@ private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
 
 @Composable
 private fun CreateStoryBanner(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(DozyLayout.bannerRadius)
     Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
+        shape = shape,
+        color = DozyColors.brandCoral,
+        contentColor = DozyColors.onBrandCoral,
+        modifier = Modifier.fillMaxWidth().shadow(8.dp, shape).clickable(onClick = onClick),
     ) {
         Row(
             Modifier.padding(UiSpacing.x3),
@@ -187,18 +203,15 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Text(
                         stringResource(Res.string.home_banner_eyebrow),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
                         stringResource(Res.string.home_banner_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = DozyTextStyles.bannerTitle,
                     )
                     Text(
                         stringResource(Res.string.home_banner_body),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
                         Row(
