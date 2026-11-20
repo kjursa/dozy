@@ -21,13 +21,14 @@ internal fun AvatarImage(
     url: String?,
     description: String,
     modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
 ) {
     SubcomposeAsyncImage(
         model = remoteImage(url, koinInject<ApiConfig>().allowLocalAssetHttp),
         imageLoader = koinInject(),
         contentDescription = description,
         modifier = modifier,
-        contentScale = ContentScale.Fit,
+        contentScale = contentScale,
         loading = { Icon(Icons.Default.Face, description) },
         error = { Icon(Icons.Default.Face, description) },
     )

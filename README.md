@@ -39,8 +39,8 @@ Settings are loaded from `backend/src/main/resources/application.yaml` into `App
 | `DOZY_STORY_COVER_MODE` | `SUCCESS` | `SUCCESS` or `FAILURE` |
 | `DOZY_STORY_DELAY_MS` | `250` | Delay per fake generator in milliseconds |
 | `DOZY_STORY_CONCURRENCY` | `2` | Worker concurrency, 1–32 |
-| `DOZY_ASSET_BASE_URL` | `https://localhost:8080` | Stable externally reachable backend origin, including optional hosting prefix |
-| `DOZY_ASSET_ALLOW_HTTP` | `false` | Explicit development HTTP opt-in |
+| `DOZY_ASSET_BASE_URL` | `http://localhost:8080` | Stable externally reachable backend origin, including optional hosting prefix |
+| `DOZY_ASSET_ALLOW_HTTP` | `true` | Allows HTTP only for local development hosts |
 
 The database and its parent directory are created automatically. Flyway runs versioned migrations from `db/migration` at startup and tracks their checksums in `flyway_schema_history`. Version 1 creates installation/place tables and seeds three shared predefined places. Version 2 adds characters, permanent deletion reservations and the shared asset metadata registry. Version 3 adds durable story jobs, immutable results and local cover bytes. Local database files are ignored by Git when running from `backend/`. Version 4 adds durable avatar jobs.
 

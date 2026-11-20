@@ -5,8 +5,8 @@ import java.net.URI
 enum class FakeAvatarMode { SUCCESS, FAILURE }
 data class AvatarConfig(
     val storagePath: String = "data/assets",
-    val publicBaseUrl: String = "https://localhost:8080",
-    val allowLocalHttp: Boolean = false,
+    val publicBaseUrl: String = "http://localhost:8080",
+    val allowLocalHttp: Boolean = true,
     val mode: FakeAvatarMode = FakeAvatarMode.SUCCESS,
     val delayMillis: Long = 1000,
     val concurrency: Int = 2,

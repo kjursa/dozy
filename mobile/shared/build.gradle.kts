@@ -58,14 +58,16 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             api(libs.room.runtime)
-            api(libs.sqlite.bundled)
             api(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             api(libs.koin.core)
         }
         androidMain.dependencies { implementation(libs.ktor.client.android) }
-        iosMain.dependencies { implementation(libs.ktor.client.darwin) }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+            implementation(libs.sqlite.bundled)
+        }
         commonTest.dependencies {
             implementation(libs.ktor.client.mock)
             implementation(libs.ktor.client.content.negotiation)

@@ -1,5 +1,7 @@
 package com.dozy.mobile.di
 
+import androidx.sqlite.SQLiteDriver
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.work.WorkManager
 import com.dozy.api.client.auth.AuthSessionStorage
 import com.dozy.mobile.BuildConfig
@@ -24,6 +26,7 @@ import java.util.UUID
 /** Android construction boundary for shared data and Android background work. */
 internal val androidModule =
     module {
+        single<SQLiteDriver> { AndroidSQLiteDriver() }
         single<StoryCompletionNotifier> { AndroidStoryCompletionNotifier(androidContext()) }
         single { GenerationWorkerFactory(get()) }
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
