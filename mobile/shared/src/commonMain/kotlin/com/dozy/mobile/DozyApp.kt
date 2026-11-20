@@ -17,6 +17,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dozy.api.client.auth.AuthSessionManager
 import com.dozy.api.client.auth.SessionState
+import com.dozy.mobile.feature.launcher.presentation.LauncherDestination
+import com.dozy.mobile.feature.launcher.presentation.LauncherScreen
+import com.dozy.mobile.feature.launcher.presentation.LauncherViewModel
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
 import com.dozy.mobile.feature.login.presentation.LoginViewModel
 import com.dozy.mobile.navigation.AppNavigator
@@ -29,7 +32,6 @@ import com.dozy.mobile.navigation.LOGIN_EMAIL_ROUTE
 import com.dozy.mobile.navigation.LOGIN_PIN_ROUTE
 import com.dozy.mobile.navigation.LOGIN_TUTORIAL_ROUTE
 import com.dozy.mobile.navigation.LOGIN_WELCOME_ROUTE
-import com.dozy.mobile.navigation.LauncherScreen
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.NavigationHostOptions
 import com.dozy.mobile.navigation.PLACES_ROUTE
@@ -37,7 +39,6 @@ import com.dozy.mobile.navigation.PLACE_FORM_ROUTE
 import com.dozy.mobile.navigation.READER_ROUTE
 import com.dozy.mobile.navigation.handleNavigation
 import com.dozy.mobile.navigation.openSavedStory
-import com.dozy.mobile.navigation.resolveStartupDestination
 import com.dozy.mobile.ui.theme.DozyTheme
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -59,13 +60,6 @@ fun DozyApp(
         val sessionManager: AuthSessionManager = koinInject()
         var startupResolved by remember { mutableStateOf(false) }
         LaunchedEffect(sessionManager, navController) {
-            sessionManager.initialize()
-            val tutorialSeen = loginRepository.hasSeenTutorial() || loginViewModel.uiState.value.tutorialSeen
-            navController.navigate(resolveStartupDestination(sessionManager.state.value, tutorialSeen)) {
-                popUpTo(LAUNCHER_ROUTE) { inclusive = true }
-                launchSingleTop = true
-            }
-            startupResolved = true
             sessionManager.state.collect { state ->
                 when (state) {
                     SessionState.Expired ->
@@ -80,6 +74,7 @@ fun DozyApp(
         LaunchedEffect(navigator, navController) {
             navigator.commands.collect { command ->
                 navController.handleNavigation(command)
+                if (command is LauncherDestination) startupResolved = true
             }
         }
         LaunchedEffect(notificationStory, startupResolved) {
@@ -102,7 +97,11 @@ fun DozyApp(
             startDestination = LAUNCHER_ROUTE,
             modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
         ) {
-            composable(LAUNCHER_ROUTE) { LauncherScreen() }
+            composable(LAUNCHER_ROUTE) {
+                val launcherViewModel: LauncherViewModel = koinViewModel()
+                val tutorialSeen = loginRepository.hasSeenTutorial() || loginViewModel.uiState.value.tutorialSeen
+                LauncherScreen(launcherViewModel, tutorialSeen)
+            }
             composable(LOGIN_TUTORIAL_ROUTE) { screens.tutorial.Content() }
             composable(LOGIN_WELCOME_ROUTE) { screens.welcome.Content() }
             composable(LOGIN_EMAIL_ROUTE) { screens.email.Content() }

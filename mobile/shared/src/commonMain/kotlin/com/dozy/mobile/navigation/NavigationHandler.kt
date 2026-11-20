@@ -6,6 +6,7 @@ import com.dozy.mobile.feature.character.presentation.create.CreateCharacterDest
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsDestination
 import com.dozy.mobile.feature.character.presentation.list.CharactersDestination
 import com.dozy.mobile.feature.home.presentation.HomeDestination
+import com.dozy.mobile.feature.launcher.presentation.LauncherDestination
 import com.dozy.mobile.feature.login.presentation.LoginDestination
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormDestination
 import com.dozy.mobile.feature.place.presentation.list.PlacesDestination
@@ -15,9 +16,11 @@ import com.dozy.mobile.feature.story.presentation.list.StoriesDestination
 import com.dozy.mobile.feature.story.presentation.reader.ReaderDestination
 import com.dozy.mobile.navigation.CREATE_STORY_ROUTE
 import com.dozy.mobile.navigation.HostDestination
+import com.dozy.mobile.navigation.LAUNCHER_ROUTE
 import com.dozy.mobile.navigation.LOGIN_EMAIL_ROUTE
 import com.dozy.mobile.navigation.LOGIN_PIN_ROUTE
 import com.dozy.mobile.navigation.LOGIN_TUTORIAL_ROUTE
+import com.dozy.mobile.navigation.LOGIN_WELCOME_ROUTE
 import com.dozy.mobile.navigation.MAIN_ROUTE
 import com.dozy.mobile.navigation.characterDeleted
 import com.dozy.mobile.navigation.characterSaved
@@ -28,10 +31,28 @@ import com.dozy.mobile.navigation.openStory
 import com.dozy.mobile.navigation.readerLibrary
 
 /** The application's only consumer of navigation commands. */
-fun NavHostController.handleNavigation(
-    command: NavigationCommand,
-) {
+fun NavHostController.handleNavigation(command: NavigationCommand) {
     when (command) {
+        LauncherDestination.Home ->
+            navigate(MAIN_ROUTE) {
+                popUpTo(LAUNCHER_ROUTE) { inclusive = true }
+                launchSingleTop = true
+            }
+        LauncherDestination.Welcome ->
+            navigate(LOGIN_WELCOME_ROUTE) {
+                popUpTo(LAUNCHER_ROUTE) { inclusive = true }
+                launchSingleTop = true
+            }
+        LauncherDestination.Tutorial ->
+            navigate(LOGIN_TUTORIAL_ROUTE) {
+                popUpTo(LAUNCHER_ROUTE) { inclusive = true }
+                launchSingleTop = true
+            }
+        LauncherDestination.Email ->
+            navigate(LOGIN_EMAIL_ROUTE) {
+                popUpTo(LAUNCHER_ROUTE) { inclusive = true }
+                launchSingleTop = true
+            }
         HostDestination.Back -> popBackStack()
         HostDestination.Email -> navigate(LOGIN_EMAIL_ROUTE)
         HostDestination.NewCharacter -> navigate("create-character")

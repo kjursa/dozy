@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.login.di
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.mobile.feature.launcher.di.launcherModule
 import com.dozy.mobile.feature.login.data.ApiLoginRepository
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
 import com.dozy.mobile.feature.login.presentation.LoginUiState
@@ -12,7 +13,7 @@ import org.koin.dsl.module
 
 val loginModule =
     module {
-        includes(navigationModule)
+        includes(navigationModule, launcherModule)
         single<LoginRepository> { ApiLoginRepository(get(), get()) }
         viewModel {
             val savedStateHandle: SavedStateHandle = get()
