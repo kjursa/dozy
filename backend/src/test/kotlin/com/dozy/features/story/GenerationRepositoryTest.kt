@@ -59,7 +59,7 @@ class GenerationRepositoryTest {
         val originalKey = requestKey()
         val job = assertIs<Submission.Accepted>(repository.start(ownerId, originalKey, "snapshot", command())).job
         val worker = GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options)
-        assertTrue(worker.runOne())
+        worker.run(assertNotNull(repository.claim()))
         assertEquals(Stage.FAILED, repository.status(ownerId, job.id)?.stage)
         assertIs<RetrySubmission.IdempotencyConflict>(repository.retry(ownerId, job.id, originalKey))
         assertIs<RetrySubmission.JobNotFound>(repository.retry(stranger, job.id, requestKey()))
@@ -73,12 +73,12 @@ class GenerationRepositoryTest {
         SqliteDatabase(dbConfig).use { second ->
             val recovered = SqliteGenerationRepository(second, options, clock)
             assertEquals(accepted.copy(isReplay = true), recovered.retry(ownerId, job.id, key))
-            assertTrue(GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+            GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).run(assertNotNull(recovered.claim()))
             val ready = assertNotNull(recovered.status(ownerId, job.id))
             assertEquals(Stage.READY, ready.stage)
             assertEquals(Stage.READY, assertIs<RetrySubmission.Accepted>(recovered.retry(ownerId, job.id, key)).job.stage)
             assertEquals(command().configuration, recovered.read(ownerId, requireNotNull(ready.storyId))?.configuration)
-            assertFalse(GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+            assertNull(recovered.claim())
         }
     }
 
@@ -225,7 +225,7 @@ class GenerationRepositoryTest {
                 val avatarInput = command(input.configuration.copy(cast = input.configuration.cast.map { it.copy(avatar = AvatarSnapshot(AssetId.generate(), "https://example.test/missing")) }))
                 assertIs<Submission.ReferenceUnavailable>(repository.start(ownerId, requestKey(), "unavailable", avatarInput))
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", input)).job
-                assertTrue(GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+                GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options).run(assertNotNull(repository.claim()))
                 val status = assertNotNull(repository.status(ownerId, job.id))
                 assertEquals(expected, status.failure)
                 assertEquals(if (expected == null) Stage.READY else Stage.FAILED, status.stage)
@@ -235,7 +235,7 @@ class GenerationRepositoryTest {
                     assertTrue(story.text.contains("Luna") && story.text.contains("Moon garden"))
                     assertTrue(story.text.split(Regex("\\s+")).size in 550..650)
                 }
-                assertFalse(GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options).runOne())
+                assertNull(repository.claim())
             }
             val long = FakeTextGenerator(config).generate(configuration().copy(length = StoryConfiguration.Length.LONG))
             assertTrue(long.text.split(Regex("\\s+")).size in 1400..1600)
