@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -24,7 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,7 +30,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -52,8 +49,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +58,10 @@ import androidx.compose.ui.unit.sp
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyFootnote
+import com.dozy.mobile.ui.common.DozyFormField
+import com.dozy.mobile.ui.common.DozyLayout
 import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.UiText
@@ -96,14 +95,14 @@ internal fun CreateStoryContent(
             .drawBehind {
                 drawRect(
                     Brush.radialGradient(
-                        listOf(colors.secondary.copy(alpha = .07f), Color.Transparent),
+                        listOf(DozyColors.brandTeal.copy(alpha = .07f), Color.Transparent),
                         Offset(size.width, 0f),
                         size.width,
                     ),
                 )
                 drawRect(
                     Brush.radialGradient(
-                        listOf(colors.primary.copy(alpha = .04f), Color.Transparent),
+                        listOf(DozyColors.brandCoral.copy(alpha = .04f), Color.Transparent),
                         Offset(0f, size.height * .18f),
                         size.width,
                     ),
@@ -114,7 +113,14 @@ internal fun CreateStoryContent(
             .verticalScroll(rememberScrollState()),
     ) {
         StoryHeader(onBack)
-        Column(Modifier.fillMaxWidth().padding(start = 25.dp, end = 25.dp, top = 8.dp, bottom = 35.dp)) {
+        Column(
+            Modifier.fillMaxWidth().padding(
+                start = DozyLayout.screenGutter,
+                end = DozyLayout.screenGutter,
+                top = DozyLayout.labelGap,
+                bottom = DozyLayout.sectionGap,
+            ),
+        ) {
             StoryIntro()
             HeroPicker(state, dispatch, onNewHero)
             Spacer(Modifier.height(28.dp))
@@ -142,7 +148,7 @@ internal fun CreateStoryContent(
                 )
             }
             FieldError(state.submissionError)
-            Button(
+            DozyActionButton(
                 onClick = { dispatch(CreateStoryAction.Submit) },
                 enabled =
                     state.heroes.isNotEmpty() &&
@@ -150,14 +156,8 @@ internal fun CreateStoryContent(
                         !state.characterLoadError &&
                         !state.submitting &&
                         state.acceptedJobId == null,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-                shape = RoundedCornerShape(30.dp),
-                contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
             ) {
-                Text(
-                    stringResource(Res.string.generate_my_story),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
-                )
+                Text(stringResource(Res.string.generate_my_story))
                 Spacer(Modifier.width(14.dp))
                 if (state.submitting) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = colors.onPrimary, strokeWidth = 2.dp)
@@ -165,12 +165,9 @@ internal fun CreateStoryContent(
                     Icon(Icons.Default.AutoAwesome, null, Modifier.size(20.dp))
                 }
             }
-            Text(
+            DozyFootnote(
                 stringResource(Res.string.story_submit_hint),
-                Modifier.fillMaxWidth().padding(top = 13.dp),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal, lineHeight = 19.sp),
-                color = colors.onSurfaceVariant,
+                Modifier.padding(top = DozyLayout.contentGap),
             )
         }
     }
@@ -326,7 +323,7 @@ private fun HeroChoice(
                         3.dp,
                     ).border(
                         3.dp,
-                        MaterialTheme.colorScheme.onPrimary,
+                        MaterialTheme.colorScheme.surface,
                         CircleShape,
                     ).padding(3.dp)
                     .clip(CircleShape)
@@ -524,65 +521,15 @@ private fun StoryInput(
     minimumHeight: Dp,
     onValueChange: (String) -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(label, style = MaterialTheme.typography.titleMedium)
-        Text(
-            stringResource(Res.string.story_optional),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    BasicTextField(
+    DozyFormField(
+        label = label,
         value = value,
         onValueChange = onValueChange,
-        textStyle =
-            MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Normal,
-                lineHeight = 27.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-            ),
-        modifier =
-            Modifier
-                .semantics {
-                    contentDescription = label
-                }.padding(
-                    top = 13.dp,
-                ).fillMaxWidth()
-                .heightIn(
-                    min = minimumHeight,
-                ).clip(RoundedCornerShape(22.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(
-                    1.dp,
-                    if (error ==
-                        null
-                    ) {
-                        MaterialTheme.colorScheme.outline
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
-                    RoundedCornerShape(22.dp),
-                ).padding(19.dp),
-        decorationBox = { inner ->
-            Box {
-                if (value.isEmpty()) {
-                    Text(
-                        placeholder,
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal,
-                                lineHeight = 27.sp,
-                            ),
-                        color = DozyColors.placeholder,
-                    )
-                }
-                inner()
-            }
-        },
+        placeholder = placeholder,
+        labelHint = stringResource(Res.string.story_optional),
+        error = error?.resolve(),
+        minimumHeight = minimumHeight,
     )
-    FieldError(error)
 }
 
 @Composable

@@ -24,7 +24,7 @@ Request:
   "cast": [{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
-  "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","origin":"SYSTEM","editable":false,"inhabitants":null},
+  "place":{"id":"place-00000000-0000-7000-8000-000000000001","name":"Woods","description":"Quiet woods","origin":"SYSTEM","editable":false,"inhabitants":null},
   "idea":"Help a lost star",
   "ending":"Everyone returns home"
 }
@@ -227,15 +227,10 @@ Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_INSTALLATION_ID,
 retryable library error while retaining known cards; raw server messages are not
 shown. Transport failures retain the cache and show a retryable error. Null ApiConfig shows the offline library without claiming synchronization and sends no requests.
 
-The existing shared GenerationRepository owns both jobs and stories; no parallel
-list repository is introduced. DozyDatabase v8 adds nullable summary JSON to the
-feature's existing table with an automatic migration from v7. Remote summaries use
-reserved `library:<id>` rows without jobs. Locally completed jobs and durable reader
-fetches continue storing the complete result in their existing rows. Observation
-merges by story ID, choosing the metadata with the newest creation timestamp and
-sorting deterministically. Summary refresh never overwrites full text, job status,
-configuration or notification state. Successful traversal replaces remote summary rows, including clearing them on an empty result; failures preserve them. The reader fetches full text only when no
-local result exists. A remote summary alone therefore does not promise offline text.
+The shared GenerationRepository owns jobs and stories. Room stores pending jobs
+in `story_generations` and summaries and completed results in `stories`. Summary
+refresh preserves cached full text and completion metadata. The reader fetches
+full text when no local result exists.
 
 
 ## Home composition (F13)

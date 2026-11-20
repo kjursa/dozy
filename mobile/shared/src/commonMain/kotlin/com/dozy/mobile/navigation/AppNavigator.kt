@@ -27,7 +27,7 @@ val navigationModule =
         factory { CharactersTabEntry() }
         factory { parameters -> TutorialEntryScreen(parameters.get()) }
         factory { parameters -> WelcomeEntryScreen(get(), parameters.get()) }
-        factory { parameters -> EmailEntryScreen(get(), parameters.get()) }
+        factory { parameters -> EmailEntryScreen(parameters.get()) }
         factory { parameters -> PinEntryScreen(parameters.get()) }
         factory { MainEntryScreen() }
         factory { CreateStoryEntryScreen(get()) }

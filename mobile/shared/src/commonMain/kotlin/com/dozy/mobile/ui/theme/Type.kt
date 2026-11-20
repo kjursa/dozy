@@ -8,7 +8,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.jetbrains_mono
+import com.dozy.mobile.resources.nunito_sans
+import com.dozy.mobile.resources.playfair_display
 import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.FontResource
 import androidx.compose.ui.text.font.Font as ComposeFont
@@ -66,77 +69,38 @@ object DozyFontFamilies {
 }
 
 val DozyTypography: Typography
-    @Composable get() =
-        Typography(
-            displayLarge =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.PlayfairDisplay,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 36.sp,
-                    lineHeight = 44.sp,
-                ),
-            headlineLarge =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 30.sp,
-                    lineHeight = 36.sp,
-                ),
-            headlineSmall =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
-                    lineHeight = 25.sp,
-                ),
-            titleLarge =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                ),
-            titleMedium =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                ),
-            bodyLarge =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                ),
-            bodyMedium =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                ),
-            bodySmall =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                ),
-            labelLarge =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                ),
-            labelSmall =
-                TextStyle(
-                    fontFamily = DozyFontFamilies.NunitoSans,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                    letterSpacing = 1.3.sp,
-                ),
+    @Composable get() {
+        val nunito = DozyFontFamilies.NunitoSans
+        val playfair = DozyFontFamilies.PlayfairDisplay
+        return Typography(
+            displayLarge = playfair.style(36, 44, FontWeight.Bold),
+            displayMedium = nunito.style(32, 38, FontWeight.Black, -1f),
+            displaySmall = nunito.style(28, 34, FontWeight.Black, -.5f),
+            headlineLarge = nunito.style(34, 38, FontWeight.Black, -1f),
+            headlineMedium = nunito.style(30, 34, FontWeight.Black, -1f),
+            headlineSmall = nunito.style(22, 28, FontWeight.Black, -.5f),
+            titleLarge = nunito.style(17, 23, FontWeight.Black),
+            titleMedium = nunito.style(16, 22, FontWeight.Bold),
+            titleSmall = nunito.style(14, 20, FontWeight.Bold),
+            bodyLarge = nunito.style(15, 25, FontWeight.SemiBold),
+            bodyMedium = nunito.style(13, 21, FontWeight.Normal),
+            bodySmall = nunito.style(11, 19, FontWeight.Normal),
+            labelLarge = nunito.style(14, 20, FontWeight.Black),
+            labelMedium = nunito.style(12, 18, FontWeight.Bold),
+            labelSmall = nunito.style(11, 17, FontWeight.Black, 1.3f),
         )
+    }
+
+private fun FontFamily.style(
+    size: Int,
+    lineHeight: Int,
+    weight: FontWeight,
+    tracking: Float = 0f,
+): TextStyle =
+    TextStyle(
+        fontFamily = this,
+        fontWeight = weight,
+        fontSize = size.sp,
+        lineHeight = lineHeight.sp,
+        letterSpacing = tracking.sp,
+    )

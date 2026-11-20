@@ -63,7 +63,7 @@ class PlacesViewModelTest {
     @Test fun noCustomStillShowsPredefinedAndTrueEmptyIsRepresentable() =
         runTest(dispatcher) {
             val repository = FakePlaceRepository()
-            repository.places.value = listOf(place("builtin:woods", custom = false))
+            repository.places.value = listOf(place("place-00000000-0000-7000-8000-000000000001", custom = false))
             val viewModel = vm(repository)
             advanceUntilIdle()
             assertFalse(viewModel.uiState.value.hasCustom)
@@ -81,7 +81,7 @@ class PlacesViewModelTest {
         runTest(dispatcher) {
             val viewModel = vm(FakePlaceRepository())
             advanceUntilIdle()
-            viewModel.dispatch(PlacesAction.Edit(Place.Id("builtin:woods")))
+            viewModel.dispatch(PlacesAction.Edit(Place.Id("place-00000000-0000-7000-8000-000000000001")))
             assertFalse(viewModel.uiState.value.navigating)
             val effect = async { viewModel.navigator.commands.first() }
             viewModel.dispatch(PlacesAction.Select(Place.Id("custom")))

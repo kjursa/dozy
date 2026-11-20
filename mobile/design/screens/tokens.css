@@ -1,0 +1,92 @@
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('../../shared/src/commonMain/composeResources/font/nunito_sans.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('../../shared/src/commonMain/composeResources/font/playfair_display.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+:root {
+  --font-ui: 'Nunito Sans', sans-serif;
+  --font-reader: 'Playfair Display', Georgia, serif;
+
+  --paper: #faf5eb;
+  --ink: #2d3436;
+  --white: #fff;
+  --muted: #636e72;
+  --line: #ebdcc7;
+  --coral: #ff6b6b;
+  --teal: #4ecdc4;
+  --action: #be5150;
+  --on-action: #fff;
+  --link: #226d67;
+  --selected-surface: #e7f5ef;
+  --selection-outline: #d65f5a;
+  --focus-ring: #267c76;
+  --field-outline: #8d8476;
+  --placeholder: #636e72;
+  --error: #d63031;
+
+  --night-paper: #202b30;
+  --night-ink: #eee4d1;
+  --night-muted: #b8b9b1;
+  --night-line: #435054;
+  --night-surface: #2b393f;
+  --night-action: #ff9990;
+  --night-link: #9acac0;
+
+  --screen-gutter: 24px;
+  --section-gap: 32px;
+  --content-gap: 16px;
+  --label-gap: 8px;
+  --card-padding: 20px;
+  --card-radius: 24px;
+  --banner-radius: 28px;
+  --field-radius: 16px;
+  --multiline-field-radius: 22px;
+  --action-height: 54px;
+  --action-radius: 28px;
+
+  --screen-title-size: 34px;
+  --screen-title-line: 38px;
+  --home-title-size: 30px;
+  --home-title-line: 34px;
+  --section-title-size: 22px;
+  --section-title-line: 28px;
+  --card-title-size: 17px;
+  --card-title-line: 23px;
+  --intro-size: 15px;
+  --intro-line: 25px;
+  --body-medium-size: 13px;
+  --body-medium-line: 21px;
+  --field-label-size: 16px;
+  --field-label-line: 22px;
+  --label-size: 14px;
+  --label-line: 20px;
+  --eyebrow-size: 11px;
+  --eyebrow-line: 17px;
+  --eyebrow-tracking: 1.3px;
+  --footnote-size: 11px;
+  --footnote-line: 19px;
+  --reader-title-size: 37px;
+  --reader-title-line: 42px;
+  --reader-body-size: 21px;
+  --reader-body-leading: 1.95;
+  --reader-ending-size: 27px;
+  --reader-ending-line: 34px;
+  --banner-title-size: 26px;
+  --banner-title-line: 33px;
+
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: #eae5dc;
+  font-synthesis: none;
+}

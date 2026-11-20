@@ -36,7 +36,7 @@ class StoryRoutesTest {
     @TempDir lateinit var directory: Path
     private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000010"))
     private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000011"))
-    private val request = """{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"builtin:woods","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
+    private val request = """{"cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Silver coat","type":"ANIMAL"}],"mode":"MANUAL","length":"SHORT","place":{"id":"place-00000000-0000-7000-8000-000000000001","name":"Moon garden","description":"Quiet","origin":"SYSTEM","editable":false},"idea":"  Find a star  "}"""
     private val json = Json { ignoreUnknownKeys = true }
     private suspend fun HttpClient.start(body: String = request, key: String = UUID.randomUUID().toString()) = post("/api/v1/story-generations") {
         asOwner(owner); header("Idempotency-Key", key)

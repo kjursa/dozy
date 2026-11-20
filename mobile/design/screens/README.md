@@ -27,8 +27,36 @@ Open `index.html` in a browser to select a screen and its variants. This directo
 - Query parameters select variants, for example `home.html?state=empty` or `character-form.html?avatar=ready`. Inspect each relevant rendered variant rather than inferring the design from example artwork or HTML source alone.
 - The prototype uses example content and shared assets from `../images/`, `../icons/`, and `../brand.css`. Keep these assets available when opening the HTML files.
 - No real generation, notifications, or durable database operations occur. Some form values may be stored in browser-tab session storage.
-- Google Fonts are optional external dependencies with fallback fonts. No build step is required.
+- The mockups load the same Nunito Sans and Playfair Display font files as Compose from the shared mobile resources. Open them from the repository so those files are available. No build step is required.
 - For interaction details where prototype simulations or annotations differ, follow `../../SPEC.MD` and the task requirements. In particular, changing character fields does not require regenerating an existing avatar before saving.
+
+## Shared UI
+
+Open [the component reference](components.html) for the baseline screen styles.
+Use `tokens.css` for shared colors, typography, and measurements. Use the
+existing classes in `components.css` for common controls and surfaces. Keep
+screen layout and state-specific rules with the screen.
+
+| HTML pattern | Compose counterpart |
+| --- | --- |
+| Page title, section title, and card title | `MaterialTheme.typography.headlineLarge`, `headlineSmall`, and `titleLarge` |
+| `.intro`, `.muted`, `.eyebrow`, and `.footnote` | `bodyLarge`, `bodyMedium`, `labelSmall`, and `DozyFootnote` |
+| `.button.primary` and `.button.secondary` | `DozyActionButton` and Material `FilledTonalButton` |
+| `.form-label` with `.form-field` or `textarea` | `DozyFormField` with normal, focused, error, and disabled states |
+| `.form-card` and `.book-row` | Material `Surface` or `Card` with `DozyLayout.cardRadius` |
+| `.create-banner h2`, `.story-copy`, and `.ending h2` | `DozyTextStyles.bannerTitle`, `readerBody`, and `readerEnding` |
+
+Start with a 24 px screen gutter, 32 px between sections, 16 px between
+related components, and 8 px between a label and its control. In Compose
+these values are defined in dp in `ui.common.DozyLayout`. Use sp for text.
+Keep form labels and story prose start-aligned. Center the text itself in
+footnotes, empty states, and reader endings.
+
+For a new screen, assemble the HTML from these patterns, then use the same
+roles in Compose. If a style belongs to more than one screen, add it to the
+shared stylesheet and the corresponding Compose theme or component. Compare
+focused and error states as well as the default state, and check at a narrow
+viewport and with larger Android text.
 
 ## Sign-in prototype
 

@@ -75,14 +75,10 @@ value class CharacterId private constructor(
 value class PlaceId private constructor(
     val value: String,
 ) {
-    val isBuiltIn: Boolean get() = value.startsWith("builtin:")
-
     companion object {
-        private val builtIn = Regex("builtin:[a-z][a-z0-9-]*")
-
         fun generate() = PlaceId("place-${Uuids.v7()}")
 
-        fun parse(raw: String?): PlaceId? = (raw?.takeIf(builtIn::matches) ?: prefixedUuid(raw, "place", 7))?.let(::PlaceId)
+        fun parse(raw: String?): PlaceId? = prefixedUuid(raw, "place", 7)?.let(::PlaceId)
     }
 }
 

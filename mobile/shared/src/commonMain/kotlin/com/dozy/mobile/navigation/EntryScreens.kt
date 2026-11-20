@@ -57,19 +57,16 @@ class WelcomeEntryScreen(
 }
 
 class EmailEntryScreen(
-    private val navigator: AppNavigator,
     private val loginViewModel: LoginViewModel,
 ) : Screen {
     @Composable
     override fun Content() {
         val loginState by loginViewModel.uiState.collectAsStateWithLifecycle()
-        val scope = rememberCoroutineScope()
 
         LoginEmailScreen(
             state = loginState,
             onEmailChanged = { loginViewModel.dispatch(LoginAction.EmailChanged(it)) },
             onSubmit = { loginViewModel.dispatch(LoginAction.EmailSubmitted) },
-            onBack = { scope.launch { navigator.navigate(HostDestination.Back) } },
         )
     }
 }
@@ -82,7 +79,6 @@ class PinEntryScreen(
         val loginState by loginViewModel.uiState.collectAsStateWithLifecycle()
         LoginPinScreen(
             state = loginState,
-            onBack = { loginViewModel.dispatch(LoginAction.BackToEmail) },
             onResend = { loginViewModel.dispatch(LoginAction.ResendPin) },
             onDigit = { loginViewModel.dispatch(LoginAction.PinDigit(it)) },
             onDelete = { loginViewModel.dispatch(LoginAction.DeletePinDigit) },

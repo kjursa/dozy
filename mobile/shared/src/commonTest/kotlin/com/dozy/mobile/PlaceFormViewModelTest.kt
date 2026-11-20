@@ -75,7 +75,7 @@ internal class PlaceFormViewModelTest : PlaceFormViewModelFixture() {
         runTest(dispatcher) {
             val repository = FakePlaceRepository()
             val missing = vm(repository, id = "missing")
-            val predefined = vm(repository, id = "builtin:woods")
+            val predefined = vm(repository, id = "place-00000000-0000-7000-8000-000000000001")
             advanceUntilIdle()
             assertEquals(UiText.Resource(Res.string.place_unavailable), missing.uiState.value.error)
             assertEquals(UiText.Resource(Res.string.place_not_editable), predefined.uiState.value.error)

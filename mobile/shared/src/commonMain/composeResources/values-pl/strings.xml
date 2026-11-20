@@ -26,4 +26,16 @@
     <string name="login_pin_back">Wróć do emaila</string>
     <string name="login_pin_clear">Wyczyść</string>
     <string name="login_pin_delete_description">Usuń ostatnią cyfrę</string>
+    <string name="home_stories_label">TWOJA PÓŁKA Z BAJKAMI</string>
+    <string name="home_stories_title">Bajki na dziś wieczór</string>
+    <string name="home_characters_label">TWOI MALI BOHATEROWIE</string>
+    <string name="home_characters_title">Znajome twarze</string>
+    <string name="home_places_label">MAŁE ŚWIATY DO ODKRYCIA</string>
+    <string name="home_job_active_label">TWOJA NOWA BAJKA</string>
+    <string name="home_job_active_title">Dzieje się odrobina magii…</string>
+    <string name="home_job_active_body">Tworzymy bajkę i jej okładkę. W tym czasie możesz zamknąć aplikację.</string>
+    <string name="home_job_ready_label">GOTOWA NA DZIŚ WIECZÓR</string>
+    <string name="home_job_ready_title">Twoja nowa bajka jest gotowa!</string>
+    <string name="home_job_failed_label">SPRÓBUJMY JESZCZE RAZ</string>
+    <string name="home_job_failed_title">Przygoda potrzebuje jeszcze chwili.</string>
 </resources>

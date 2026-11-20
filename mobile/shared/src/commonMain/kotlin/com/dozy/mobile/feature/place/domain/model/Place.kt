@@ -9,6 +9,7 @@ data class Place(
     val inhabitants: Inhabitants? = null,
     val origin: Origin,
     val editable: Boolean,
+    val imageUrl: String? = null,
 ) {
     val canEdit: Boolean get() = origin == Origin.USER && editable
 

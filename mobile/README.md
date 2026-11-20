@@ -88,20 +88,18 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Tab owners, saved scroll state, form drafts, return paths and reader settings
   retain the existing implementation. Route values are percent-encoded from UTF-8.
   Common insets, keyboard padding and back handlers adapt to the host.
-- `:app`: Application/Activity/manifest, localized bundled place catalog, ID generators,
+- `:app`: Application/Activity/manifest, ID generators,
   WorkManager, notification delivery, permission launcher and signing. MainActivity
   hosts `DozyApp`, forwards notification story IDs and passes narrow notification
   callbacks/capabilities. Scheduling and worker reconciliation remain Android-only.
-- Shared `AvatarImage` resolves persisted `bundled-avatar://` references to the
-  same DrawableResources. HTTPS avatars/covers/previews use Coil 3.3.0 with
+- Remote avatars, place thumbnails and covers use Coil 3.3.0 with
   `coil-network-ktor3` and the injected Ktor 3.6.0 client/platform engine.
   Loading/errors retain the face placeholder and accessibility description;
-  bundled images crop and remote images fit as before. Unsupported URL schemes
-  never reach the network. The image loader is registered by `imageModule` and
+  Unsupported URL schemes never reach the network. The image loader is registered by `imageModule` and
   receives a platform `PlatformContext`.
-- `shared/schemas`: database version 9 adds local creation drafts. KSP runs per
-  Android/iOS target. Android generated sources are wired explicitly for the
-  pinned KSP/AGP versions, including on clean builds.
+- Room creates `dozy.db` with the current schema. If an older development build
+  left an incompatible database, clear the app's local data before running
+  the new build. KSP generates the Room classes for Android and iOS.
 - The future iOS host calls `initializeDozy(config, places, requestKeys)` once,
   then embeds `DozyViewController()` from `DozyShared`. The backend assigns new
   character and place IDs. Supply the localized bundled place catalog, story
@@ -114,10 +112,10 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   UnsupportedStoryCompletionNotifier returns false. There is no iOS scheduler/push.
   The host owns Koin startup/shutdown; do not initialize the global graph twice.
 - `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
-  Repository, mapping, fake-avatar, MockEngine, pure ViewModel/MVI and feature-graph
+  Repository, mapping, MockEngine, pure ViewModel/MVI and feature-graph
   lifetime/argument tests also run from commonTest.
   Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
-  so Android tests reuse domain and DAO fakes. Real Room migration/reopen and
+  so Android tests reuse domain and DAO fakes. Room reopen and
   mixed data/presentation integration tests remain Android-hosted;
   foundation SavedStateHandle tests remain in `androidHostTest`. Mixed form/reader
   recreation tests stay Android-hosted and reuse common fixtures.
@@ -149,24 +147,23 @@ is compiled into the framework without building or running an iOS application.
 Character CRUD uses the shared `CharactersClients` container with persisted
 installation identity. Saves/edits and deletion tombstones are durable before HTTP;
 refresh retries pending mutations and replaces only synced collection data.
-Android injects the common Kotlin UUIDv7 character ID generator. Bundled development
-avatars remain local-only. API2 generates deterministic fake PNGs and validates
-character references against the shared owned asset registry.
+Android generates avatars through API2. The backend returns a sample PNG and
+validates character references against the shared owned asset registry.
+Android loads places from the API and caches the catalogue and its thumbnail URLs
+in Room.
 See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantics.
 
 ## Local fake story generation
 
 API3/API5 integrate story submission, durable retry/progress, completion and immutable reading
-through the shared SDK. Run the fake backend with matching `DOZY_ASSET_BASE_URL`
-and app API base URL; see the [root setup](../README.md). For an Android emulator,
-use `http://10.0.2.2:8080` and `DOZY_ASSET_ALLOW_HTTP=true` on the backend. API defaults
-remain disabled until configured. The existing Android WorkManager scheduler and
+through the shared SDK. See the [local Android demo](../README.md#local-android-demo) for the backend setup.
+The existing Android WorkManager scheduler and
 local completion notifications observe the same persisted jobs. Remote library pagination uses the shared Stories client and persistent backend snapshots. A complete traversal atomically replaces remote summary rows; failed or cancelled traversal retains the cache. Failed-job retry uses the shared SDK. See [the story contract](STORY_GENERATION_API.md).
 
-Build the Android debug app against that backend with
-`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
-Without this property, remote APIs remain disabled. Debug builds allow cleartext
-for local development; release builds retain Android's HTTPS-only default.
+Run the `debug` variant in Android Studio or build it with
+`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug`. Debug uses
+`http://10.0.2.2:8080` as its API base URL. Release uses the `dozy.apiBaseUrl`
+Gradle property and requires HTTPS.
 
 API2 uses shared `CharacterAvatarsClients` and repository polling. See [character data](CHARACTER_DATA.md) and the root README for local development URLs and debug build configuration.
 

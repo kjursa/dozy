@@ -9,6 +9,8 @@ import com.dozy.features.story.domain.model.TextGenerator
 import kotlinx.coroutines.delay
 
 class FakeTextGenerator(private val config: GenerationConfig) : TextGenerator {
+    private val placeholder = Regex("""\{(heroes|place)\}""")
+
     override suspend fun generate(configuration: StoryConfiguration): GeneratedText {
         delay(config.delayMillis)
         when (config.textMode) {
@@ -18,11 +20,11 @@ class FakeTextGenerator(private val config: GenerationConfig) : TextGenerator {
         }
         val heroes = configuration.cast.joinToString(" and ") { it.name }
         val setting = configuration.place?.name ?: "the quiet moonlit garden"
-        val paragraph = "$heroes explored $setting together. They listened to the gentle breeze and helped a sleepy friend find the path home. Each small act of kindness made the evening warmer. Beneath the stars they shared a peaceful smile, knowing tomorrow would bring another wonderful adventure."
-        val target = if (configuration.length == StoryConfiguration.Length.SHORT) 600 else 1500
-        val paragraphs = List((target / paragraph.split(' ').size).coerceAtLeast(1)) { paragraph }
-        val details = listOfNotNull(configuration.idea, configuration.ending).joinToString(" ")
-        return GeneratedText("$heroes and the peaceful adventure", paragraphs.joinToString("\n\n") + "\n\n" + details)
+        val story = Stories.random()
+        val text = placeholder.replace(story.substringAfter('\n')) {
+            if (it.groupValues[1] == "heroes") heroes else setting
+        }
+        return GeneratedText(story.substringBefore('\n'), text)
     }
 }
 class FakeCoverGenerator(private val config: GenerationConfig) : CoverGenerator {

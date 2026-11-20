@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+from os import fsdecode
+from pathlib import Path
+from subprocess import check_output
+
+root = Path(__file__).resolve().parent
+paths = check_output(
+    ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.kt"],
+    cwd=root,
+)
+
+file_count = 0
+line_count = 0
+for path in dict.fromkeys(paths.split(b"\0")):
+    if not path:
+        continue
+
+    source = root / fsdecode(path)
+    if not source.is_file():
+        continue
+
+    with source.open("rb") as lines:
+        line_count += sum(1 for _ in lines)
+    file_count += 1
+
+print(f"Kotlin files: {file_count}")
+print(f"Kotlin lines: {line_count}")

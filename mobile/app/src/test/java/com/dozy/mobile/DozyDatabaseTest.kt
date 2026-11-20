@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
-import androidx.sqlite.execSQL
 import com.dozy.mobile.core.data.database.CreationDraftEntity
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
@@ -49,17 +48,17 @@ class DozyDatabaseTest {
             val place = place().toEntity()
             val draft = CreationDraftEntity("place", """{"name":"Moon garden"}""")
             val generation = GenerationEntity("existing-key", "immutable-snapshot", "existing-job", "QUEUED")
-            // The builder used before extraction writes the installed database.
+            val story = StoryEntity(id = "story", result = """{"id":"story","text":"Saved story"}""")
             val original = Room.databaseBuilder<DozyDatabase>(context, "dozy.db").setDriver(AndroidSQLiteDriver()).build()
             try {
                 original.characters().upsert(character)
                 original.places().upsert(place)
                 original.generations().upsert(generation)
+                original.generations().upsertStory(story)
                 original.creationDrafts().save(draft)
             } finally {
                 original.close()
             }
-            // The production shared Android boundary must find that same file and data.
             val extracted = androidDatabaseBuilder(context).setDriver(AndroidSQLiteDriver()).build()
             try {
                 assertEquals(
@@ -72,61 +71,10 @@ class DozyDatabaseTest {
                 )
                 assertEquals(place, extracted.places().find(place.id))
                 assertEquals(generation, extracted.generations().find("existing-key"))
+                assertEquals(story, extracted.generations().findStory(story.id))
                 assertEquals(draft.payload, extracted.creationDrafts().load(draft.form))
             } finally {
                 extracted.close()
-                context.deleteDatabase("dozy.db")
-            }
-        }
-
-    @Test fun migratesStoryResultsAndKeepsPendingWork() =
-        runBlocking {
-            val context: Context = RuntimeEnvironment.getApplication()
-            context.deleteDatabase("dozy.db")
-            val driver = AndroidSQLiteDriver()
-            val pending =
-                GenerationEntity("pending-key", "pending-configuration", "pending-job", "FAILED", retryKey = "retry-key", createdOrder = 2)
-            val database = Room.databaseBuilder<DozyDatabase>(context, "dozy.db").setDriver(driver).build()
-            try {
-                database.generations().upsert(pending)
-            } finally {
-                database.close()
-            }
-            val result = """{"id":"story","text":"Saved story"}"""
-            val summary = """{"id":"story","title":"Saved story"}"""
-            driver.open(context.getDatabasePath("dozy.db").path).use { connection ->
-                // Restore the v9 columns and seed the three kinds of legacy story records.
-                connection.execSQL("DROP TABLE stories")
-                connection.execSQL("ALTER TABLE story_generations ADD COLUMN result TEXT DEFAULT NULL")
-                connection.execSQL("ALTER TABLE story_generations ADD COLUMN summary TEXT DEFAULT NULL")
-                connection.execSQL("ALTER TABLE story_generations ADD COLUMN notificationDelivered INTEGER NOT NULL DEFAULT 0")
-                connection.execSQL(
-                    """
-                    INSERT INTO story_generations (requestKey, configuration, jobId, status, result, notificationDelivered, createdOrder)
-                    VALUES ('completed-key', '{}', 'completed-job', 'READY', '$result', 1, 1),
-                           ('story:story', '{}', NULL, NULL, '$result', 0, 0)
-                    """.trimIndent(),
-                )
-                connection.execSQL(
-                    "INSERT INTO story_generations (requestKey, configuration, summary) VALUES ('library:story', '', '$summary')",
-                )
-                connection.execSQL("PRAGMA user_version = 9")
-            }
-
-            val graph =
-                koinApplication {
-                    androidContext(context)
-                    modules(androidModule, module { single<SQLiteDriver> { driver } })
-                }
-            try {
-                val dao = graph.koin.get<DozyDatabase>().generations()
-                assertEquals(listOf(pending), dao.observe().first())
-                assertEquals(
-                    StoryEntity("story", "completed-job", "completed-key", result, summary, notificationDelivered = true, createdOrder = 1),
-                    dao.findStory("story"),
-                )
-            } finally {
-                graph.close()
                 context.deleteDatabase("dozy.db")
             }
         }

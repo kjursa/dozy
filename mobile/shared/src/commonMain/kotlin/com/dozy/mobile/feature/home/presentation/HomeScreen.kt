@@ -1,6 +1,7 @@
 package com.dozy.mobile.feature.home.presentation
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
@@ -30,19 +32,28 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.dozy.mobile.core.presentation.components.AmbientGlow
 import com.dozy.mobile.core.presentation.components.AvatarImage
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.place.presentation.list.PlaceCard
+import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
-import com.dozy.mobile.feature.story.presentation.generation.GenerationCard
+import com.dozy.mobile.feature.story.presentation.generation.GenerationAction
+import com.dozy.mobile.feature.story.presentation.generation.message
 import com.dozy.mobile.feature.story.presentation.list.Story
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyActionButton
+import com.dozy.mobile.ui.common.DozyLayout
+import com.dozy.mobile.ui.common.DozyTextStyles
+import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
@@ -66,7 +77,7 @@ private fun HomeContent(
     onAction: (HomeAction) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        AmbientGlow(Modifier.fillMaxSize())
+        HomeBackground()
         Column(
             Modifier
                 .fillMaxSize()
@@ -74,16 +85,13 @@ private fun HomeContent(
                 .verticalScroll(rememberScrollState()),
         ) {
             HomeHeader()
-            if (state.firstVisit) {
-                FirstVisitHome(onCreateCharacter = { onAction(HomeAction.AddCharacterClicked) })
-                Spacer(Modifier.height(mainBottomMenuScrollSpace()))
-                return@Column
-            }
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
+                Modifier.fillMaxWidth().padding(horizontal = DozyLayout.screenGutter),
+                verticalArrangement = Arrangement.spacedBy(DozyLayout.sectionGap),
             ) {
-                HomeJob(state, onAction)
+                if (state.generation.homeJob != null || HomeSection.GENERATION in state.errors) {
+                    HomeJob(state, onAction)
+                }
                 CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
                 Column {
                     HomeSectionStatus(state, HomeSection.STORIES, onAction)
@@ -91,21 +99,18 @@ private fun HomeContent(
                         onAction(HomeAction.StorySelected(it))
                     }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
                     if (HomeSection.STORIES !in state.loading &&
-                        HomeSection.STORIES !in state.refreshing &&
                         HomeSection.STORIES !in state.errors &&
                         state.stories.isEmpty() &&
                         state.characters.isNotEmpty()
                     ) {
-                        Text(stringResource(Res.string.home_first_story))
+                        Text(stringResource(Res.string.home_first_story), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Column {
                     HomeSectionStatus(state, HomeSection.CHARACTERS, onAction)
                     CharactersSection(
                         state.characters,
-                        onAddCharacter = {
-                            onAction(HomeAction.AddCharacterClicked)
-                        },
+                        onAddCharacter = { onAction(HomeAction.AddCharacterClicked) },
                         onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) },
                         onSeeAll = { onAction(HomeAction.SeeAllCharactersClicked) },
                     )
@@ -118,65 +123,48 @@ private fun HomeContent(
 }
 
 @Composable
-private fun HomeHeader() {
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x2),
-        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-    ) {
-        Text(
-            stringResource(Res.string.tuesday_14_october),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
+private fun HomeBackground() {
+    Canvas(Modifier.fillMaxSize()) {
+        drawRect(
+            Brush.radialGradient(
+                listOf(DozyColors.brandTeal.copy(alpha = .08f), Color.Transparent),
+                center = Offset(size.width, size.height * .03f),
+                radius = size.width * .84f,
+            ),
         )
-        Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(Res.string.home_header_subtitle), style = MaterialTheme.typography.bodyLarge)
+        drawRect(
+            Brush.radialGradient(
+                listOf(DozyColors.brandCoral.copy(alpha = .04f), Color.Transparent),
+                center = Offset(0f, size.height * .18f),
+                radius = size.width * .72f,
+            ),
+        )
     }
 }
 
 @Composable
-private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
+private fun HomeHeader() {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3, vertical = UiSpacing.x4),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+        Modifier.fillMaxWidth().padding(horizontal = DozyLayout.screenGutter, vertical = UiSpacing.x2),
+        verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
     ) {
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.size(145.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(56.dp),
-                )
-            }
-        }
+        Text(stringResource(Res.string.good_evening), style = MaterialTheme.typography.headlineMedium)
         Text(
-            stringResource(Res.string.home_first_visit_eyebrow),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-        Text(
-            stringResource(Res.string.home_first_visit_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            stringResource(Res.string.home_first_visit),
-            style = MaterialTheme.typography.bodyLarge,
+            stringResource(Res.string.home_header_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        androidx.compose.material3.Button(onClick = onCreateCharacter) {
-            Text(stringResource(Res.string.home_first_character))
-        }
     }
 }
 
 @Composable
 private fun CreateStoryBanner(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(DozyLayout.bannerRadius)
     Surface(
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.fillMaxWidth().shadow(8.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
+        shape = shape,
+        color = DozyColors.brandCoral,
+        contentColor = DozyColors.onBrandCoral,
+        modifier = Modifier.fillMaxWidth().shadow(8.dp, shape).clickable(onClick = onClick),
     ) {
         Row(
             Modifier.padding(UiSpacing.x3),
@@ -187,18 +175,15 @@ private fun CreateStoryBanner(onClick: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
                     Text(
                         stringResource(Res.string.home_banner_eyebrow),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
                         stringResource(Res.string.home_banner_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = DozyTextStyles.bannerTitle,
                     )
                     Text(
                         stringResource(Res.string.home_banner_body),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .92f),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
                         Row(
@@ -232,7 +217,7 @@ private fun StoriesSection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading(stringResource(Res.string.library), stringResource(Res.string.your_stories), onSeeAll)
+        SectionHeading(stringResource(Res.string.home_stories_label), stringResource(Res.string.home_stories_title), onSeeAll)
         stories.forEach { story -> StoryWideCard(story, onStorySelected) }
     }
 }
@@ -245,7 +230,7 @@ private fun CharactersSection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-        SectionHeading(stringResource(Res.string.cast), stringResource(Res.string.your_characters), onSeeAll)
+        SectionHeading(stringResource(Res.string.home_characters_label), stringResource(Res.string.home_characters_title), onSeeAll)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
             characters.forEach { character ->
                 Column(
@@ -255,7 +240,7 @@ private fun CharactersSection(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
-                    AvatarImage(character.avatarUrl, character.name, Modifier.size(80.dp))
+                    AvatarImage(character.avatarUrl, character.name, Modifier.size(70.dp).clip(CircleShape))
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
@@ -295,7 +280,7 @@ private fun HomeSectionStatus(
     section: HomeSection,
     onAction: (HomeAction) -> Unit,
 ) {
-    if (section in state.loading || section in state.refreshing) CircularProgressIndicator()
+    if (section in state.loading) CircularProgressIndicator()
     state.errors[section]?.let {
         Text(it.resolve(), color = MaterialTheme.colorScheme.error)
         TextButton(onClick = { onAction(HomeAction.RetrySection(section)) }, enabled = section !in state.refreshing) {
@@ -312,11 +297,72 @@ private fun HomeJob(
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         HomeSectionStatus(state, HomeSection.GENERATION, onAction)
         state.generation.homeJob?.let { job ->
-            GenerationCard(job, state.generation.busy) {
-                onAction(HomeAction.Generation(it))
-            }
-            TextButton(onClick = { onAction(HomeAction.ProgressClicked(job.id.value)) }) {
-                Text(stringResource(Res.string.generation_progress))
+            val unavailable = job.statusUnknown || job.retryPending
+            val failed = job.status == GenerationJob.Status.FAILED && !unavailable
+            val ready = job.storyId != null && !unavailable
+            val colors = MaterialTheme.colorScheme
+            val accent = if (failed) colors.primary else colors.onSecondaryContainer
+            val background = if (failed) DozyColors.selectedBackground else colors.secondaryContainer
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = background,
+                contentColor = colors.onBackground,
+                border = BorderStroke(1.dp, colors.outlineVariant),
+            ) {
+                Column(Modifier.padding(DozyLayout.screenGutter), verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap)) {
+                    val label =
+                        when {
+                            ready -> Res.string.home_job_ready_label
+                            failed -> Res.string.home_job_failed_label
+                            else -> Res.string.home_job_active_label
+                        }
+                    val title =
+                        when {
+                            ready -> Res.string.home_job_ready_title
+                            failed -> Res.string.home_job_failed_title
+                            unavailable -> Res.string.generation_unavailable
+                            else -> Res.string.home_job_active_title
+                        }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DozyLayout.labelGap)) {
+                        if (!ready && !failed && !unavailable) {
+                            CircularProgressIndicator(Modifier.size(14.dp), color = accent, strokeWidth = 2.dp)
+                        }
+                        Text(stringResource(label), style = MaterialTheme.typography.labelSmall, color = accent)
+                    }
+                    Text(stringResource(title), style = DozyTextStyles.bannerTitle)
+                    if (!unavailable) {
+                        val description =
+                            when {
+                                ready ->
+                                    state.stories
+                                        .firstOrNull { it.id == job.storyId?.value }
+                                        ?.title
+                                        ?.resolve() ?: job.message().resolve()
+                                failed -> job.message().resolve()
+                                else -> stringResource(Res.string.home_job_active_body)
+                            }
+                        Text(description, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                    }
+                    val action =
+                        when {
+                            ready -> Res.string.generation_read
+                            failed -> Res.string.place_retry
+                            else -> Res.string.generation_progress
+                        }
+                    DozyActionButton(
+                        onClick = {
+                            when {
+                                ready -> onAction(HomeAction.Generation(GenerationAction.Open(job.id)))
+                                failed -> onAction(HomeAction.Generation(GenerationAction.Retry(job.id)))
+                                else -> onAction(HomeAction.ProgressClicked(job.id.value))
+                            }
+                        },
+                        enabled = !state.generation.busy && !state.navigating && (!failed || HomeSection.GENERATION !in state.refreshing),
+                    ) {
+                        Text(stringResource(action))
+                    }
+                }
             }
         }
     }
@@ -328,7 +374,7 @@ private fun HomePlaces(
     onAction: (HomeAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionHeading(stringResource(Res.string.place_setting), stringResource(Res.string.places_heading), {
+        SectionHeading(stringResource(Res.string.home_places_label), stringResource(Res.string.places_heading), {
             onAction(HomeAction.SeeAllPlacesClicked)
         })
         HomeSectionStatus(state, HomeSection.PLACES, onAction)

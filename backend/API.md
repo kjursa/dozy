@@ -44,13 +44,13 @@ For example, characters now support deletion, and full story responses include
   | Email verification session | `sess-<uuidv7>` |
   | Refresh token | `ref-<uuidv4>` |
   | Character | `char-<uuidv7>` |
-  | Custom place | `place-<uuidv7>` |
+  | Place | `place-<uuidv7>` |
   | Asset | `asset-<uuidv7>` |
   | Avatar job | `avjob-<uuidv7>` |
   | Story generation job | `job-<uuidv7>` |
   | Story | `story-<uuidv7>` |
 
-  Built-in places retain their `builtin:` IDs. Clients send an unprefixed UUIDv4
+  Clients send an unprefixed UUIDv4
   in `Idempotency-Key`. Internal execution IDs, snapshot IDs and lease tokens use
   `genid-`, `snap-` and `lease-`, respectively. Start with a fresh SQLite database
   and fresh development sessions when switching from unprefixed IDs.
@@ -224,8 +224,8 @@ non-success HTTP, or observation timeout are mobile failures, not implicit delet
 The current client polls every second for up to 120 GETs. A later PUT explicitly
 attaches the ready asset to a character. Jobs and unattached assets are retained without automatic cleanup during development.
 
-Local fake avatars (`bundled-avatar://...`) exist only in disabled-API development
-mode. They are not server assets. Users must regenerate them through backend jobs before uploading references.
+The development avatar generator picks a sample PNG. The resulting asset belongs
+to the authenticated owner and is served by the usual protected asset endpoint.
 
 ## Places
 
@@ -233,18 +233,20 @@ mode. They are not server assets. Users must regenerate them through backend job
 
 ```json
 {
-  "id":"builtin:woods",
+  "id":"place-00000000-0000-7000-8000-000000000001",
   "name":"Whispering woods",
   "description":"A peaceful forest with glowing paths.",
   "inhabitants":null,
   "origin":"SYSTEM",
-  "editable":false
+  "editable":false,
+  "imageUrl":"https://api.example.com/api/v1/place-icons/forest.png"
 }
 ```
 
 `origin`: `USER` or `SYSTEM`. `editable` is computed from permissions;
 clients cannot grant it by submitting true. Predefined places must not be editable.
-Custom places use non-`builtin:` IDs. No image field is required. Normalize blank
+System and user places use the same ID format. The optional, response-only `imageUrl` points
+to a demo PNG served with bearer authentication. Normalize blank
 inhabitants to null. Current form rules: name required/max 80, description
 required/max 500, inhabitants optional/max 500, using trimmed UTF-16 lengths.
 
@@ -255,10 +257,10 @@ then sorts each group by lowercase name and ID. A fresh database includes all
 three predefined places, so it does not return an empty collection.
 
 No body/query. Return `200 {"places":[<Place>,...]}` containing a complete consistent
-collection of accessible custom and predefined places. Three bundled mobile IDs
-are `builtin:woods`, `builtin:island`, `builtin:village`; preserve their identity.
-The client sorts custom first, then lowercased name and ID. It merges the server
-snapshot with bundled fallback entries and preserves authoritative local edits.
+collection of accessible custom and predefined places. The seeded system places
+keep their assigned IDs across database initializations.
+The Android client sorts custom first, then lowercased name and ID. It caches the
+server snapshot and preserves authoritative local edits.
 `{"places":[]}` is a valid empty remote snapshot. Non-200/invalid collections retain
 known local data; there is no GET-by-ID requirement.
 
@@ -267,13 +269,13 @@ known local data; there is no GET-by-ID requirement.
 Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
 Both methods accept `name`, `description`, and optional `inhabitants`.
-POST assigns a place ID and returns `201 {"id":"place-<uuidv7>"}`. The backend assigns
+POST returns 201 with a backend-assigned `id` and optional `imageUrl`. The backend assigns
 `origin: "USER"` and computes `editable`. POST supports the same optional
 `Idempotency-Key` header as character creation.
 
 PUT takes the existing ID in the path and returns empty `204`. Omitting
 `inhabitants` or passing `null` clears it. The owner can replace the existing
-custom place. The backend rejects changes to the predefined namespace.
+custom place. The backend rejects changes to records with stored origin `SYSTEM`.
 
 Implemented place business errors are shared serializable `PlacesSaveError` values
 from `api/contracts`. Backend sends that object and the SDK deserializes the same
@@ -296,7 +298,7 @@ remain readable even if write limits change.
 | 400 | `INVALID_REQUEST` | Invalid request structure |
 | 401 | | Missing or invalid access token |
 | 422 | Flat validation code above | Invalid user input |
-| 403 | `place.not_editable` | Any `builtin:` ID, including unknown ones |
+| 403 | `place.not_editable` | Existing place with stored origin `SYSTEM` |
 | 404 | `place.not_found` | PUT references a missing custom place |
 | 409 | `IDEMPOTENCY_CONFLICT` | The creation key was used with different input |
 | 409 | `place.conflict` | Custom ID belongs to another owner |
@@ -322,7 +324,7 @@ multi-device reconciliation is not defined; no version precondition is submitted
   "cast":[{"id":"char-019a0000-0000-7000-8000-000000000001","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
-  "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","inhabitants":null,"origin":"SYSTEM","editable":false},
+  "place":{"id":"place-00000000-0000-7000-8000-000000000001","name":"Woods","description":"Quiet woods","inhabitants":null,"origin":"SYSTEM","editable":false},
   "idea":"Help a lost star",
   "ending":"Everyone returns home"
 }

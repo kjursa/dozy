@@ -4,7 +4,6 @@ import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
-import com.dozy.api.client.place.v1.PlacesSaveResult
 import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.mobile.core.config.ApiConfig
@@ -24,6 +23,10 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
+import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -31,10 +34,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlinx.io.IOException
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 
 class PlaceDataTest {
     @Test fun cachesTheServerIdOnlyAfterCreationSucceeds() =
@@ -52,9 +51,11 @@ class PlaceDataTest {
             val repository = DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList())
             assertFailsWith<IllegalStateException> { repository.create(input) }
             assertTrue(dao.rows.value.isEmpty())
-            result = PlacesCreateResult.Success(CreatedPlaceResponse("server-place"))
+            val imageUrl = "https://example.test/api/v1/place-icons/cottage.png"
+            result = PlacesCreateResult.Success(CreatedPlaceResponse("server-place", imageUrl))
             val place = repository.create(input)
             assertEquals(Place.Id("server-place"), place.id)
+            assertEquals(imageUrl, place.imageUrl)
             assertEquals(place, repository.observe().first().single())
             assertFalse(
                 dao.rows.value
@@ -68,11 +69,11 @@ class PlaceDataTest {
             val dao = FakePlaceDao()
             dao.upsert(place("z", "Zoo").toEntity())
             dao.upsert(place("a", "Attic").toEntity())
-            val bundled = listOf(place("builtin:woods", "Woods", false))
+            val bundled = listOf(place("place-00000000-0000-7000-8000-000000000001", "Woods", false))
             val repository =
                 DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { error("No network during observation") }), bundled)
             val ordered = ObservePlaces(repository)().first()
-            assertEquals(listOf("a", "z", "builtin:woods"), ordered.map { it.id.value })
+            assertEquals(listOf("a", "z", "place-00000000-0000-7000-8000-000000000001"), ordered.map { it.id.value })
             assertEquals(listOf(true, true, false), ordered.map { it.canEdit })
             assertEquals(
                 ordered,
@@ -126,7 +127,8 @@ class PlaceDataTest {
                         PlaceDto("remote", "Island", "Sandy", "SYSTEM", false),
                     ),
                 )
-            val repository = DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { PlacesListResult.Success(snapshot) }), emptyList())
+            val repository =
+                DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { PlacesListResult.Success(snapshot) }), emptyList())
             assertTrue(repository.refresh())
             assertEquals(
                 "Local edit",
@@ -148,11 +150,12 @@ class PlaceDataTest {
             val dao = FakePlaceDao()
             val existing = place().toEntity().copy(local = false, pendingSync = false)
             dao.upsert(existing)
-            val failures: List<PlacesListResult> = listOf(
-                PlacesListResult.ApiError(PlacesListError.Unknown("NEW_RULE")),
-                PlacesListResult.TechnicalError(TechnicalError.Server(503)),
-                PlacesListResult.TechnicalError(TechnicalError.Communication(IOException("Offline"))),
-            )
+            val failures: List<PlacesListResult> =
+                listOf(
+                    PlacesListResult.ApiError(PlacesListError.Unknown("NEW_RULE")),
+                    PlacesListResult.TechnicalError(TechnicalError.Server(503)),
+                    PlacesListResult.TechnicalError(TechnicalError.Communication(IOException("Offline"))),
+                )
             for (failure in failures) {
                 val api = fakePlacesClient { failure }
                 assertFalse(DefaultPlaceRepository(dao, fakePlacesClients(api), emptyList()).refresh())
@@ -168,7 +171,9 @@ class PlaceDataTest {
             val repository =
                 DefaultPlaceRepository(
                     dao,
-                    fakePlacesClients(fakePlacesClient { PlacesListResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) }),
+                    fakePlacesClients(
+                        fakePlacesClient { PlacesListResult.Success(PlacesDto(listOf(PlaceDto("x", "", "desc", "USER", true)))) },
+                    ),
                     emptyList(),
                 )
             try {

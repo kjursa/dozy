@@ -17,10 +17,11 @@ data class PlaceResponse(
     val origin: String,
     val editable: Boolean,
     val inhabitants: String? = null,
+    val imageUrl: String? = null,
 )
 
 @Serializable
 data class PlacesResponse(val places: List<PlaceResponse>)
 
 @Serializable
-data class CreatedPlaceResponse(val id: String)
+data class CreatedPlaceResponse(val id: String, val imageUrl: String? = null)

@@ -65,7 +65,7 @@ class AvatarRoutesTest {
         val image = client.get("/assets/${asset.id}") { asOwner(owner) }
         assertEquals(HttpStatusCode.OK, image.status)
         assertEquals("image/png", image.headers["Content-Type"])
-        assertEquals(64, ImageIO.read(ByteArrayInputStream(image.bodyAsBytes())).height)
+        assertEquals(256, ImageIO.read(ByteArrayInputStream(image.bodyAsBytes())).height)
         assertEquals(HttpStatusCode.NotFound, client.get("/assets/unknown") { asOwner(owner) }.status)
         for (id in listOf(job.jobId, "unknown")) {
             val missing = client.get("/api/v1/character-avatars/$id") { asOwner(stranger) }

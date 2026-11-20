@@ -66,6 +66,8 @@ Places is needed. The container exposes singular version interfaces (`places.v1.
 constructors; tests provide interface stubs without constructing production implementations. Mobile registers the root client in Koin and exposes its Places
 container to `DefaultPlaceRepository`.
 Authenticated requests use the JWT subject for resource ownership.
+List and create responses may include a place thumbnail `imageUrl`.
+Fetch thumbnails with `dozy.assetHttpClient`.
 The Places and Characters `create` methods submit fields without a resource ID
 and return the backend-assigned UUIDv7. Supply a UUIDv4 as the optional
 `requestKey` and reuse it for an uncertain retry with the same input.
