@@ -59,6 +59,7 @@ internal object DozyColors {
     val informationBackground = Color(0xFFF1EADC)
     val emptyStateBackground = Color(0xFFEEE9DF)
     val textLink = Color(0xFF226D67)
+    val dangerLink = Color(0xFFAF4C43)
     val settingIconBackground = Color(0xFFE4EEE0)
     val settingIcon = Color(0xFF557E62)
     val navigationAccent = Color(0xFF568875)

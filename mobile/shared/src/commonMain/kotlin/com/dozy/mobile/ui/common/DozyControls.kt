@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -41,6 +42,28 @@ internal fun DozyActionButton(
         enabled = enabled,
         shape = RoundedCornerShape(DozyLayout.actionRadius),
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
+        content = content,
+    )
+}
+
+@Composable
+internal fun DozySecondaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().heightIn(min = DozyLayout.actionMinHeight),
+        enabled = enabled,
+        shape = RoundedCornerShape(DozyLayout.actionRadius),
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 14.dp),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.secondary,
+            ),
         content = content,
     )
 }

@@ -5,6 +5,7 @@ package com.dozy.mobile.feature.character.presentation.details
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,11 +27,9 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,7 +39,10 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,6 +73,7 @@ import com.dozy.mobile.resources.child
 import com.dozy.mobile.resources.fantasy
 import com.dozy.mobile.resources.other
 import com.dozy.mobile.resources.personality
+import com.dozy.mobile.ui.common.DozySecondaryButton
 import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
@@ -94,7 +97,26 @@ internal fun CharacterDetailsContent(
     if (state.deleteDialog) DeleteCharacterDialog(state, dispatch)
 
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .drawBehind {
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(Color(0x134ECDC4), Color.Transparent),
+                        center = Offset(size.width, 0f),
+                        radius = size.width * 0.8f,
+                    ),
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(Color(0x0BFF6B6B), Color.Transparent),
+                        center = Offset(0f, size.height * 0.18f),
+                        radius = size.width * 0.65f,
+                    ),
+                )
+            }.statusBarsPadding()
+            .verticalScroll(rememberScrollState()),
     ) {
         CharacterDetailsTopBar(onBack = { dispatch(CharacterDetailsAction.Back) }, onEdit = { dispatch(CharacterDetailsAction.Edit) })
         if (state.loading) {
@@ -121,29 +143,44 @@ private fun CharacterDetailsTopBar(
     onEdit: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().padding(start = 22.dp, top = 12.dp, end = 22.dp, bottom = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        TextButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(Res.string.back),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        CharacterDetailsIconButton(
+            onClick = onBack,
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            description = stringResource(Res.string.back),
+        )
         Text(
             stringResource(Res.string.character_details_title),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = 10.sp),
             letterSpacing = 1.5.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(onClick = onEdit, modifier = Modifier.size(48.dp)) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = stringResource(Res.string.character_edit),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
+        CharacterDetailsIconButton(
+            onClick = onEdit,
+            icon = Icons.Default.Edit,
+            description = stringResource(Res.string.character_edit),
+        )
+    }
+}
+
+@Composable
+private fun CharacterDetailsIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    description: String,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = description, tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -214,20 +251,19 @@ private fun CharacterDetailsBody(
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(28.dp),
         ) {
-            Text(stringResource(Res.string.character_story_named, character.details.name.value), fontWeight = FontWeight.SemiBold)
+            Text(stringResource(Res.string.character_story_named, character.details.name.value), fontWeight = FontWeight.Black)
             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.padding(start = 8.dp).size(18.dp))
         }
-        OutlinedButton(
+        DozySecondaryButton(
             onClick = { dispatch(CharacterDetailsAction.Edit) },
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(54.dp),
-            shape = RoundedCornerShape(28.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-        ) { Text(stringResource(Res.string.character_edit)) }
+            modifier = Modifier.padding(top = 12.dp).height(54.dp),
+        ) {
+            Text(stringResource(Res.string.character_edit), fontWeight = FontWeight.Black)
+        }
         TextButton(
             onClick = { dispatch(CharacterDetailsAction.Delete) },
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp, bottom = 20.dp),
-        ) { Text(stringResource(Res.string.character_delete), color = MaterialTheme.colorScheme.error) }
+        ) { Text(stringResource(Res.string.character_delete), color = DozyColors.dangerLink) }
     }
 }
 
