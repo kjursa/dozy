@@ -72,13 +72,12 @@ For a local HTTP backend, run from `backend/`:
 DOZY_ASSET_BASE_URL=http://10.0.2.2:8080 DOZY_ASSET_ALLOW_HTTP=true ./gradlew --no-daemon run
 ```
 
-Set the Android API base URL to `http://10.0.2.2:8080` (the emulator host bridge).
-Use a matching reachable origin for other devices. Images are generated from a checked-in PNG fixture and stored in SQLite; no image bytes are fetched from third parties. Production-style URLs default to HTTPS. API and assets must use the same externally reachable origin so the mobile image client can attach the installation header safely.
+The Android debug build uses `http://10.0.2.2:8080` (the emulator host bridge). Images are generated from a checked-in PNG fixture and stored in SQLite; no image bytes are fetched from third parties. Production-style URLs default to HTTPS. API and assets must use the same externally reachable origin so the mobile image client can attach the bearer token safely.
 
-Build the Android debug app against that backend with
-`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`.
-Without this property, remote APIs remain disabled. Debug builds allow cleartext
-for local development; release builds retain Android's HTTPS-only default.
+Run the `debug` variant in Android Studio or build it with
+`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug`.
+Release builds take their API base URL from the `dozy.apiBaseUrl` Gradle property
+and require HTTPS.
 
 ### Local avatar development
 
@@ -88,8 +87,8 @@ From `backend/`, run:
 DOZY_ASSET_PUBLIC_BASE_URL=http://10.0.2.2:8080 DOZY_ASSET_ALLOW_LOCAL_HTTP=true ./gradlew --no-daemon run
 ```
 
-Build Android with `./gradlew --no-daemon :app:assembleDebug -Pdozy.apiBaseUrl=http://10.0.2.2:8080`
-from `mobile/`. With no URL, bundled fakes remain local-only. Use `localhost` or
+Build Android with `./gradlew --no-daemon :app:assembleDebug` from `mobile/`.
+Use `localhost` or
 `127.0.0.1` instead for a host client. HTTPS is the default; local HTTP requires
 explicit backend configuration and is permitted only for loopback/emulator hosts.
 Android release builds keep local HTTP disabled; the debug network policy permits
