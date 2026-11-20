@@ -97,9 +97,9 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Loading/errors retain the face placeholder and accessibility description;
   Unsupported URL schemes never reach the network. The image loader is registered by `imageModule` and
   receives a platform `PlatformContext`.
-- `shared/schemas`: database version 11 adds cached place thumbnail URLs. KSP runs per
-  Android/iOS target. Android generated sources are wired explicitly for the
-  pinned KSP/AGP versions, including on clean builds.
+- Room creates `dozy.db` with the current schema. If an older development build
+  left an incompatible database, clear the app's local data before running
+  the new build. KSP generates the Room classes for Android and iOS.
 - The future iOS host calls `initializeDozy(config, places, requestKeys)` once,
   then embeds `DozyViewController()` from `DozyShared`. The backend assigns new
   character and place IDs. Supply the localized bundled place catalog, story
@@ -115,7 +115,7 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Repository, mapping, MockEngine, pure ViewModel/MVI and feature-graph
   lifetime/argument tests also run from commonTest.
   Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
-  so Android tests reuse domain and DAO fakes. Real Room migration/reopen and
+  so Android tests reuse domain and DAO fakes. Room reopen and
   mixed data/presentation integration tests remain Android-hosted;
   foundation SavedStateHandle tests remain in `androidHostTest`. Mixed form/reader
   recreation tests stay Android-hosted and reuse common fixtures.

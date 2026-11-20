@@ -84,7 +84,6 @@ dependencies {
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
 }
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 // KSP 2.3.12 does not attach Android KMP output to AGP 8.13's compileAndroidMain.
 // Wire the generated constructors/DAOs explicitly so clean builds also process Room.

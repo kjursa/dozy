@@ -213,7 +213,7 @@ reference through StatePersistence. Active jobs, loading, and errors are not
 restored; generation must be explicitly retried. An absent API configuration
 shows an unavailable error and cannot produce an avatar. Existing previews can
 still be saved locally. The proposed HTTP contract, retry rules, asset lifetime,
-and database migration are documented in [CHARACTER_DATA.md](CHARACTER_DATA.md).
+and local storage are documented in [CHARACTER_DATA.md](CHARACTER_DATA.md).
 
 ## 8. Character details
 
@@ -274,7 +274,7 @@ The mobile collection uses bundled, offline predefined suggestions plus durable
 local custom places and a cached remote snapshot. Within each source, names and
 IDs determine order. Selection changes only the persisted story draft setting;
 inhabitants never select main characters. The add/edit form saves locally first and queues unacknowledged uploads. The
-proposed GET/PUT contract, identifiers, ordering, migration, retry, and
+API contract, identifiers, ordering, retry, and
 synchronization limits are documented in [PLACE_DATA.md](PLACE_DATA.md).
 
 ## 10. Creating and editing a place

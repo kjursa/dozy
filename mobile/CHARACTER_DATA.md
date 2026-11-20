@@ -61,7 +61,7 @@ pending local rows and tombstones win, synced absent rows disappear, and remote
 rows replace synced records. Duplicate IDs or malformed transport data reject the
 entire snapshot. Tombstones remain even after acknowledgement, across database
 reopening, and are never uploaded as PUTs. They protect against stale snapshots.
-Room schema v9 adds the local creation drafts table.
+Room stores creation drafts in a dedicated table.
 
 ## API2 avatar generation
 
