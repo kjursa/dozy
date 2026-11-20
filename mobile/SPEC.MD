@@ -82,7 +82,7 @@ A greeting, story creation action, recent stories, characters, and a **Places** 
 | Variant | Content / behavior |
 | --- | --- |
 | Populated | Recent stories, heroes, and compact Places. |
-| First launch | No characters or stories. The main prompt encourages creating the first character and briefly explains the flow. Predefined Places remain available. |
+| Empty collections | The usual Home layout shows the create-story action, an add-character tile, and any loaded places. |
 | Characters exist, no stories | Characters and places remain visible; the story section encourages creating the first story. An intended case without a separate HTML variant. |
 | Generating | A card explains that a new story is being prepared; the user can open progress and continue using the app. |
 | Story ready | A ready card with an action to open that specific story. The story is also in the library. |
@@ -98,7 +98,7 @@ A greeting, story creation action, recent stories, characters, and a **Places** 
 | See all for stories | My Stories. |
 | Character | Character details. |
 | See all for characters | Characters. |
-| Create the first character | Empty character form. |
+| Add character | Empty character form. |
 | See all for Places | Place list. |
 | Place card | Story creation with the selected setting. |
 | View progress | Generation. |
@@ -111,14 +111,12 @@ Home observes the existing shared collections and latest generation job through 
 HomeViewModel. It previews three stories (newest creation timestamp, then ID), six
 characters (the shared collection order: case-insensitive name, then ID), and three
 places (custom before predefined, then case-insensitive name and ID). See all opens
-the full collection. Bundled predefined places remain available offline and on first
-visit; the existing compact place card uses a 48 dp landscape placeholder until final
-thumbnail assets are agreed.
+the full collection. The Android app caches the places returned by the backend.
+The compact place card displays its thumbnail when available.
 
 Each section loads and fails independently and retains known content during refresh
 or failure. Retry restarts a failed observation and refreshes only that section;
-repeated refresh and generation retry taps are ignored while in progress. First-visit
-copy waits for successful local story/character reads and settled refresh attempts.
+repeated refresh and generation retry taps are ignored while in progress.
 Characters without stories show the first-story prompt. Resume refreshes the shared
 collections and reconciles the displayed job; Room updates also arrive while Home is
 open. Navigation carries stable IDs, preserves the existing main tab state, and

@@ -59,7 +59,7 @@ class DefaultPlaceRepository(
             val result = places.v1.create(input.toSaveRequest(), requestKey)
             check(result is PlacesCreateResult.Success) { "Place creation failed" }
             val id = Place.Id(result.response.id)
-            val place = Place(id, input.name, input.description, input.inhabitants, Place.Origin.USER, true)
+            val place = Place(id, input.name, input.description, input.inhabitants, Place.Origin.USER, true, result.response.imageUrl)
             dao.upsert(place.toEntity().copy(pendingSync = false))
             place
         }

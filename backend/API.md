@@ -224,8 +224,8 @@ non-success HTTP, or observation timeout are mobile failures, not implicit delet
 The current client polls every second for up to 120 GETs. A later PUT explicitly
 attaches the ready asset to a character. Jobs and unattached assets are retained without automatic cleanup during development.
 
-Local fake avatars (`bundled-avatar://...`) exist only in disabled-API development
-mode. They are not server assets. Users must regenerate them through backend jobs before uploading references.
+The development avatar generator picks a sample PNG. The resulting asset belongs
+to the authenticated owner and is served by the usual protected asset endpoint.
 
 ## Places
 
@@ -238,13 +238,15 @@ mode. They are not server assets. Users must regenerate them through backend job
   "description":"A peaceful forest with glowing paths.",
   "inhabitants":null,
   "origin":"SYSTEM",
-  "editable":false
+  "editable":false,
+  "imageUrl":"https://api.example.com/api/v1/place-icons/forest.png"
 }
 ```
 
 `origin`: `USER` or `SYSTEM`. `editable` is computed from permissions;
 clients cannot grant it by submitting true. Predefined places must not be editable.
-Custom places use non-`builtin:` IDs. No image field is required. Normalize blank
+Custom places use non-`builtin:` IDs. The optional, response-only `imageUrl` points
+to a demo PNG served with bearer authentication. Normalize blank
 inhabitants to null. Current form rules: name required/max 80, description
 required/max 500, inhabitants optional/max 500, using trimmed UTF-16 lengths.
 
@@ -255,10 +257,10 @@ then sorts each group by lowercase name and ID. A fresh database includes all
 three predefined places, so it does not return an empty collection.
 
 No body/query. Return `200 {"places":[<Place>,...]}` containing a complete consistent
-collection of accessible custom and predefined places. Three bundled mobile IDs
+collection of accessible custom and predefined places. The three predefined IDs
 are `builtin:woods`, `builtin:island`, `builtin:village`; preserve their identity.
-The client sorts custom first, then lowercased name and ID. It merges the server
-snapshot with bundled fallback entries and preserves authoritative local edits.
+The Android client sorts custom first, then lowercased name and ID. It caches the
+server snapshot and preserves authoritative local edits.
 `{"places":[]}` is a valid empty remote snapshot. Non-200/invalid collections retain
 known local data; there is no GET-by-ID requirement.
 
@@ -267,7 +269,7 @@ known local data; there is no GET-by-ID requirement.
 Implemented. Requires bearer authentication and `Content-Type: application/json`.
 
 Both methods accept `name`, `description`, and optional `inhabitants`.
-POST assigns a place ID and returns `201 {"id":"place-<uuidv7>"}`. The backend assigns
+POST returns 201 with a backend-assigned `id` and optional `imageUrl`. The backend assigns
 `origin: "USER"` and computes `editable`. POST supports the same optional
 `Idempotency-Key` header as character creation.
 

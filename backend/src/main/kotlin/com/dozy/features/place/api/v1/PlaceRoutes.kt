@@ -17,6 +17,7 @@ import com.dozy.plugins.ownerId
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -25,11 +26,12 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 
-fun Route.placeV1Routes(service: PlaceService) {
+fun Route.placeV1Routes(service: PlaceService, assetBaseUrl: String) {
+    staticResources("/place-icons", "fixtures/place-icons")
     route("/places") {
         get {
             val places = service.list(call.ownerId())
-            call.respond(PlacesResponse(places.map { it.toResponse() }))
+            call.respond(PlacesResponse(places.map { it.toResponse(assetBaseUrl) }))
         }
         post {
             val ownerId = call.ownerId()
@@ -39,14 +41,16 @@ fun Route.placeV1Routes(service: PlaceService) {
                     ownerId,
                     call.receive<SavePlaceRequest>().toCommand(),
                     requestKey
-                )
+                ),
+                assetBaseUrl,
             )
         }
         put("/{id}") {
             val ownerId = call.ownerId()
             val id = requirePlaceId(call.parameters["id"])
             call.respondToSave(
-                service.save(ownerId, id, call.receive<SavePlaceRequest>().toCommand())
+                service.save(ownerId, id, call.receive<SavePlaceRequest>().toCommand()),
+                assetBaseUrl,
             )
         }
     }
@@ -72,11 +76,11 @@ private fun SavePlaceRequest.toCommand(): SavePlace =
         is ParseResult.Invalid -> throw result.error.toApiException()
     }
 
-private suspend fun ApplicationCall.respondToSave(result: SavePlaceResult) {
+private suspend fun ApplicationCall.respondToSave(result: SavePlaceResult, assetBaseUrl: String) {
     when (result) {
         is SavePlaceResult.Created -> respond(
             HttpStatusCode.Created,
-            CreatedPlaceResponse(result.id.value)
+            CreatedPlaceResponse(result.id.value, result.id.imageUrl(assetBaseUrl))
         )
         SavePlaceResult.Updated -> respond(HttpStatusCode.NoContent)
         SavePlaceResult.NotFound -> throw BusinessApiException(

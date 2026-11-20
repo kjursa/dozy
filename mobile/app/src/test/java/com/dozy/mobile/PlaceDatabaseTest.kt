@@ -33,7 +33,8 @@ class PlaceDatabaseTest {
             val context: Context = RuntimeEnvironment.getApplication()
             context.deleteDatabase("places-test.db")
             val custom = place().toEntity()
-            val remote = PlaceDto("remote", "Island", "Sandy cove", "SYSTEM", false, "Turtles").toEntity()
+            val imageUrl = "https://example.test/api/v1/place-icons/cottage.png"
+            val remote = PlaceDto("remote", "Island", "Sandy cove", "SYSTEM", false, "Turtles", imageUrl).toEntity()
             val database = open(context)
             try {
                 database.characters().upsert(character("hero").toEntity(true))
@@ -89,6 +90,7 @@ class PlaceDatabaseTest {
                         .avatarUrl,
                 )
                 assertEquals("Turtles", reopened.places().find("remote")?.inhabitants)
+                assertEquals(imageUrl, reopened.places().find("remote")?.imageUrl)
                 assertEquals(listOf(custom), reopened.places().pending())
                 val repository =
                     DefaultPlaceRepository(

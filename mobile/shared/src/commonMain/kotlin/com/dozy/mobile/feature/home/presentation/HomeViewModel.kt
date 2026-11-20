@@ -96,7 +96,7 @@ class HomeViewModel(
                         }.getOrDefault(true)
                 }
             if (failed) sectionFailed(section)
-            updateState { copy(refreshing = refreshing - section, initialRefreshes = initialRefreshes + section) }
+            updateState { copy(refreshing = refreshing - section) }
         }
     }
 

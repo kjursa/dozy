@@ -24,14 +24,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import coil3.compose.SubcomposeAsyncImage
+import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.presentation.components.remoteImage
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.resources.*
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 @Composable
 internal fun PlacesScreen(viewModel: PlacesViewModel) {
@@ -95,11 +101,7 @@ internal fun PlaceCard(
                 Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onSelect),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(
-                    Icons.Default.Landscape,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.secondaryContainer),
-                )
+                PlaceThumbnail(place.imageUrl)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(place.name.value, style = MaterialTheme.typography.titleMedium)
                     Text(place.description.value, style = MaterialTheme.typography.bodyMedium)
@@ -117,5 +119,24 @@ internal fun PlaceCard(
                 TextButton(onClick = onEdit, enabled = enabled) { Text(stringResource(Res.string.place_edit)) }
             }
         }
+    }
+}
+
+@Composable
+private fun PlaceThumbnail(url: String?) {
+    val modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.secondaryContainer)
+    val image = remoteImage(url, koinInject<ApiConfig>().allowLocalAssetHttp)
+    if (image == null) {
+        Icon(Icons.Default.Landscape, contentDescription = null, modifier = modifier)
+    } else {
+        SubcomposeAsyncImage(
+            model = image,
+            imageLoader = koinInject(),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
+            loading = { Icon(Icons.Default.Landscape, contentDescription = null) },
+            error = { Icon(Icons.Default.Landscape, contentDescription = null) },
+        )
     }
 }

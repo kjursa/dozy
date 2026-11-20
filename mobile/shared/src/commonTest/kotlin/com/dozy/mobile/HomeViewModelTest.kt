@@ -78,7 +78,7 @@ class HomeViewModelTest {
         RetryGeneration(stories, GenerationKeyGenerator { GenerationJob.RequestKey("retry") }),
     ).also { store.put("home", it) }
 
-    @Test fun firstVisitWaitsForLoadingAndKeepsPredefinedPlaces() =
+    @Test fun emptyHomeKeepsPlacesVisibleDuringCharacterRefresh() =
         runTest(dispatcher) {
             characters.characters.value = emptyList()
             places.places.value = listOf(place("builtin:woods", "Woods", false))
@@ -88,9 +88,7 @@ class HomeViewModelTest {
                 false
             }
             val vm = viewModel()
-            assertFalse(vm.uiState.value.firstVisit)
             runCurrent()
-            assertFalse(vm.uiState.value.firstVisit)
             assertEquals(
                 "builtin:woods",
                 vm.uiState.value.places
@@ -99,7 +97,6 @@ class HomeViewModelTest {
             )
             gate.complete(Unit)
             advanceUntilIdle()
-            assertTrue(vm.uiState.value.firstVisit)
             assertTrue(
                 vm.uiState.value.loading
                     .isEmpty(),
@@ -112,14 +109,25 @@ class HomeViewModelTest {
             vm.resumed()
             runCurrent()
             assertTrue(HomeSection.CHARACTERS in vm.uiState.value.refreshing)
-            assertTrue(vm.uiState.value.firstVisit)
+            assertTrue(
+                vm.uiState.value.characters
+                    .isEmpty(),
+            )
+            assertTrue(
+                vm.uiState.value.stories
+                    .isEmpty(),
+            )
+            assertEquals(
+                "builtin:woods",
+                vm.uiState.value.places
+                    .single()
+                    .id.value,
+            )
             refreshGate.complete(Unit)
             advanceUntilIdle()
-            assertTrue(vm.uiState.value.firstVisit)
 
             characters.characters.value = listOf(character())
             runCurrent()
-            assertFalse(vm.uiState.value.firstVisit)
             assertEquals(
                 "Oliver",
                 vm.uiState.value.characters
@@ -223,7 +231,7 @@ class HomeViewModelTest {
             )
         }
 
-    @Test fun failedObservationCanRestartWithoutClearingOtherSectionsOrShowingFirstVisit() =
+    @Test fun failedObservationCanRestartWithoutClearingOtherSections() =
         runTest(dispatcher) {
             var failRead = true
             val heroes =
@@ -237,7 +245,6 @@ class HomeViewModelTest {
             val vm = viewModel(heroes)
             advanceUntilIdle()
             assertTrue(HomeSection.CHARACTERS in vm.uiState.value.errors)
-            assertFalse(vm.uiState.value.firstVisit)
             assertTrue(
                 vm.uiState.value.places
                     .isNotEmpty(),

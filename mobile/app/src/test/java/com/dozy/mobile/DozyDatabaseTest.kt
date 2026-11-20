@@ -79,16 +79,18 @@ class DozyDatabaseTest {
             }
         }
 
-    @Test fun migratesStoryResultsAndKeepsPendingWork() =
+    @Test fun migratesStoryResultsAndKeepsPendingWorkAndPlaces() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()
             context.deleteDatabase("dozy.db")
             val driver = AndroidSQLiteDriver()
             val pending =
                 GenerationEntity("pending-key", "pending-configuration", "pending-job", "FAILED", retryKey = "retry-key", createdOrder = 2)
+            val savedPlace = place().toEntity()
             val database = Room.databaseBuilder<DozyDatabase>(context, "dozy.db").setDriver(driver).build()
             try {
                 database.generations().upsert(pending)
+                database.places().upsert(savedPlace)
             } finally {
                 database.close()
             }
@@ -97,6 +99,7 @@ class DozyDatabaseTest {
             driver.open(context.getDatabasePath("dozy.db").path).use { connection ->
                 // Restore the v9 columns and seed the three kinds of legacy story records.
                 connection.execSQL("DROP TABLE stories")
+                connection.execSQL("ALTER TABLE places DROP COLUMN imageUrl")
                 connection.execSQL("ALTER TABLE story_generations ADD COLUMN result TEXT DEFAULT NULL")
                 connection.execSQL("ALTER TABLE story_generations ADD COLUMN summary TEXT DEFAULT NULL")
                 connection.execSQL("ALTER TABLE story_generations ADD COLUMN notificationDelivered INTEGER NOT NULL DEFAULT 0")
@@ -119,8 +122,10 @@ class DozyDatabaseTest {
                     modules(androidModule, module { single<SQLiteDriver> { driver } })
                 }
             try {
-                val dao = graph.koin.get<DozyDatabase>().generations()
+                val migrated = graph.koin.get<DozyDatabase>()
+                val dao = migrated.generations()
                 assertEquals(listOf(pending), dao.observe().first())
+                assertEquals(savedPlace, migrated.places().find(savedPlace.id))
                 assertEquals(
                     StoryEntity("story", "completed-job", "completed-key", result, summary, notificationDelivered = true, createdOrder = 1),
                     dao.findStory("story"),

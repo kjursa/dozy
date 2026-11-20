@@ -36,6 +36,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -46,13 +47,17 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.io.TempDir
+import java.io.ByteArrayInputStream
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.SQLException
 import java.util.UUID
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class PlaceRoutesTest {
@@ -72,7 +77,8 @@ class PlaceRoutesTest {
         assertEquals(3, client.places().size)
         val created = client.create(body = body(name = "  Garden  ", inhabitants = "Owls"))
         assertEquals(HttpStatusCode.Created, created.status)
-        val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
+        val creation = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText())
+        val id = creation.id
         assertEquals(7, UUID.fromString(id.removePrefix("place-")).version())
         val saved = client.places().first()
         assertEquals(id, saved.id)
@@ -80,6 +86,8 @@ class PlaceRoutesTest {
         assertEquals("USER", saved.origin)
         assertEquals(true, saved.editable)
         assertEquals("Owls", saved.inhabitants)
+        assertEquals(creation.imageUrl, saved.imageUrl)
+        assertNotNull(creation.imageUrl)
         val updated = client.save(id)
         assertEquals(HttpStatusCode.NoContent, updated.status)
         assertEquals("", updated.bodyAsText())
@@ -88,6 +96,22 @@ class PlaceRoutesTest {
         assertNull(owned.first().inhabitants)
         assertEquals(HttpStatusCode.NoContent, client.save(id).status)
         assertEquals(4, client.places().size)
+    }
+
+    @Test
+    fun `listed place thumbnails are PNGs served behind bearer authentication`() = testApplication {
+        configurePlacesTest()
+        val thumbnails = client.places().map { URI(assertNotNull(it.imageUrl)).path }.toSet()
+        assertEquals(setOf("/api/v1/place-icons/forest.png", "/api/v1/place-icons/cottage.png"), thumbnails)
+        for (path in thumbnails) {
+            assertEquals(HttpStatusCode.Unauthorized, client.get(path).status)
+            val response = client.get(path) { asOwner(owner) }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("image/png", response.headers["Content-Type"]?.substringBefore(';'))
+            val image = assertNotNull(ImageIO.read(ByteArrayInputStream(response.bodyAsBytes())))
+            assertEquals(256, image.width)
+            assertEquals(256, image.height)
+        }
     }
 
     @Test

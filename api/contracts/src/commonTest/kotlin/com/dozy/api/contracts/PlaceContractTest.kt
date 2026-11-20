@@ -21,6 +21,14 @@ class PlaceContractTest {
         assertEquals("SYSTEM", place.origin)
         assertEquals(false, place.editable)
         assertEquals(null, place.inhabitants)
+        assertEquals(null, place.imageUrl)
         assertEquals("/api/v1", ApiVersion.V1.path)
+    }
+
+    @Test
+    fun `v1 response reads the optional place thumbnail URL`() {
+        val body = """{"places":[{"id":"builtin:woods","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false,"imageUrl":"https://example.test/api/v1/place-icons/forest.png"}]}"""
+        val place = Json.decodeFromString<PlacesResponse>(body).places.single()
+        assertEquals("https://example.test/api/v1/place-icons/forest.png", place.imageUrl)
     }
 }

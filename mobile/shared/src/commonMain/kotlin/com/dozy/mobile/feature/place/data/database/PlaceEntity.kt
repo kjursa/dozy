@@ -14,4 +14,5 @@ data class PlaceEntity(
     val editable: Boolean,
     val local: Boolean,
     @ColumnInfo(defaultValue = "1") val pendingSync: Boolean = local,
+    val imageUrl: String? = null,
 )

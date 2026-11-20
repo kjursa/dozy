@@ -211,7 +211,7 @@ class GenerationRepositoryTest {
             assertEquals(ready, recovered.status(ownerId, job.id))
         }
     }
-    @Test fun `worker terminal modes text lengths and protected reference availability`() = runBlocking {
+    @Test fun `worker terminal modes short sample text and protected reference availability`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
             for ((textMode, coverMode, expected) in listOf(
                 Triple(GenerationConfig.TextMode.SUCCESS, GenerationConfig.CoverMode.SUCCESS, null),
@@ -233,12 +233,12 @@ class GenerationRepositoryTest {
                 if (status.storyId != null) {
                     val story = assertNotNull(repository.read(ownerId, status.storyId!!))
                     assertTrue(story.text.contains("Luna") && story.text.contains("Moon garden"))
-                    assertTrue(story.text.split(Regex("\\s+")).size in 550..650)
+                    assertTrue(story.text.split(Regex("\\s+")).size in 90..120)
                 }
                 assertNull(repository.claim())
             }
             val long = FakeTextGenerator(config).generate(configuration().copy(length = StoryConfiguration.Length.LONG))
-            assertTrue(long.text.split(Regex("\\s+")).size in 1400..1600)
+            assertTrue(long.text.split(Regex("\\s+")).size in 90..120)
         }
     }
 }
