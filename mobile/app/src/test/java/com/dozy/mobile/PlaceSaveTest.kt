@@ -236,9 +236,14 @@ class PlaceSaveTest {
                 DefaultPlaceRepository(
                     dao,
                     fakePlacesClients(fakePlacesClient { error("No HTTP allowed") }),
-                    listOf(place("builtin:woods", custom = false)),
+                    listOf(place("place-00000000-0000-7000-8000-000000000001", custom = false)),
                 )
-            for (id in listOf("locked", "remote", "builtin:woods", "builtin:unknown")) {
+            for (id in listOf(
+                "locked",
+                "remote",
+                "place-00000000-0000-7000-8000-000000000001",
+                "place-00000000-0000-7000-8000-000000000004",
+            )) {
                 try {
                     repository.save(place(id))
                     fail("Expected permission rejection for $id")

@@ -77,7 +77,7 @@ class CharacterModuleTest {
 
                     single<CharacterDao> { dao }
                     single<PlaceDao> { FakePlaceDao() }
-                    single { BundledPlaces(listOf(place("builtin:woods", "Woods", false))) }
+                    single { BundledPlaces(listOf(place("place-00000000-0000-7000-8000-000000000001", "Woods", false))) }
                     single<GenerationKeyGenerator> { GenerationKeyGenerator { GenerationJob.RequestKey("injected-key") } }
                     single<GenerationDao> { FakeGenerationDao() }
                     single<HttpClient> { client }

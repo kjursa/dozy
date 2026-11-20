@@ -11,6 +11,7 @@ internal object Places : Table("places") {
     val description = text("description")
     val inhabitants = text("inhabitants").nullable()
     val origin = enumerationByName<Place.Origin>("origin", 16)
+    val thumbnail = enumerationByName<Place.Thumbnail>("thumbnail", 16).default(Place.Thumbnail.COTTAGE)
     val updatedAt = text("updated_at")
     override val primaryKey = PrimaryKey(id)
 }

@@ -69,11 +69,11 @@ class PlaceDataTest {
             val dao = FakePlaceDao()
             dao.upsert(place("z", "Zoo").toEntity())
             dao.upsert(place("a", "Attic").toEntity())
-            val bundled = listOf(place("builtin:woods", "Woods", false))
+            val bundled = listOf(place("place-00000000-0000-7000-8000-000000000001", "Woods", false))
             val repository =
                 DefaultPlaceRepository(dao, fakePlacesClients(fakePlacesClient { error("No network during observation") }), bundled)
             val ordered = ObservePlaces(repository)().first()
-            assertEquals(listOf("a", "z", "builtin:woods"), ordered.map { it.id.value })
+            assertEquals(listOf("a", "z", "place-00000000-0000-7000-8000-000000000001"), ordered.map { it.id.value })
             assertEquals(listOf(true, true, false), ordered.map { it.canEdit })
             assertEquals(
                 ordered,

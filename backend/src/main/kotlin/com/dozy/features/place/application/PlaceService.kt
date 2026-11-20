@@ -8,20 +8,25 @@ import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 
-class PlaceService(private val repository: PlaceRepository) {
-    suspend fun list(ownerId: OwnerId) = repository.list(ownerId).sortedWith(
-        compareBy<Place> { it.origin != Place.Origin.USER }
-            .thenBy { it.name.value.lowercase() }.thenBy { it.id.value },
-    )
+class PlaceService(
+    private val repository: PlaceRepository,
+) {
+    suspend fun list(ownerId: OwnerId) =
+        repository.list(ownerId).sortedWith(
+            compareBy<Place> { it.origin != Place.Origin.USER }
+                .thenBy { it.name.value.lowercase() }
+                .thenBy { it.id.value },
+        )
 
     suspend fun create(
         ownerId: OwnerId,
         command: SavePlace,
-        requestKey: IdempotencyKey? = null
+        requestKey: IdempotencyKey? = null,
     ) = repository.create(ownerId, command, requestKey)
 
-    suspend fun save(ownerId: OwnerId, id: PlaceId, command: SavePlace): SavePlaceResult {
-        if (id.isBuiltIn) return SavePlaceResult.Forbidden
-        return repository.save(ownerId, id, command)
-    }
+    suspend fun save(
+        ownerId: OwnerId,
+        id: PlaceId,
+        command: SavePlace,
+    ): SavePlaceResult = repository.save(ownerId, id, command)
 }

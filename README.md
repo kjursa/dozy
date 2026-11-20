@@ -80,6 +80,11 @@ then generate and open a story. The backend picks from five short bedtime storie
 and serves PNG fixtures for avatars, places, and the story cover.
 Keep the API and asset URLs on the same origin so the app can attach its bearer token.
 
+This development schema uses fixed UUIDv7 IDs for system places. If you
+already initialized a database with the previous seed data, set
+`DOZY_DATABASE_PATH=data/dozy-demo-v2.db` when starting the backend to use a
+fresh database.
+
 Run the `debug` variant in Android Studio or build it with
 `./mobile/gradlew -p mobile --no-daemon :app:assembleDebug`.
 Release builds take their API base URL from the `dozy.apiBaseUrl` Gradle property

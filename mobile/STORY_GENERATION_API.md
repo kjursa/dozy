@@ -24,7 +24,7 @@ Request:
   "cast": [{"id":"hero-1","name":"Luna","personality":"Kind","appearance":"Red hair","type":"CHILD","avatar":null}],
   "mode":"MANUAL",
   "length":"SHORT",
-  "place":{"id":"builtin:woods","name":"Woods","description":"Quiet woods","origin":"SYSTEM","editable":false,"inhabitants":null},
+  "place":{"id":"place-00000000-0000-7000-8000-000000000001","name":"Woods","description":"Quiet woods","origin":"SYSTEM","editable":false,"inhabitants":null},
   "idea":"Help a lost star",
   "ending":"Everyone returns home"
 }

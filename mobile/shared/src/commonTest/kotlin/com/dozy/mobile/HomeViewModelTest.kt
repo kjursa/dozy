@@ -81,7 +81,7 @@ class HomeViewModelTest {
     @Test fun emptyHomeKeepsPlacesVisibleDuringCharacterRefresh() =
         runTest(dispatcher) {
             characters.characters.value = emptyList()
-            places.places.value = listOf(place("builtin:woods", "Woods", false))
+            places.places.value = listOf(place("place-00000000-0000-7000-8000-000000000001", "Woods", false))
             val gate = CompletableDeferred<Unit>()
             characters.beforeRefresh = {
                 gate.await()
@@ -90,7 +90,7 @@ class HomeViewModelTest {
             val vm = viewModel()
             runCurrent()
             assertEquals(
-                "builtin:woods",
+                "place-00000000-0000-7000-8000-000000000001",
                 vm.uiState.value.places
                     .single()
                     .id.value,
@@ -118,7 +118,7 @@ class HomeViewModelTest {
                     .isEmpty(),
             )
             assertEquals(
-                "builtin:woods",
+                "place-00000000-0000-7000-8000-000000000001",
                 vm.uiState.value.places
                     .single()
                     .id.value,
@@ -149,7 +149,12 @@ class HomeViewModelTest {
                 }
             characters.characters.value = (1..8).map { character("hero$it", "Hero $it") }
             places.places.value =
-                listOf(place("builtin:z", "Z", false), place("custom:z", "Z"), place("custom:a", "A"), place("builtin:a", "A", false))
+                listOf(
+                    place("place-00000000-0000-7000-8000-000000000003", "Z", false),
+                    place("custom:z", "Z"),
+                    place("custom:a", "A"),
+                    place("place-00000000-0000-7000-8000-000000000002", "A", false),
+                )
             val vm = viewModel(stories = stories)
             advanceUntilIdle()
             assertEquals(
@@ -159,7 +164,7 @@ class HomeViewModelTest {
             )
             assertEquals(6, vm.uiState.value.characters.size)
             assertEquals(
-                listOf("custom:a", "custom:z", "builtin:a"),
+                listOf("custom:a", "custom:z", "place-00000000-0000-7000-8000-000000000002"),
                 vm.uiState.value.places
                     .map { it.id.value },
             )

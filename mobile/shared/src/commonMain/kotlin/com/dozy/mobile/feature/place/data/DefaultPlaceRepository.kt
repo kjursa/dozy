@@ -66,7 +66,7 @@ class DefaultPlaceRepository(
 
     override suspend fun save(place: Place): PlaceSync =
         mutations.withLock {
-            require(place.canEdit && !place.id.value.startsWith("builtin:"))
+            require(place.canEdit)
             // Check the stored authority too: caller-supplied origin cannot grant edit permission.
             val existing = find(place.id)
             require(existing?.canEdit == true)

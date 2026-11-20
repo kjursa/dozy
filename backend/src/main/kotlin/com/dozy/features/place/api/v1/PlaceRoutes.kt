@@ -8,6 +8,7 @@ import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.domain.id.PlaceId
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.domain.model.ParseResult
+import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
@@ -80,7 +81,7 @@ private suspend fun ApplicationCall.respondToSave(result: SavePlaceResult, asset
     when (result) {
         is SavePlaceResult.Created -> respond(
             HttpStatusCode.Created,
-            CreatedPlaceResponse(result.id.value, result.id.imageUrl(assetBaseUrl))
+            CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl))
         )
         SavePlaceResult.Updated -> respond(HttpStatusCode.NoContent)
         SavePlaceResult.NotFound -> throw BusinessApiException(

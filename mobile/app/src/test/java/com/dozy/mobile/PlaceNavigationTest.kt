@@ -99,9 +99,9 @@ class PlaceNavigationTest {
         val places = nav.currentBackStackEntry
         nav.navigate("place-form")
         nav.popBackStack()
-        nav.usePlace(Place.Id("builtin:woods"), null)
+        nav.usePlace(Place.Id("place-00000000-0000-7000-8000-000000000001"), null)
         assertEquals(CREATE_STORY_ROUTE, nav.currentDestination?.route)
-        assertEquals("builtin:woods", nav.currentBackStackEntry?.arguments?.getString("place"))
+        assertEquals("place-00000000-0000-7000-8000-000000000001", nav.currentBackStackEntry?.arguments?.getString("place"))
         nav.popBackStack()
         assertSame(places, nav.currentBackStackEntry)
         nav.popBackStack()

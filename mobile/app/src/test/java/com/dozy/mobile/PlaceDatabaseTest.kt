@@ -100,7 +100,7 @@ class PlaceDatabaseTest {
                                 error("Local reads must not request HTTP")
                             },
                         ),
-                        listOf(place("builtin:woods", custom = false)),
+                        listOf(place("place-00000000-0000-7000-8000-000000000001", custom = false)),
                     )
                 assertEquals(3, repository.observe().first().size)
                 reopened.places().replaceRemote(emptyList())

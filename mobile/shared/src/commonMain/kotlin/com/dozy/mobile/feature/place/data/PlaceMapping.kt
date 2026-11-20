@@ -9,7 +9,6 @@ import com.dozy.mobile.feature.place.domain.model.PlaceInput
 fun PlaceDto.toEntity(): PlaceEntity {
     require(id.isNotBlank() && name.isNotBlank() && description.isNotBlank())
     val source = Place.Origin.valueOf(origin)
-    require(!id.startsWith("builtin:") || source == Place.Origin.SYSTEM)
     require(source != Place.Origin.SYSTEM || !editable)
     return PlaceEntity(id, name, description, inhabitants?.takeIf { it.isNotBlank() }, source.name, editable, false, imageUrl = imageUrl)
 }

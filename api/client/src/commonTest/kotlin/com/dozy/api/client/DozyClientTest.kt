@@ -32,7 +32,7 @@ class DozyClientTest {
         val http = HttpClient(MockEngine { request ->
             assertEquals("https://example.test/api/v1/places", request.url.toString())
 
-            respond("""{"places":[{"id":"builtin:woods","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false,"newField":true}],"extra":1}""",
+            respond("""{"places":[{"id":"place-00000000-0000-7000-8000-000000000001","name":"Woods","description":"Quiet","origin":"SYSTEM","editable":false,"newField":true}],"extra":1}""",
                 headers = headersOf(HttpHeaders.ContentType, "application/json"))
         })
         try {

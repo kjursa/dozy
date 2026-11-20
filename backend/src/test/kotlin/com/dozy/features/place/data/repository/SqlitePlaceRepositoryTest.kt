@@ -40,8 +40,14 @@ class SqlitePlaceRepositoryTest {
         val owned = repository.list(owner)
         assertEquals(4, owned.size)
         assertEquals("Owls", owned.single { it.id == id }.inhabitants?.value)
-        assertEquals(setOf("builtin:woods", "builtin:island", "builtin:village"),
-            repository.list(stranger).map { it.id.value }.toSet())
+        assertEquals(
+            setOf(
+                "place-00000000-0000-7000-8000-000000000001",
+                "place-00000000-0000-7000-8000-000000000002",
+                "place-00000000-0000-7000-8000-000000000003",
+            ),
+            repository.list(stranger).map { it.id.value }.toSet(),
+        )
     }
 
     @Test
@@ -64,9 +70,9 @@ class SqlitePlaceRepositoryTest {
         val repository = repository()
         val id = assertIs<SavePlaceResult.Created>(repository.create(owner, input)).id
         assertEquals(SavePlaceResult.Conflict, repository.save(stranger, id, input))
-        assertEquals(SavePlaceResult.Forbidden, repository.save(owner, placeId("builtin:woods"), input))
-        assertEquals(SavePlaceResult.Forbidden, repository.save(owner, placeId("builtin:missing"), input))
-        assertEquals("Whispering woods", repository.list(owner).single { it.id.value == "builtin:woods" }.name.value)
+        assertEquals(SavePlaceResult.Forbidden, repository.save(owner, placeId("place-00000000-0000-7000-8000-000000000001"), input))
+        assertEquals(SavePlaceResult.NotFound, repository.save(owner, placeId("place-00000000-0000-7000-8000-000000000004"), input))
+        assertEquals("Whispering woods", repository.list(owner).single { it.id.value == "place-00000000-0000-7000-8000-000000000001" }.name.value)
         assertFalse(repository.list(stranger).any { it.id == id })
     }
 
