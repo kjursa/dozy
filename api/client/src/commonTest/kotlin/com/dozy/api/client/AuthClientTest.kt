@@ -113,6 +113,7 @@ class AuthClientTest {
             client.sessionManager.initialize()
             assertEquals(SessionState.Anonymous("guest"), client.sessionManager.state.value)
             assertEquals(HttpStatusCode.OK, client.assetHttpClient.get("https://api.example/assets/avatar").status)
+            assertEquals(HttpStatusCode.OK, client.assetHttpClient.get("https://api.example/api/v1/place-icons/forest.png").status)
             assertEquals(HttpStatusCode.Unauthorized, client.assetHttpClient.get("https://other.example/assets/avatar").status)
         } finally {
             client.close()

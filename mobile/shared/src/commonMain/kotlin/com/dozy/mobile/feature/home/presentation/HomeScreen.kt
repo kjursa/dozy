@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.SentimentSatisfied
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +37,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -94,34 +92,28 @@ private fun HomeContent(
                 if (state.generation.homeJob != null || HomeSection.GENERATION in state.errors) {
                     HomeJob(state, onAction)
                 }
-                when {
-                    state.firstVisit -> FirstVisitHome(onCreateCharacter = { onAction(HomeAction.AddCharacterClicked) })
-                    state.checkingFirstVisit -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-                    else -> {
-                        CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
-                        Column {
-                            HomeSectionStatus(state, HomeSection.STORIES, onAction)
-                            StoriesSection(state.stories, onStorySelected = {
-                                onAction(HomeAction.StorySelected(it))
-                            }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
-                            if (HomeSection.STORIES !in state.loading &&
-                                HomeSection.STORIES !in state.errors &&
-                                state.stories.isEmpty() &&
-                                state.characters.isNotEmpty()
-                            ) {
-                                Text(stringResource(Res.string.home_first_story), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        Column {
-                            HomeSectionStatus(state, HomeSection.CHARACTERS, onAction)
-                            CharactersSection(
-                                state.characters,
-                                onAddCharacter = { onAction(HomeAction.AddCharacterClicked) },
-                                onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) },
-                                onSeeAll = { onAction(HomeAction.SeeAllCharactersClicked) },
-                            )
-                        }
+                CreateStoryBanner { onAction(HomeAction.CreateStoryClicked) }
+                Column {
+                    HomeSectionStatus(state, HomeSection.STORIES, onAction)
+                    StoriesSection(state.stories, onStorySelected = {
+                        onAction(HomeAction.StorySelected(it))
+                    }, onSeeAll = { onAction(HomeAction.SeeAllStoriesClicked) })
+                    if (HomeSection.STORIES !in state.loading &&
+                        HomeSection.STORIES !in state.errors &&
+                        state.stories.isEmpty() &&
+                        state.characters.isNotEmpty()
+                    ) {
+                        Text(stringResource(Res.string.home_first_story), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+                Column {
+                    HomeSectionStatus(state, HomeSection.CHARACTERS, onAction)
+                    CharactersSection(
+                        state.characters,
+                        onAddCharacter = { onAction(HomeAction.AddCharacterClicked) },
+                        onCharacterSelected = { onAction(HomeAction.CharacterSelected(it)) },
+                        onSeeAll = { onAction(HomeAction.SeeAllCharactersClicked) },
+                    )
                 }
                 HomePlaces(state, onAction)
             }
@@ -162,89 +154,6 @@ private fun HomeHeader() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun FirstVisitHome(onCreateCharacter: () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(UiSpacing.x2),
-    ) {
-        Box(
-            Modifier
-                .padding(vertical = DozyLayout.contentGap)
-                .size(165.dp)
-                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = .45f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                Modifier.size(145.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.SentimentSatisfied,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(56.dp),
-                )
-                Text(
-                    "✦",
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        Text(
-            stringResource(Res.string.home_first_visit_eyebrow),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary,
-        )
-        Text(
-            stringResource(Res.string.home_first_visit_title),
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            stringResource(Res.string.home_first_visit),
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        DozyActionButton(onClick = onCreateCharacter) {
-            Text(stringResource(Res.string.home_first_character))
-        }
-        FirstStorySteps()
-    }
-}
-
-@Composable
-private fun FirstStorySteps() {
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(top = DozyLayout.labelGap),
-        shape = MaterialTheme.shapes.large,
-        color = DozyColors.informationBackground,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-    ) {
-        Column(Modifier.padding(DozyLayout.screenGutter), verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap)) {
-            Text(
-                stringResource(Res.string.home_first_steps_title),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            listOf(Res.string.home_first_step_hero, Res.string.home_first_step_adventure, Res.string.home_first_step_read)
-                .forEachIndexed { index, step ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(DozyLayout.labelGap)) {
-                        Text("0${index + 1}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Text(stringResource(step), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-        }
     }
 }
 

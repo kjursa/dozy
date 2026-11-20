@@ -9,9 +9,8 @@ import com.dozy.mobile.feature.place.domain.model.PlaceInput
 fun PlaceDto.toEntity(): PlaceEntity {
     require(id.isNotBlank() && name.isNotBlank() && description.isNotBlank())
     val source = Place.Origin.valueOf(origin)
-    require(!id.startsWith("builtin:") || source == Place.Origin.SYSTEM)
     require(source != Place.Origin.SYSTEM || !editable)
-    return PlaceEntity(id, name, description, inhabitants?.takeIf { it.isNotBlank() }, source.name, editable, false)
+    return PlaceEntity(id, name, description, inhabitants?.takeIf { it.isNotBlank() }, source.name, editable, false, imageUrl = imageUrl)
 }
 
 fun PlaceEntity.toDomain() =
@@ -22,11 +21,13 @@ fun PlaceEntity.toDomain() =
         inhabitants?.let(Place::Inhabitants),
         Place.Origin.valueOf(origin),
         editable,
+        imageUrl,
     )
 
-fun Place.toEntity() = PlaceEntity(id.value, name.value, description.value, inhabitants?.value, origin.name, editable, true)
+fun Place.toEntity() =
+    PlaceEntity(id.value, name.value, description.value, inhabitants?.value, origin.name, editable, true, imageUrl = imageUrl)
 
-fun Place.toDto() = PlaceDto(id.value, name.value, description.value, origin.name, editable, inhabitants?.value)
+fun Place.toDto() = PlaceDto(id.value, name.value, description.value, origin.name, editable, inhabitants?.value, imageUrl)
 
 fun Place.toSaveRequest() = SavePlaceRequestDto(name.value, description.value, inhabitants?.value)
 

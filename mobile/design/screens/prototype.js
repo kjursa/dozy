@@ -22,8 +22,6 @@ $('[data-night]')?.addEventListener('click', event => {
 function read(key) { try { return JSON.parse(sessionStorage.getItem(`dozy-proposal2-${key}`)); } catch { return null; } }
 function save(key, value) { try { sessionStorage.setItem(`dozy-proposal2-${key}`, JSON.stringify(value)); } catch { /* Nonessential in a mockup. */ } }
 if (page === 'home') {
-  $('[data-empty-home]').hidden = !empty;
-  $('[data-populated-home]').hidden = empty;
   const states = {
     generating: ['YOUR NEW STORY', 'A little magic is happening…', 'We’re creating the story and its cover. You can close the app while we work.', 'View progress', 'generating.html'],
     ready: ['READY FOR TONIGHT', 'Your new story is ready!', 'Oliver and the sleepy forest · 6 min read. A brand-new adventure with familiar faces.', 'Read your story', 'reader.html'],

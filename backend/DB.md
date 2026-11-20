@@ -13,7 +13,7 @@ requests. Flyway discovers versioned SQL in `classpath:db/migration`, applies
 pending migrations in order, and tracks versions and checksums in
 `flyway_schema_history`. Applied script checksum mismatches fail startup.
 `V1__places.sql` creates `installations` and `places`, including an owner index and the three
-read-only `builtin:` places. The SQL table `installations` and columns named
+read-only system places. The SQL table `installations` and columns named
 `installation_id` store owner IDs. SQLite IDs are TEXT, and timestamps use
 `CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
 
@@ -199,11 +199,9 @@ CREATE TABLE places (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CHECK (
-        (origin = 'SYSTEM' AND installation_id IS NULL
-            AND starts_with(id, 'builtin:'))
+        (origin = 'SYSTEM' AND installation_id IS NULL)
         OR
-        (origin = 'USER' AND installation_id IS NOT NULL
-            AND NOT starts_with(id, 'builtin:'))
+        (origin = 'USER' AND installation_id IS NOT NULL)
     ),
     CHECK (inhabitants IS NULL OR btrim(inhabitants) <> '')
 );
@@ -318,8 +316,8 @@ CREATE INDEX stories_cover_idx ON stories (cover_asset_id);
   unconditional UPSERT to revive a tombstone. Character IDs are installation-scoped;
   no other installation's rows are affected by the same submitted ID.
 - `places` has no stored `editable` flag: derive it as true only for the current
-  installation's custom place. Shared predefined places have no owner. Seed
-  `builtin:woods`, `builtin:island`, `builtin:village` without changing their IDs.
+  installation's custom place. Shared predefined places have no owner and use fixed `place-<uuidv7>` IDs.
+  Their stored thumbnail determines which demo PNG URL is returned.
   A custom place ID belonging to another installation cannot be overwritten.
 - `avatar_jobs.request_snapshot` holds type/personality/appearance. It is not a
   character record. `asset_id` is assigned only after successful image persistence.

@@ -3,7 +3,6 @@ package com.dozy.domain.id
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -37,11 +36,15 @@ class IdentifiersTest {
     }
 
     @Test
-    fun preservesBuiltInPlaceSpellingAndClientGeneratedKeys() {
-        val builtIn = assertNotNull(PlaceId.parse("builtin:woods"))
-        assertEquals("builtin:woods", builtIn.value)
-        assertTrue(builtIn.isBuiltIn)
-        assertFalse(PlaceId.generate().isBuiltIn)
+    fun placeIdsRequireTheSameFormatForSystemAndUserPlaces() {
+        val systemId = "place-00000000-0000-7000-8000-000000000001"
+        assertEquals(systemId, PlaceId.parse(systemId)?.value)
+        assertNull(PlaceId.parse("builtin:woods"))
+        assertNull(PlaceId.parse("place-${UUID.randomUUID()}"))
+    }
+
+    @Test
+    fun preservesClientGeneratedKeys() {
         val key = UUID.randomUUID().toString()
         assertEquals(key, IdempotencyKey.parse(key)?.value)
         assertNull(IdempotencyKey.parse("key-$key"))

@@ -36,6 +36,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -46,13 +47,17 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.io.TempDir
+import java.io.ByteArrayInputStream
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.sql.SQLException
 import java.util.UUID
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class PlaceRoutesTest {
@@ -62,17 +67,25 @@ class PlaceRoutesTest {
     private val collection = "/api/v1/places"
 
     @Test
-    fun `lists builtins then saves and replaces a normalized custom place`() = testApplication {
+    fun `lists system places then saves and replaces a normalized custom place`() = testApplication {
         configurePlacesTest()
         val initial = client.places()
         assertEquals(3, initial.size)
-        assertEquals(setOf("builtin:village", "builtin:island", "builtin:woods"), initial.map { it.id }.toSet())
+        assertEquals(
+            setOf(
+                "place-00000000-0000-7000-8000-000000000001",
+                "place-00000000-0000-7000-8000-000000000002",
+                "place-00000000-0000-7000-8000-000000000003",
+            ),
+            initial.map { it.id }.toSet(),
+        )
         initial.forEach { assertFalse(it.editable); assertEquals("SYSTEM", it.origin) }
         assertError(client.save("place-019a0000-0000-7000-8000-000000000003"), HttpStatusCode.NotFound, "place.not_found")
         assertEquals(3, client.places().size)
         val created = client.create(body = body(name = "  Garden  ", inhabitants = "Owls"))
         assertEquals(HttpStatusCode.Created, created.status)
-        val id = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText()).id
+        val creation = Json.decodeFromString<CreatedPlaceResponse>(created.bodyAsText())
+        val id = creation.id
         assertEquals(7, UUID.fromString(id.removePrefix("place-")).version())
         val saved = client.places().first()
         assertEquals(id, saved.id)
@@ -80,6 +93,8 @@ class PlaceRoutesTest {
         assertEquals("USER", saved.origin)
         assertEquals(true, saved.editable)
         assertEquals("Owls", saved.inhabitants)
+        assertEquals(creation.imageUrl, saved.imageUrl)
+        assertNotNull(creation.imageUrl)
         val updated = client.save(id)
         assertEquals(HttpStatusCode.NoContent, updated.status)
         assertEquals("", updated.bodyAsText())
@@ -88,6 +103,24 @@ class PlaceRoutesTest {
         assertNull(owned.first().inhabitants)
         assertEquals(HttpStatusCode.NoContent, client.save(id).status)
         assertEquals(4, client.places().size)
+    }
+
+    @Test
+    fun `listed place thumbnails are PNGs served behind bearer authentication`() = testApplication {
+        configurePlacesTest()
+        val thumbnailsByName = client.places().associate { it.name to URI(assertNotNull(it.imageUrl)).path }
+        assertEquals("/api/v1/place-icons/forest.png", thumbnailsByName["Whispering woods"])
+        val thumbnails = thumbnailsByName.values.toSet()
+        assertEquals(setOf("/api/v1/place-icons/forest.png", "/api/v1/place-icons/cottage.png"), thumbnails)
+        for (path in thumbnails) {
+            assertEquals(HttpStatusCode.Unauthorized, client.get(path).status)
+            val response = client.get(path) { asOwner(owner) }
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals("image/png", response.headers["Content-Type"]?.substringBefore(';'))
+            val image = assertNotNull(ImageIO.read(ByteArrayInputStream(response.bodyAsBytes())))
+            assertEquals(256, image.width)
+            assertEquals(256, image.height)
+        }
     }
 
     @Test
@@ -135,13 +168,18 @@ class PlaceRoutesTest {
     }
 
     @Test
-    fun `protects predefined namespace even for unknown IDs`() = testApplication {
-        configurePlacesTest()
-        for (builtin in listOf("builtin:woods", "builtin:missing")) {
-            assertError(client.save(path = builtin, body = body()), HttpStatusCode.Forbidden, "place.not_editable")
+    fun `uses stored origin to protect system places and rejects old IDs`() =
+        testApplication {
+            configurePlacesTest()
+            val systemPlaces = client.places()
+            for (place in systemPlaces) {
+                assertError(client.save(path = place.id), HttpStatusCode.Forbidden, "place.not_editable")
+                assertError(client.save(path = place.id, ownerId = stranger), HttpStatusCode.Forbidden, "place.not_editable")
+            }
+            assertError(client.save(path = "place-00000000-0000-7000-8000-000000000004"), HttpStatusCode.NotFound, "place.not_found")
+            assertError(client.save(path = "builtin:woods"), HttpStatusCode.BadRequest, "INVALID_REQUEST")
+            assertEquals(systemPlaces, client.places())
         }
-        assertEquals("Whispering woods", client.places().single { it.id == "builtin:woods" }.name)
-    }
 
     @Test
     fun `rejects malformed JSON and missing fields`() = testApplication {

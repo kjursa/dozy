@@ -13,6 +13,7 @@ import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.character.api.v1.characterV1Routes
 import com.dozy.api.contracts.ApiVersion
 import com.dozy.di.configureDependencies
+import com.dozy.config.GenerationConfig
 import com.dozy.features.place.api.v1.placeV1Routes
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.auth.application.AccessTokens
@@ -45,6 +46,7 @@ fun Application.module() {
     install(CallLogging)
     install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
     val places: PlaceService by dependencies
+    val generationConfig: GenerationConfig by dependencies
     val assets: AssetRepository by dependencies
     val stories: StoryService by dependencies
     val storyScheduler: StoryGenerationScheduler by dependencies
@@ -60,7 +62,7 @@ fun Application.module() {
             authenticate(OWNER_AUTH) {
                 assetV1Routes(assets)
                 storyV1Routes(stories)
-                placeV1Routes(places)
+                placeV1Routes(places, generationConfig.assetBaseUrl)
                 characterV1Routes()
                 avatarV1Routes(jobs)
             }

@@ -10,27 +10,13 @@ import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.core.data.database.databaseModule
-import com.dozy.mobile.feature.place.di.BundledPlaces
-import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
 import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
 import com.dozy.mobile.feature.story.data.background.GenerationWorkerFactory
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.usecase.GenerationKeyGenerator
 import com.dozy.mobile.feature.story.domain.usecase.StoryCompletionNotifier
-import com.dozy.mobile.resources.Res
-import com.dozy.mobile.resources.place_island
-import com.dozy.mobile.resources.place_island_description
-import com.dozy.mobile.resources.place_village
-import com.dozy.mobile.resources.place_village_description
-import com.dozy.mobile.resources.place_village_inhabitants
-import com.dozy.mobile.resources.place_woods
-import com.dozy.mobile.resources.place_woods_description
-import com.dozy.mobile.resources.place_woods_inhabitants
 import io.ktor.client.engine.android.Android
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.getString
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import java.util.UUID
@@ -50,48 +36,6 @@ internal val androidModule =
             GenerationKeyGenerator {
                 GenerationJob
                     .RequestKey(UUID.randomUUID().toString())
-            }
-        }
-        single {
-            runBlocking {
-                suspend fun place(
-                    id: String,
-                    name: StringResource,
-                    description: StringResource,
-                    inhabitants: StringResource?,
-                ) = Place(
-                    Place.Id(id),
-                    Place.Name(
-                        getString(name),
-                    ),
-                    Place.Description(
-                        getString(description),
-                    ),
-                    inhabitants?.let {
-                        Place.Inhabitants(
-                            getString(it),
-                        )
-                    },
-                    Place.Origin.SYSTEM,
-                    false,
-                )
-                BundledPlaces(
-                    listOf(
-                        place(
-                            "builtin:woods",
-                            Res.string.place_woods,
-                            Res.string.place_woods_description,
-                            Res.string.place_woods_inhabitants,
-                        ),
-                        place("builtin:island", Res.string.place_island, Res.string.place_island_description, null),
-                        place(
-                            "builtin:village",
-                            Res.string.place_village,
-                            Res.string.place_village_description,
-                            Res.string.place_village_inhabitants,
-                        ),
-                    ),
-                )
             }
         }
     }

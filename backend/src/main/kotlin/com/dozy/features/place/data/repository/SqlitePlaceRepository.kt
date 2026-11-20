@@ -52,8 +52,8 @@ class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceReposit
     ): SavePlaceResult = database.write {
         val existing = existingPlace(id)
         when {
-            id.isBuiltIn -> SavePlaceResult.Forbidden
             existing == null -> SavePlaceResult.NotFound
+            existing.origin == Place.Origin.SYSTEM -> SavePlaceResult.Forbidden
             existing.ownerId != ownerId -> SavePlaceResult.Conflict
             else -> {
                 updatePlace(id, command)

@@ -85,7 +85,7 @@ internal class PlaceFormRestorationTest : PlaceFormViewModelFixture() {
             advanceUntilIdle()
             assertEquals(PlaceFormDestination.Back, effect.await())
             assertEquals(0, repository.saves)
-            val predefined = vm(repository, id = "builtin:woods")
+            val predefined = vm(repository, id = "place-00000000-0000-7000-8000-000000000001")
             advanceUntilIdle()
             assertFalse(predefined.uiState.value.initialized)
             predefined.dispatch(PlaceFormAction.Save)

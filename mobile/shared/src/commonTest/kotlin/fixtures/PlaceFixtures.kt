@@ -21,7 +21,7 @@ internal fun place(
 )
 
 internal class FakePlaceRepository : PlaceRepository {
-    val places = MutableStateFlow(listOf(place(), place("builtin:woods", "Woods", false)))
+    val places = MutableStateFlow(listOf(place(), place("place-00000000-0000-7000-8000-000000000001", "Woods", false)))
     var findFailure = false
     var refreshCalls = 0
     var saves = 0

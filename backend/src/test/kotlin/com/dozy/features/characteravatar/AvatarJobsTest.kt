@@ -67,7 +67,7 @@ class AvatarJobsTest {
             assertEquals(AvatarState.READY, jobs.find(owner, job.id)?.state)
             jobs.complete(job, true)
             val bytes = assertNotNull(storage.get(job.assetId))
-            assertEquals(64, ImageIO.read(ByteArrayInputStream(bytes)).width)
+            assertEquals(256, ImageIO.read(ByteArrayInputStream(bytes)).width)
             assertTrue(bytes.contentEquals(assertNotNull(LocalAvatarStorage(config).get(job.assetId))))
             val avatar = Character.Avatar(job.assetId, job.url)
             val command = (SaveCharacter.parse("Hero", input.personality, input.appearance, input.type, avatar) as SaveCharacter.Result.Valid).command

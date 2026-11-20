@@ -17,7 +17,6 @@ val databaseModule =
             get<DatabaseBuilderFactory>()
                 .create()
                 .setDriver(get())
-                .addMigrations(storyPublicationMigration)
                 .build()
         } onClose
             { it?.close() }

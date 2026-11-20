@@ -8,11 +8,17 @@ data class Place(
     val description: Description,
     val inhabitants: Inhabitants?,
     val origin: Origin,
+    val thumbnail: Thumbnail = Thumbnail.COTTAGE,
 ) {
     @JvmInline value class Name(val value: String)
     @JvmInline value class Description(val value: String)
     @JvmInline value class Inhabitants(val value: String)
     enum class Origin { USER, SYSTEM }
+
+    enum class Thumbnail(val fileName: String) {
+        COTTAGE("cottage.png"),
+        FOREST("forest.png"),
+    }
 }
 
 sealed interface ParseResult<out T, out E> {

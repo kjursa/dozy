@@ -240,8 +240,6 @@
     <string name="stories_create">Create a story</string>
     <string name="stories_refresh">Refresh</string>
     <string name="home_header_subtitle">Who will tonight’s heroes be?</string>
-    <string name="home_first_visit_eyebrow">A LITTLE BEGINNING</string>
-    <string name="home_first_visit_title">Every story starts with someone.</string>
     <string name="home_banner_eyebrow">A NEW STORY EVERY NIGHT</string>
     <string name="home_banner_title">Same little heroes.\nNew big adventures.</string>
     <string name="home_banner_body">You bring the characters. We’ll bring the magic.</string>
@@ -250,11 +248,6 @@
     <string name="home_characters_label">YOUR LITTLE HEROES</string>
     <string name="home_characters_title">Familiar faces</string>
     <string name="home_places_label">LITTLE WORLDS TO EXPLORE</string>
-    <string name="home_first_visit">Create a character inspired by your child, a favourite animal, or a completely imaginary friend.</string>
-    <string name="home_first_steps_title">YOUR FIRST BEDTIME STORY</string>
-    <string name="home_first_step_hero">Describe your hero</string>
-    <string name="home_first_step_adventure">Choose an adventure — or let us surprise you</string>
-    <string name="home_first_step_read">Read your very own story together</string>
     <string name="home_job_active_label">YOUR NEW STORY</string>
     <string name="home_job_active_title">A little magic is happening…</string>
     <string name="home_job_active_body">We’re creating the story and its cover. You can close the app while we work.</string>
@@ -262,7 +255,6 @@
     <string name="home_job_ready_title">Your new story is ready!</string>
     <string name="home_job_failed_label">LET’S TRY THAT AGAIN</string>
     <string name="home_job_failed_title">The adventure needs another moment.</string>
-    <string name="home_first_character">Create your first character</string>
     <string name="home_first_story">Your heroes are ready. Create their first story!</string>
     <string name="story_form_title">CREATE A STORY</string>
     <string name="story_form_eyebrow">TONIGHT’S LITTLE ESCAPE</string>

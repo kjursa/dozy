@@ -20,7 +20,7 @@ class BundledPlaces(
 val placeDataModule =
     module {
         single<PlacesClients> { get<DozyClient>().places }
-        single<PlaceRepository> { DefaultPlaceRepository(get(), get(), get<BundledPlaces>().places) }
+        single<PlaceRepository> { DefaultPlaceRepository(get(), get(), getOrNull<BundledPlaces>()?.places.orEmpty()) }
         factoryOf(::ObservePlaces)
         factoryOf(::RefreshPlaces)
         factoryOf(::SelectPlace)
