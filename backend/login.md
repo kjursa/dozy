@@ -34,6 +34,6 @@ The mobile API client stores tokens through a platform-provided `AuthSessionStor
 
 - Sending real emails and production delivery configuration.
 - Importing, merging, or restoring an anonymous library into an email account.
-- Reassigning data created under the legacy installation ID to a guest or email account.
+- Reassigning data created under the legacy owner ID to a guest or email account.
 - Anonymous story quotas and anti-abuse controls.
 - Session listing and revocation of a single device session.

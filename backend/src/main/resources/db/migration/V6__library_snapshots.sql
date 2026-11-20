@@ -1,6 +1,6 @@
 CREATE TABLE library_snapshots (
  id TEXT PRIMARY KEY NOT NULL,
- installation_id TEXT NOT NULL REFERENCES installations(id),
+ owner_id TEXT NOT NULL REFERENCES installations(id),
  page_limit INTEGER NOT NULL,
  summaries TEXT NOT NULL
 );

@@ -145,7 +145,7 @@ class PlaceRoutesTest {
     fun `reads and writes require valid bearer credentials`() = testApplication {
         configurePlacesTest()
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/v1/places") {
-            header("X-Installation-Id", owner.value)
+            header("X-Owner-Id", owner.value)
         }.status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/v1/places") {
             bearerAuth("invalid")

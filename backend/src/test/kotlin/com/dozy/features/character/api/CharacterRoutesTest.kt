@@ -154,7 +154,7 @@ class CharacterRoutesTest {
         assertEquals("REFERENCE_UNAVAILABLE", Json.decodeFromString<ApiErrorResponse>(reference.bodyAsText()).code)
         assertTrue(client.list().isEmpty())
         for (header in listOf(null, "invalid")) {
-            val response = client.get("/api/v1/characters") { header?.let { header("X-Installation-Id", it) } }
+            val response = client.get("/api/v1/characters") { header?.let { header("X-Owner-Id", it) } }
             assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
         val badId = client.put("/api/v1/characters/not-a-uuid") { asOwner(owner); contentType(ContentType.Application.Json); setBody(Json.encodeToString(input)) }

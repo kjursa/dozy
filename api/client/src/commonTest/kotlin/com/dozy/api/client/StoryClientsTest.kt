@@ -82,7 +82,7 @@ class StoryClientsTest {
         } finally { http.close() }
     }
     @Test fun `malformed terminal states become technical errors and cancellation propagates`() = runTest {
-        for (code in listOf("INVALID_REQUEST", "INVALID_INSTALLATION_ID")) {
+        for (code in listOf("INVALID_REQUEST", "INVALID_OWNER_ID")) {
             val http = HttpClient(MockEngine { respond("""{"code":"$code"}""", HttpStatusCode.BadRequest) })
             try { assertIs<GenerationStatusResult.TechnicalError>(sdk(http).storyGenerations.v1.status("job")) } finally { http.close() }
         }

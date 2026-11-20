@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object Jobs : Table("avatar_jobs") {
     val id = text("id")
-    val ownerId = reference("installation_id", OwnerPartitions.id)
+    val ownerId = reference("owner_id", OwnerPartitions.id)
     val type = text("type")
     val personality = text("personality")
     val appearance = text("appearance")

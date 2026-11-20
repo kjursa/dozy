@@ -37,7 +37,7 @@ class SqliteDatabaseTest {
                 statement.executeUpdate("INSERT INTO installations (id) VALUES ('owner')")
                 statement.executeUpdate(
                     """
-                    INSERT INTO story_jobs (id, installation_id, operation, idempotency_key, canonical_request,
+                    INSERT INTO story_jobs (id, owner_id, operation, idempotency_key, canonical_request,
                                             configuration, stage, story_id, asset_id, created_at, title, text, execution_id)
                     VALUES ('done', 'owner', 'START_STORY_V1', 'done-key', '{}', '{}', 'READY', 'published', 'cover-1', 1, 'Title', 'Story', 'first'),
                            ('pending', 'owner', 'START_STORY_V1', 'pending-key', '{}', '{}', 'QUEUED', 'reserved', 'cover-2', 2, NULL, NULL, 'second')

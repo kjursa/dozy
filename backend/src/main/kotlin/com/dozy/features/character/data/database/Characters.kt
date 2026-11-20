@@ -10,7 +10,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object Characters : Table("characters") {
     val id = text("id")
-    val ownerId = reference("installation_id", OwnerPartitions.id)
+    val ownerId = reference("owner_id", OwnerPartitions.id)
     val name = text("name")
     val personality = text("personality")
     val appearance = text("appearance")

@@ -45,7 +45,7 @@ internal class ResourceCreation(
 }
 
 private object ResourceCreations : Table("resource_creations") {
-    val ownerId = reference("installation_id", OwnerPartitions.id)
+    val ownerId = reference("owner_id", OwnerPartitions.id)
     val type = text("resource_type")
     val key = text("request_key")
     val requestHash = text("request_hash")

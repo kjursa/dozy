@@ -110,7 +110,7 @@ class DozyClientTest {
     fun `invalid requests malformed payloads and unexpected statuses are communication errors`() = runTest {
         for ((status, body) in listOf(
             400 to """{"code":"INVALID_REQUEST"}""",
-            400 to """{"code":"INVALID_INSTALLATION_ID"}""",
+            400 to """{"code":"INVALID_OWNER_ID"}""",
             400 to "<html>Bad request</html>",
             422 to "{}",
             200 to "<html>Not JSON</html>",

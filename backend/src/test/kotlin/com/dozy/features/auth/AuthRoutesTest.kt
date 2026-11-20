@@ -74,7 +74,7 @@ class AuthRoutesTest {
         val otherRefresh = other.getValue("refreshToken").jsonPrimitive.content
         assertEquals(HttpStatusCode.NoContent, client.post("/api/v1/auth/logout") {
             bearerAuth(fields.getValue("accessToken").jsonPrimitive.content)
-            header("X-Installation-Id", otherId)
+            header("X-Owner-Id", otherId)
             contentType(ContentType.Application.Json)
             setBody("""{"ownerId":"$otherId"}""")
         }.status)
