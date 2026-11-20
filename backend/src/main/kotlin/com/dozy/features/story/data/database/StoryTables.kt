@@ -4,7 +4,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object StoryJobs : Table("story_jobs") {
     val id = text("id")
-    val ownerId = text("installation_id")
+    val ownerId = text("owner_id")
     val operation = text("operation")
     val key = text("idempotency_key")
     val canonical = text("canonical_request")
@@ -25,7 +25,7 @@ internal object StoryJobs : Table("story_jobs") {
 internal object Stories : Table("stories") {
     val id = text("id")
     val jobId = text("job_id")
-    val ownerId = text("installation_id")
+    val ownerId = text("owner_id")
     val title = text("title")
     val text = text("text")
     val coverUrl = text("cover_url")
@@ -36,7 +36,7 @@ internal object Stories : Table("stories") {
 
 internal object StoryExecutions : Table("story_executions") {
     val id = text("id")
-    val ownerId = text("installation_id")
+    val ownerId = text("owner_id")
     val jobId = text("job_id")
     val key = text("idempotency_key")
     val operation = text("operation")

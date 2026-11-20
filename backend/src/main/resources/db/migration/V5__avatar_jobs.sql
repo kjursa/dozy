@@ -1,6 +1,6 @@
 CREATE TABLE avatar_jobs (
     id TEXT PRIMARY KEY NOT NULL,
-    installation_id TEXT NOT NULL REFERENCES installations(id),
+    owner_id TEXT NOT NULL REFERENCES installations(id),
     type TEXT NOT NULL,
     personality TEXT NOT NULL,
     appearance TEXT NOT NULL,

@@ -145,7 +145,7 @@ is compiled into the framework without building or running an iOS application.
 ## Characters API1
 
 Character CRUD uses the shared `CharactersClients` container with persisted
-installation identity. Saves/edits and deletion tombstones are durable before HTTP;
+owner IDentity. Saves/edits and deletion tombstones are durable before HTTP;
 refresh retries pending mutations and replaces only synced collection data.
 Android generates avatars through API2. The backend returns a sample PNG and
 validates character references against the shared owned asset registry.

@@ -82,7 +82,7 @@ class ClientResultsTest {
                 try { assertEquals(failure.message, assertIs<TechnicalError.Communication>(operation.technical(operation.invoke(sdk(http)))).exception.message, operation.name) }
                 finally { http.close() }
             }
-            for (body in listOf("{}", "<html>Invalid</html>", """{"code":"INVALID_REQUEST"}""", """{"code":"INVALID_INSTALLATION_ID"}""")) {
+            for (body in listOf("{}", "<html>Invalid</html>", """{"code":"INVALID_REQUEST"}""", """{"code":"INVALID_OWNER_ID"}""")) {
                 val http = HttpClient(MockEngine { respond(body, HttpStatusCode.BadRequest) })
                 try { assertIs<TechnicalError.Communication>(operation.technical(operation.invoke(sdk(http))), operation.name) }
                 finally { http.close() }

@@ -6,10 +6,10 @@ snapshot fields. A null ApiConfig base URL sends no HTTP and reports unavailabil
 
 `DefaultGenerationRepository` directly injects `StoryGenerationsClients`,
 `StoriesClients`, and the existing Room DAO. Shared story DTOs replace mobile-owned transport models.
-All new operations carry the persisted `X-Installation-Id`. Android WorkManager,
+All new operations carry the persisted `X-Owner-Id`. Android WorkManager,
 completion notifications, local caches, reader settings and independent cast-only
 new-adventure requests retain their existing behavior. Protected cover loads use
-the same HttpClient, with an installation header restricted to the configured
+the same HttpClient, with an owner header restricted to the configured
 backend asset origin. Local HTTP needs matching HTTP app/backend URLs and the
 backend's explicit development opt-in.
 
@@ -222,7 +222,7 @@ duplicate IDs, invalid metadata or malformed pages fail the refresh. The client
 validates all pages before replacing remote summary rows in one Room transaction. Cancellation propagates. Retry is an explicit
 idempotent GET starting at page one; no generation, cover generation or POST occurs.
 
-Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_INSTALLATION_ID,
+Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_OWNER_ID,
 422 `validation.limit.invalid_value`, 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
 retryable library error while retaining known cards; raw server messages are not
 shown. Transport failures retain the cache and show a retryable error. Null ApiConfig shows the offline library without claiming synchronization and sends no requests.

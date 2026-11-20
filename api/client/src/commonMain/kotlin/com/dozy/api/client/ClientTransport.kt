@@ -15,7 +15,7 @@ internal suspend fun <E : ApiBusinessError, R> HttpResponse.businessFailure(seri
     if (status.value in 500..599) return technicalError(TechnicalError.Server(status.value))
     if (status.value !in 400..499) throw InvalidResponseException(status.value)
     val error = clientJson.decodeFromString(serializer, bodyAsText())
-    if (ApiErrorCode.fromValue(error.code) in setOf(ApiErrorCode.INVALID_REQUEST, ApiErrorCode.INVALID_INSTALLATION_ID)) {
+    if (ApiErrorCode.fromValue(error.code) in setOf(ApiErrorCode.INVALID_REQUEST, ApiErrorCode.INVALID_OWNER_ID)) {
         throw InvalidRequestException(status.value, ApiErrorResponse(error.code))
     }
     return apiError(error)

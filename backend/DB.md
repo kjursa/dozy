@@ -14,7 +14,7 @@ pending migrations in order, and tracks versions and checksums in
 `flyway_schema_history`. Applied script checksum mismatches fail startup.
 `V1__places.sql` creates `installations` and `places`, including an owner index and the three
 read-only system places. The SQL table `installations` and columns named
-`installation_id` store owner IDs. SQLite IDs are TEXT, and timestamps use
+`owner_id` store owner IDs. SQLite IDs are TEXT, and timestamps use
 `CURRENT_TIMESTAMP`; the PostgreSQL DDL below is not run by the application.
 
 Data access uses Exposed 1.6.1 SQL DSL over the SQLite JDBC driver, without ORM
@@ -114,15 +114,15 @@ storage; PostgreSQL holds references, input snapshots, generated text, and job s
 
 Confirmed product decisions:
 
-- No user accounts or login for now. Resources belong to an installation identified
-  by a client-generated UUID in `X-Installation-Id`, without a separate secret.
+- No user accounts or login for now. Resources belong to an owner identified
+  by a client-generated UUID in `X-Owner-Id`, without a separate secret.
 - Keep the existing generated-avatar contract, including explicit generation before
   character save. The local fake generator is a development convenience only.
-- Reinstallation without preserving the installation ID creates a separate namespace;
+- Reinstallation without preserving the owner ID creates a separate namespace;
   there is no cross-device library/account recovery contract.
 
 The UUID is a namespace identifier, not strong authentication. A caller presenting
-another installation's ID could access its resources. Use TLS, keep IDs out of
+another owner's ID could access its resources. Use TLS, keep IDs out of
 public URLs/logs, and do not describe this as authenticated private storage.
 Mobile must persist/send this new header; it does not do so today. The backend can
 register an installation on its first valid request, without inventing a separate
@@ -161,17 +161,17 @@ CREATE TABLE installations (
 
 CREATE TABLE assets (
     id text PRIMARY KEY CHECK (btrim(id) <> ''),
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     kind text NOT NULL CHECK (kind IN ('AVATAR', 'STORY_COVER')),
     object_key text NOT NULL UNIQUE CHECK (btrim(object_key) <> ''),
     public_url text NOT NULL CHECK (public_url LIKE 'https://%'),
     created_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (id, installation_id)
+    UNIQUE (id, owner_id)
 );
-CREATE INDEX assets_installation_idx ON assets (installation_id);
+CREATE INDEX assets_owner_idx ON assets (owner_id);
 
 CREATE TABLE characters (
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     id text NOT NULL CHECK (btrim(id) <> ''),
     name text NOT NULL CHECK (btrim(name) <> ''),
     personality text NOT NULL,
@@ -181,17 +181,17 @@ CREATE TABLE characters (
     deleted_at timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (installation_id, id),
-    FOREIGN KEY (avatar_asset_id, installation_id)
-        REFERENCES assets (id, installation_id)
+    PRIMARY KEY (owner_id, id),
+    FOREIGN KEY (avatar_asset_id, owner_id)
+        REFERENCES assets (id, owner_id)
 );
-CREATE INDEX characters_visible_idx ON characters (installation_id, id)
+CREATE INDEX characters_visible_idx ON characters (owner_id, id)
     WHERE deleted_at IS NULL;
 CREATE INDEX characters_avatar_idx ON characters (avatar_asset_id);
 
 CREATE TABLE places (
     id text PRIMARY KEY CHECK (btrim(id) <> ''),
-    installation_id uuid REFERENCES installations(id),
+    owner_id uuid REFERENCES installations(id),
     origin text NOT NULL CHECK (origin IN ('USER', 'SYSTEM')),
     name text NOT NULL CHECK (btrim(name) <> ''),
     description text NOT NULL CHECK (btrim(description) <> ''),
@@ -199,17 +199,17 @@ CREATE TABLE places (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CHECK (
-        (origin = 'SYSTEM' AND installation_id IS NULL)
+        (origin = 'SYSTEM' AND owner_id IS NULL)
         OR
-        (origin = 'USER' AND installation_id IS NOT NULL)
+        (origin = 'USER' AND owner_id IS NOT NULL)
     ),
     CHECK (inhabitants IS NULL OR btrim(inhabitants) <> '')
 );
-CREATE INDEX places_installation_idx ON places (installation_id);
+CREATE INDEX places_owner_idx ON places (owner_id);
 
 CREATE TABLE avatar_jobs (
     id text PRIMARY KEY CHECK (id ~ '^[A-Za-z0-9_-]{1,128}$'),
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     request_snapshot jsonb NOT NULL CHECK (jsonb_typeof(request_snapshot) = 'object'),
     status text NOT NULL CHECK (status IN ('QUEUED', 'RUNNING', 'READY', 'FAILED')),
     asset_id text,
@@ -221,32 +221,32 @@ CREATE TABLE avatar_jobs (
     provider_request_id text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    FOREIGN KEY (asset_id, installation_id) REFERENCES assets (id, installation_id),
+    FOREIGN KEY (asset_id, owner_id) REFERENCES assets (id, owner_id),
     CHECK ((status = 'READY') = (asset_id IS NOT NULL)),
     CHECK (status = 'FAILED' OR error_code IS NULL)
 );
-CREATE INDEX avatar_jobs_owner_idx ON avatar_jobs (installation_id, id);
+CREATE INDEX avatar_jobs_owner_idx ON avatar_jobs (owner_id, id);
 CREATE INDEX avatar_jobs_work_idx ON avatar_jobs (available_at, lease_until)
     WHERE status IN ('QUEUED', 'RUNNING');
 
 CREATE TABLE story_jobs (
     id text PRIMARY KEY CHECK (id ~ '^[A-Za-z0-9_-]{1,128}$'),
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     configuration jsonb NOT NULL CHECK (jsonb_typeof(configuration) = 'object'),
     status text NOT NULL CHECK (status IN
         ('QUEUED', 'CREATING_TEXT', 'CREATING_COVER', 'READY', 'FAILED')),
     current_attempt integer NOT NULL DEFAULT 1 CHECK (current_attempt > 0),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (id, installation_id)
+    UNIQUE (id, owner_id)
 );
-CREATE UNIQUE INDEX one_active_story_per_installation
-    ON story_jobs (installation_id)
+CREATE UNIQUE INDEX one_active_story_per_owner
+    ON story_jobs (owner_id)
     WHERE status IN ('QUEUED', 'CREATING_TEXT', 'CREATING_COVER');
 
 CREATE TABLE story_attempts (
     job_id text NOT NULL,
-    installation_id uuid NOT NULL,
+    owner_id uuid NOT NULL,
     attempt_no integer NOT NULL CHECK (attempt_no > 0),
     status text NOT NULL CHECK (status IN
         ('QUEUED', 'CREATING_TEXT', 'CREATING_COVER', 'READY', 'FAILED')),
@@ -262,8 +262,8 @@ CREATE TABLE story_attempts (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (job_id, attempt_no),
-    UNIQUE (job_id, attempt_no, installation_id),
-    FOREIGN KEY (job_id, installation_id) REFERENCES story_jobs (id, installation_id),
+    UNIQUE (job_id, attempt_no, owner_id),
+    FOREIGN KEY (job_id, owner_id) REFERENCES story_jobs (id, owner_id),
     CHECK ((status = 'FAILED') = (error_code IS NOT NULL))
 );
 ALTER TABLE story_jobs ADD CONSTRAINT story_jobs_current_attempt_fk
@@ -273,16 +273,16 @@ CREATE INDEX story_attempts_work_idx ON story_attempts (available_at, lease_unti
     WHERE status IN ('QUEUED', 'CREATING_TEXT', 'CREATING_COVER');
 
 CREATE TABLE story_request_keys (
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     idempotency_key uuid NOT NULL,
     operation text NOT NULL CHECK (operation IN ('START', 'RETRY')),
     job_id text NOT NULL,
     attempt_no integer NOT NULL,
     request_fingerprint text NOT NULL CHECK (btrim(request_fingerprint) <> ''),
     created_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (installation_id, idempotency_key),
-    FOREIGN KEY (job_id, attempt_no, installation_id)
-        REFERENCES story_attempts (job_id, attempt_no, installation_id)
+    PRIMARY KEY (owner_id, idempotency_key),
+    FOREIGN KEY (job_id, attempt_no, owner_id)
+        REFERENCES story_attempts (job_id, attempt_no, owner_id)
 );
 CREATE UNIQUE INDEX one_start_key_per_story ON story_request_keys (job_id)
     WHERE operation = 'START';
@@ -290,21 +290,21 @@ CREATE INDEX story_request_keys_attempt_idx ON story_request_keys (job_id, attem
 
 CREATE TABLE stories (
     id text PRIMARY KEY CHECK (id ~ '^[A-Za-z0-9_-]{1,128}$'),
-    installation_id uuid NOT NULL REFERENCES installations(id),
+    owner_id uuid NOT NULL REFERENCES installations(id),
     job_id text NOT NULL UNIQUE,
     title text NOT NULL CHECK (btrim(title) <> ''),
     text text NOT NULL CHECK (btrim(text) <> ''),
     cover_asset_id text NOT NULL,
     reading_minutes integer NOT NULL CHECK (reading_minutes > 0),
     created_at timestamptz NOT NULL,
-    UNIQUE (id, installation_id),
-    FOREIGN KEY (job_id, installation_id) REFERENCES story_jobs (id, installation_id),
-    FOREIGN KEY (cover_asset_id, installation_id) REFERENCES assets (id, installation_id),
+    UNIQUE (id, owner_id),
+    FOREIGN KEY (job_id, owner_id) REFERENCES story_jobs (id, owner_id),
+    FOREIGN KEY (cover_asset_id, owner_id) REFERENCES assets (id, owner_id),
     CHECK (created_at >= timestamptz '1970-01-01 00:00:00+00'),
     CHECK (created_at = date_trunc('milliseconds', created_at))
 );
 CREATE INDEX stories_library_idx
-    ON stories (installation_id, id COLLATE "C" DESC);
+    ON stories (owner_id, id COLLATE "C" DESC);
 CREATE INDEX stories_cover_idx ON stories (cover_asset_id);
 
 ```
@@ -360,7 +360,7 @@ In one transaction:
 
 1. Ensure the installation row exists, then lock it (`SELECT ... FOR UPDATE`) to
    serialize initial/retry acceptance for that installation.
-2. Look up `(installation_id, idempotency_key)` first. For a matching START
+2. Look up `(owner_id, idempotency_key)` first. For a matching START
    fingerprint return its bound job/attempt status; otherwise return conflict.
 3. Reject another active logical job. Insert job, attempt 1, and START binding.
    The deferred current-attempt foreign key is satisfied before commit.

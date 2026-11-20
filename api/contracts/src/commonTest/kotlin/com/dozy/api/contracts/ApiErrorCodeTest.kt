@@ -13,7 +13,7 @@ class ApiErrorCodeTest {
         val expected = mapOf(
             ApiErrorCode.INVALID_REQUEST to "INVALID_REQUEST",
             ApiErrorCode.VALIDATION_FAILED to "VALIDATION_FAILED",
-            ApiErrorCode.INVALID_INSTALLATION_ID to "INVALID_INSTALLATION_ID",
+            ApiErrorCode.INVALID_OWNER_ID to "INVALID_OWNER_ID",
             ApiErrorCode.FORBIDDEN to "FORBIDDEN",
             ApiErrorCode.CONFLICT to "CONFLICT",
             ApiErrorCode.UNAVAILABLE to "UNAVAILABLE",

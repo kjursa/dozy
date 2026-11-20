@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object Places : Table("places") {
     val id = text("id")
-    val ownerId = reference("installation_id", OwnerPartitions.id).nullable()
+    val ownerId = reference("owner_id", OwnerPartitions.id).nullable()
     val name = text("name")
     val description = text("description")
     val inhabitants = text("inhabitants").nullable()

@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.core.Table
 
 internal object Assets : Table("assets") {
     val id = text("id")
-    val ownerId = reference("installation_id", OwnerPartitions.id)
+    val ownerId = reference("owner_id", OwnerPartitions.id)
     val url = text("url")
     val status = text("status")
     override val primaryKey = PrimaryKey(id)
