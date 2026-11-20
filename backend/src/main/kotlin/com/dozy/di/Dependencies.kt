@@ -25,6 +25,7 @@ import com.dozy.features.place.application.PlaceService
 import com.dozy.features.place.data.repository.SqlitePlaceRepository
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.features.story.application.GenerationWorker
+import com.dozy.features.story.application.StoryGenerationScheduler
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.FakeTextGenerator
@@ -59,6 +60,7 @@ fun Application.configureDependencies() {
         provide<CoverGenerator> { FakeCoverGenerator(resolve()) }
         provide<StoryService> { StoryService(resolve()) }
         provide<GenerationWorker> { GenerationWorker(resolve(), resolve(), resolve(), resolve()) }
+        provide<StoryGenerationScheduler> { StoryGenerationScheduler(resolve(), resolve(), resolve()) }
         provide<AppConfig> { AppConfig.from(configuration) }
         provide<AvatarConfig> { resolve<AppConfig>().avatars }
         provide<AvatarJobs> { SqliteAvatarJobs(resolve(), resolve()) }

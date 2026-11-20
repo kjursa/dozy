@@ -3,7 +3,7 @@ package com.dozy
 import com.dozy.features.asset.api.v1.assetV1Routes
 import com.dozy.features.auth.api.v1.authV1Routes
 import com.dozy.features.asset.domain.repository.AssetRepository
-import com.dozy.features.story.application.GenerationWorker
+import com.dozy.features.story.application.StoryGenerationScheduler
 import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.api.v1.storyV1Routes
 import com.dozy.features.characteravatar.api.v1.avatarV1Routes
@@ -47,10 +47,10 @@ fun Application.module() {
     val places: PlaceService by dependencies
     val assets: AssetRepository by dependencies
     val stories: StoryService by dependencies
-    val storyWorker: GenerationWorker by dependencies
+    val storyScheduler: StoryGenerationScheduler by dependencies
     val jobs: AvatarJobs by dependencies
     val avatarWorker: AvatarWorker by dependencies
-    storyWorker.start(this)
+    storyScheduler.start(this)
     avatarWorker.start(this)
     routing {
         authenticate(OWNER_AUTH) { avatarAssetRoutes(assets) }

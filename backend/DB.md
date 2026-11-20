@@ -73,8 +73,10 @@ persisted generated text, lease token/expiry, and execution count. A unique
 constraint on owner and idempotency key and a partial unique index on active owner jobs
 make concurrent submissions atomic. Replays precede the active-limit check.
 
-Workers claim in short IMMEDIATE transactions and run injected generators outside
-transactions. Concurrency is bounded by typed configuration. A 30-second lease is
+A single scheduler per backend instance claims jobs in short IMMEDIATE transactions.
+It fills available worker slots up to the configured concurrency, checks again when
+a worker finishes, and waits up to five seconds after an empty claim. Workers run
+injected generators outside transactions. A 30-second lease is
 renewed during generation. On process death another worker recovers the stored
 stage when its lease expires, reusing persisted text at CREATING_COVER. Lease tokens
 fence old executions. Storage failures leave work recoverable; generator failures
