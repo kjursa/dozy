@@ -47,18 +47,18 @@
 .code-screen { flex:1; display:flex; flex-direction:column; min-height:0; padding-bottom:17px; }
 .code-screen .topline { margin-bottom:17px; }.code-screen .lead { margin-bottom:16px; }
 .code-display { min-height:42px; display:flex; align-items:center; justify-content:center; margin:0 0 5px; }
-.digit-slots { width:100%; display:flex; align-items:center; justify-content:center; gap:clamp(3px,1.3vw,7px); }
-.digit-slot { width:clamp(22px,6.4vw,27px); height:clamp(22px,6.4vw,27px); border:1.5px solid #a9aa9f; border-radius:50%; display:grid; place-items:center; color:#111; font-size:9px; line-height:1; }
+.digit-slots { width:100%; display:flex; align-items:center; justify-content:center; gap:4px; }
+.digit-slot { width:min(30px, 7vw); height:min(30px, 7vw); border:1.5px solid #a9aa9f; border-radius:50%; display:grid; place-items:center; color:#111; font-size:9px; line-height:1; }
 .digit-slot.active { border:2px solid var(--focus-ring); }
 .digit-slot.filled { border-color:#202321; }
 .code-separator { color:#90938a; font-size:13px; font-weight:900; padding:0 1px; }
 .code-screen .resend { margin:4px 0 0; font-size:10px; }
 .code-screen form { margin-top:auto; padding-top:14px; }
 .number-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:7px 12px; margin:0 2px; }
-.number-pad button { width:50px; height:50px; min-height:0; justify-self:center; align-self:center; border:0; border-radius:50%; background:#edf1e8; color:#354b3f; font-size:20px; font-weight:800; box-shadow:none; }
+.number-pad button { width:58px; height:58px; min-height:0; justify-self:center; align-self:center; border:0; border-radius:50%; background:#edf1e8; color:#354b3f; font-size:20px; font-weight:800; box-shadow:none; }
 .number-pad button:active { background:#dce9dc; transform:scale(.95); }
-.number-pad .clear-key { width:auto; min-width:50px; padding:0 5px; border-radius:14px; background:transparent; font-size:10px; letter-spacing:.1px; color:#728274; }
-.number-pad .delete-key { width:50px; background:transparent; font-size:22px; color:#637a6d; }
+.number-pad .clear-key { width:auto; min-width:58px; padding:0 5px; border-radius:14px; background:transparent; font-size:10px; letter-spacing:.1px; color:#728274; }
+.number-pad .delete-key { width:58px; background:transparent; font-size:22px; color:#637a6d; }
 @media(max-width:670px) { body:not(.catalog) { padding:18px 12px 30px; background:#eae5dc; }.device { min-height:844px; border-radius:26px; } }
 @media(max-width:390px) { .story-card { flex-basis:84%; }.story-card img { height:260px; } }
 @media(max-height:730px) { .form-screen .topline { margin-bottom:12px; }.form-screen .lead { margin-bottom:14px; }.story-card img { height:225px; } }
@@ -78,8 +78,8 @@
 .welcome-screen .guest-link { display:block; width:max-content; margin:0 auto; padding:10px 8px 5px; color:#536d5f; font-size:12px; line-height:1.5; font-weight:800; text-align:center; text-decoration:none; }
 .welcome-screen .guest-link:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; border-radius:8px; }
 .welcome-legal { margin-top:12px; }
-.email-screen form { flex:initial; }
+
 .email-screen form .email-account-note { margin:-1px 2px 18px; }
-.email-screen form .button { margin-top:8px; justify-content:center; }
-.email-screen .email-legal { margin-top:auto; padding-top:20px; }
+.email-screen form .button { margin-top:auto; justify-content:center; }
+.email-screen .email-legal { margin-top:8px; }
 @media(max-height:730px) { .welcome-screen .topline { margin-bottom:12px; }.welcome-illustration { width:106px; height:106px; margin-bottom:14px; }.welcome-actions { padding-top:12px; } }

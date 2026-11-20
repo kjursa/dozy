@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,17 +19,21 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,8 +64,6 @@ import com.dozy.mobile.resources.login_email_label
 import com.dozy.mobile.resources.login_email_placeholder
 import com.dozy.mobile.resources.login_email_title
 import com.dozy.mobile.resources.login_or
-import com.dozy.mobile.resources.login_pin_back
-import com.dozy.mobile.resources.login_pin_check_mail
 import com.dozy.mobile.resources.login_pin_clear
 import com.dozy.mobile.resources.login_pin_delete_description
 import com.dozy.mobile.resources.login_pin_intro
@@ -251,7 +254,6 @@ internal fun LoginEmailScreen(
     state: LoginUiState,
     onEmailChanged: (String) -> Unit,
     onSubmit: () -> Unit,
-    onBack: () -> Unit,
 ) {
     Column(
         Modifier
@@ -262,52 +264,51 @@ internal fun LoginEmailScreen(
             .imePadding()
             .padding(horizontal = DozyLayout.screenGutter, vertical = DozyLayout.cardPadding),
     ) {
-        TextButton(onClick = onBack) { Text(stringResource(Res.string.login_pin_back)) }
-        Text(
-            stringResource(Res.string.login_address_title),
-            style = MaterialTheme.typography.headlineLarge,
-        )
-        Text(
-            stringResource(Res.string.login_address_intro),
-            modifier = Modifier.padding(top = DozyLayout.labelGap, bottom = DozyLayout.screenGutter),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        DozyFormField(
-            label = stringResource(Res.string.login_email_label),
-            value = state.email,
-            onValueChange = onEmailChanged,
-            placeholder = stringResource(Res.string.login_email_placeholder),
-            singleLine = true,
-            error = if (state.emailError) stringResource(Res.string.login_email_error) else null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-        )
-        if (state.loginError) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Text(
-                stringResource(Res.string.login_request_error),
-                modifier = Modifier.padding(top = 5.dp),
-                color = MaterialTheme.colorScheme.error,
+                stringResource(Res.string.login_address_title),
+                style = MaterialTheme.typography.headlineLarge,
+            )
+            Text(
+                stringResource(Res.string.login_address_intro),
+                modifier = Modifier.padding(top = DozyLayout.labelGap, bottom = DozyLayout.screenGutter),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            DozyFormField(
+                label = stringResource(Res.string.login_email_label),
+                value = state.email,
+                onValueChange = onEmailChanged,
+                placeholder = stringResource(Res.string.login_email_placeholder),
+                singleLine = true,
+                error = if (state.emailError) stringResource(Res.string.login_email_error) else null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = { onSubmit() }),
+            )
+            if (state.loginError) {
+                Text(
+                    stringResource(Res.string.login_request_error),
+                    modifier = Modifier.padding(top = 5.dp),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Text(
+                stringResource(Res.string.login_account_note),
                 style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(vertical = 16.dp),
             )
         }
-        Text(
-            stringResource(Res.string.login_account_note),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(vertical = 16.dp),
-        )
         DozyActionButton(onClick = onSubmit, enabled = !state.sendingPin) {
             Text(stringResource(if (state.sendingPin) Res.string.login_sending else Res.string.login_send_pin))
         }
-        Spacer(Modifier.weight(1f))
-        DozyFootnote(stringResource(Res.string.login_terms))
+        DozyFootnote(stringResource(Res.string.login_terms), Modifier.padding(top = DozyLayout.labelGap))
     }
 }
 
 @Composable
 internal fun LoginPinScreen(
     state: LoginUiState,
-    onBack: () -> Unit,
     onResend: () -> Unit,
     onDigit: (Int) -> Unit,
     onDelete: () -> Unit,
@@ -321,17 +322,6 @@ internal fun LoginPinScreen(
             .navigationBarsPadding()
             .padding(horizontal = DozyLayout.screenGutter, vertical = 14.dp),
     ) {
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.Start)) {
-            androidx.compose.material3.Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(Res.string.login_pin_back),
-            )
-        }
-        Text(
-            stringResource(Res.string.login_pin_check_mail),
-            style = MaterialTheme.typography.labelSmall,
-            color = DozyColors.textLink,
-        )
         Text(stringResource(Res.string.login_pin_title), style = MaterialTheme.typography.headlineLarge)
         Text(
             stringResource(Res.string.login_pin_intro, state.email),
@@ -379,34 +369,42 @@ private fun PinIndicator(
     verifying: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(3) { group ->
-            if (group > 0) {
-                Text("-", modifier = Modifier.padding(horizontal = 5.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(3) { position ->
-                    val index = group * 3 + position
-                    val filled = index < pin.length
-                    val focused = index == pin.length && !verifying
-                    Box(
-                        Modifier
-                            .size(25.dp)
-                            .then(
-                                if (focused) {
-                                    Modifier.border(2.dp, DozyColors.focus, CircleShape)
-                                } else {
-                                    Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                                },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (filled) {
-                            Text("●", color = Color.Black, style = MaterialTheme.typography.labelSmall)
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val gap = 4.dp
+        val separatorWidth = 12.dp
+        val slotSize = ((maxWidth - gap * 6 - separatorWidth * 2) / 9).coerceAtMost(30.dp)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(3) { group ->
+                if (group > 0) {
+                    Text(
+                        "–",
+                        modifier = Modifier.width(separatorWidth),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    repeat(3) { position ->
+                        val index = group * 3 + position
+                        val filled = index < pin.length
+                        val focused = index == pin.length && !verifying
+                        val borderColor =
+                            when {
+                                focused -> DozyColors.focus
+                                filled -> MaterialTheme.colorScheme.onSurface
+                                else -> DozyColors.fieldOutline
+                            }
+                        Box(
+                            Modifier.size(slotSize).border(if (focused) 2.dp else 1.dp, borderColor, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (filled) {
+                                Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurface, CircleShape))
+                            }
                         }
                     }
                 }
@@ -422,36 +420,30 @@ private fun NumberPad(
     onDelete: () -> Unit,
     onClear: () -> Unit,
 ) {
-    val rows = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        rows.forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                row.forEach { digit ->
-                    NumberKey(digit.toString(), enabled, onClick = { onDigit(digit) })
-                }
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onClear, enabled = enabled) { Text(stringResource(Res.string.login_pin_clear)) }
-            NumberKey("0", enabled, onClick = { onDigit(0) })
-            Surface(
-                modifier =
-                    Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .clickable(enabled = enabled, onClick = onDelete),
-                shape = CircleShape,
-                color = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.Icon(
-                        Icons.AutoMirrored.Filled.Backspace,
-                        contentDescription = stringResource(Res.string.login_pin_delete_description),
-                    )
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        repeat(4) { row ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                repeat(3) { column ->
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        when {
+                            row < 3 -> {
+                                val digit = row * 3 + column + 1
+                                NumberKey(digit.toString(), enabled, onClick = { onDigit(digit) })
+                            }
+                            column == 0 ->
+                                TextButton(onClick = onClear, enabled = enabled) {
+                                    Text(stringResource(Res.string.login_pin_clear))
+                                }
+                            column == 1 -> NumberKey("0", enabled, onClick = { onDigit(0) })
+                            else ->
+                                IconButton(onClick = onDelete, enabled = enabled, modifier = Modifier.size(58.dp)) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Backspace,
+                                        contentDescription = stringResource(Res.string.login_pin_delete_description),
+                                    )
+                                }
+                        }
+                    }
                 }
             }
         }
@@ -467,7 +459,7 @@ private fun NumberKey(
     Surface(
         modifier =
             Modifier
-                .size(50.dp)
+                .size(58.dp)
                 .clip(CircleShape)
                 .clickable(enabled = enabled, onClick = onClick),
         shape = CircleShape,
@@ -475,7 +467,7 @@ private fun NumberKey(
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(label, style = MaterialTheme.typography.headlineSmall)
         }
     }
 }
@@ -496,7 +488,6 @@ internal fun LoginWelcomeScreen(
             .padding(DozyLayout.screenGutter),
         verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap),
     ) {
-        Image(painterResource(Res.drawable.dozy_cloud_logo), null, Modifier.size(42.dp))
         Image(
             painterResource(Res.drawable.login_story),
             null,

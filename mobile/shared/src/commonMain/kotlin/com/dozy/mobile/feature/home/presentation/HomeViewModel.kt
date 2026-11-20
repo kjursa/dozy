@@ -95,8 +95,8 @@ class HomeViewModel(
                             job?.let { refreshGeneration(it.id) == RefreshGeneration.Result.Unavailable } ?: false
                         }.getOrDefault(true)
                 }
-            updateState { copy(refreshing = refreshing - section) }
             if (failed) sectionFailed(section)
+            updateState { copy(refreshing = refreshing - section, initialRefreshes = initialRefreshes + section) }
         }
     }
 

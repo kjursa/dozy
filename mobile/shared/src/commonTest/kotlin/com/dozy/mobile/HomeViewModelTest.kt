@@ -104,6 +104,19 @@ class HomeViewModelTest {
                 vm.uiState.value.loading
                     .isEmpty(),
             )
+            val refreshGate = CompletableDeferred<Unit>()
+            characters.beforeRefresh = {
+                refreshGate.await()
+                false
+            }
+            vm.resumed()
+            runCurrent()
+            assertTrue(HomeSection.CHARACTERS in vm.uiState.value.refreshing)
+            assertTrue(vm.uiState.value.firstVisit)
+            refreshGate.complete(Unit)
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value.firstVisit)
+
             characters.characters.value = listOf(character())
             runCurrent()
             assertFalse(vm.uiState.value.firstVisit)

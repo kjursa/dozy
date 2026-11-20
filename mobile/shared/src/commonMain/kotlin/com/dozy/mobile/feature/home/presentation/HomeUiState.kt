@@ -16,15 +16,18 @@ data class HomeUiState(
     val refreshing: Set<HomeSection> = emptySet(),
     val errors: Map<HomeSection, UiText> = emptyMap(),
     val navigating: Boolean = false,
+    val initialRefreshes: Set<HomeSection> = emptySet(),
 ) {
+    val checkingFirstVisit: Boolean
+        get() = canShowFirstVisit && (firstVisitSections.any { it in loading } || !initialRefreshes.containsAll(firstVisitSections))
+
     val firstVisit: Boolean
-        get() =
-            characters.isEmpty() &&
-                stories.isEmpty() &&
-                HomeSection.CHARACTERS !in loading &&
-                HomeSection.STORIES !in loading &&
-                HomeSection.CHARACTERS !in refreshing &&
-                HomeSection.STORIES !in refreshing &&
-                HomeSection.CHARACTERS !in errors &&
-                HomeSection.STORIES !in errors
+        get() = canShowFirstVisit && !checkingFirstVisit
+
+    private val canShowFirstVisit: Boolean
+        get() = characters.isEmpty() && stories.isEmpty() && firstVisitSections.none { it in errors }
+
+    private companion object {
+        val firstVisitSections = setOf(HomeSection.CHARACTERS, HomeSection.STORIES)
+    }
 }
