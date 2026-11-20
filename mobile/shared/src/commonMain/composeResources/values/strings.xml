@@ -177,6 +177,13 @@
     <string name="character_unavailable">This character is unavailable.</string>
     <string name="character_edit">Edit character</string>
     <string name="character_story">Create a story with this hero</string>
+    <string name="character_story_named">Create a story with %1$s</string>
+    <string name="character_details_title">Your character</string>
+    <string name="character_details_intro">A familiar face. A thousand possibilities.</string>
+    <string name="character_details_child_tag">Your little explorer</string>
+    <string name="character_details_animal_tag">Your furry friend</string>
+    <string name="character_details_fantasy_tag">Your magical friend</string>
+    <string name="character_details_other_tag">Your special character</string>
     <string name="characters_offline">Offline — saved characters remain available on this device.</string>
     <string name="characters_refresh">Refresh</string>
     <string name="characters_retry">Retry</string>

@@ -1,5 +1,7 @@
 package com.dozy.mobile.di
 
+import androidx.sqlite.SQLiteDriver
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.dozy.api.client.auth.AuthSessionStorage
 import com.dozy.api.client.auth.StoredAuthSession
 import com.dozy.mobile.core.config.ApiConfig
@@ -22,6 +24,7 @@ fun iosDataModule(
     config: ApiConfig,
     places: BundledPlaces,
 ) = module {
+    single<SQLiteDriver> { BundledSQLiteDriver() }
     includes(databaseModule, httpClientModule, dozyClientModule, characterDataModule, placeDataModule, storyDataModule)
     single { config }
     single<AuthSessionStorage> { IosAuthSessionStorage() }

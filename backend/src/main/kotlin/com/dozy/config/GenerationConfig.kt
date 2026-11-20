@@ -8,8 +8,8 @@ data class GenerationConfig(
     val coverMode: CoverMode = CoverMode.SUCCESS,
     val delayMillis: Long = 250,
     val concurrency: Int = 2,
-    val assetBaseUrl: String = "https://localhost:8080",
-    val allowHttp: Boolean = false,
+    val assetBaseUrl: String = "http://localhost:8080",
+    val allowHttp: Boolean = true,
     val leaseMillis: Long = 30000,
 ) {
     enum class TextMode { SUCCESS, FAILURE, CONTENT_REJECTED, FAIL_ONCE }
@@ -18,7 +18,10 @@ data class GenerationConfig(
         require(delayMillis >= 0 && concurrency in 1..32 && leaseMillis >= 300)
         val uri = URI(assetBaseUrl)
         require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null)
-        require(uri.scheme == "https" || allowHttp && uri.scheme == "http")
+        require(
+            uri.scheme == "https" ||
+                allowHttp && uri.scheme == "http" && uri.host in setOf("localhost", "127.0.0.1", "::1", "[::1]", "10.0.2.2"),
+        )
     }
     companion object {
         fun from(config: ApplicationConfig): GenerationConfig {
@@ -28,8 +31,8 @@ data class GenerationConfig(
                 coverMode = value("coverMode")?.let(CoverMode::valueOf) ?: CoverMode.SUCCESS,
                 delayMillis = value("delayMillis")?.toLong() ?: 250,
                 concurrency = value("concurrency")?.toInt() ?: 2,
-                assetBaseUrl = value("assetBaseUrl") ?: "https://localhost:8080",
-                allowHttp = value("allowHttp")?.toBooleanStrict() ?: false,
+                assetBaseUrl = value("assetBaseUrl") ?: "http://localhost:8080",
+                allowHttp = value("allowHttp")?.toBooleanStrict() ?: true,
             )
         }
     }

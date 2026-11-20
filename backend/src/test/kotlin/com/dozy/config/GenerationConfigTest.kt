@@ -6,10 +6,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class GenerationConfigTest {
-    @Test fun `typed modes bounds and explicit HTTP opt in`() {
+    @Test fun `localhost uses HTTP by default and non-local HTTP requires rejection`() {
         assertEquals(GenerationConfig(), GenerationConfig.from(MapApplicationConfig()))
-        assertFailsWith<IllegalArgumentException> { GenerationConfig(assetBaseUrl = "http://localhost:8080") }
-        assertEquals("http://localhost:8080", GenerationConfig(assetBaseUrl = "http://localhost:8080", allowHttp = true).assetBaseUrl)
+        assertEquals("http://localhost:8080", GenerationConfig().assetBaseUrl)
+        assertFailsWith<IllegalArgumentException> { GenerationConfig(assetBaseUrl = "http://example.test", allowHttp = true) }
         assertFailsWith<IllegalArgumentException> { GenerationConfig(assetBaseUrl = "https://example.test/?secret=value") }
         assertFailsWith<IllegalArgumentException> { GenerationConfig(concurrency = 0) }
         assertFailsWith<IllegalArgumentException> { GenerationConfig(delayMillis = -1) }

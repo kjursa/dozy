@@ -67,7 +67,7 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.room.runtime)
-    implementation(libs.sqlite.bundled)
+    implementation(libs.sqlite.framework)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.android)
     implementation(libs.ktor.client.content.negotiation)

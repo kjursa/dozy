@@ -11,8 +11,8 @@ data class AppConfig(val database: DatabaseConfig, val avatars: AvatarConfig = A
             ),
             AvatarConfig(
                 storagePath = config.propertyOrNull("dozy.avatars.storagePath")?.getString() ?: "data/assets",
-                publicBaseUrl = config.propertyOrNull("dozy.avatars.publicBaseUrl")?.getString() ?: "https://localhost:8080",
-                allowLocalHttp = config.propertyOrNull("dozy.avatars.allowLocalHttp")?.getString()?.toBooleanStrict() ?: false,
+                publicBaseUrl = config.propertyOrNull("dozy.avatars.publicBaseUrl")?.getString() ?: "http://localhost:8080",
+                allowLocalHttp = config.propertyOrNull("dozy.avatars.allowLocalHttp")?.getString()?.toBooleanStrict() ?: true,
                 mode = config.propertyOrNull("dozy.avatars.mode")?.getString()?.let(FakeAvatarMode::valueOf) ?: FakeAvatarMode.SUCCESS,
                 delayMillis = config.propertyOrNull("dozy.avatars.delayMillis")?.getString()?.toLong() ?: 1000,
                 concurrency = config.propertyOrNull("dozy.avatars.concurrency")?.getString()?.toInt() ?: 2,

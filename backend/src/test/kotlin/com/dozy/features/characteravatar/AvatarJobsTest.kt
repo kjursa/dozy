@@ -133,7 +133,7 @@ class AvatarJobsTest {
     @Test fun validatesDescriptionsAndDevelopmentConfig() {
         assertEquals(AvatarInput.Result.Invalid(SaveCharacter.Field.PERSONALITY, SaveCharacter.Reason.REQUIRED), AvatarInput.parse("CHILD", " ", "eyes"))
         assertEquals(AvatarInput.Result.Invalid(SaveCharacter.Field.TYPE, SaveCharacter.Reason.INVALID_VALUE), AvatarInput.parse("unknown", "kind", "eyes"))
-        assertFailsWith<IllegalArgumentException> { config.copy(publicBaseUrl = "http://localhost:8080") }
+        assertEquals("http://localhost:8080", config.copy(publicBaseUrl = "http://localhost:8080").publicBaseUrl)
         assertFailsWith<IllegalArgumentException> { config.copy(publicBaseUrl = "http://example.com", allowLocalHttp = true) }
         assertFailsWith<IllegalArgumentException> { config.copy(concurrency = 0) }
         config.copy(publicBaseUrl = "http://10.0.2.2:8080", allowLocalHttp = true)
