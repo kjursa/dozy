@@ -29,6 +29,7 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class StoryRoutesTest {
@@ -107,7 +108,10 @@ class StoryRoutesTest {
         assertEquals(HttpStatusCode.NotFound, client.read("/api/v1/stories/${job.jobId}").status)
         val response = client.read("/api/v1/stories/${status.storyId}")
         assertEquals(HttpStatusCode.OK, response.status)
-        val story = json.decodeFromString<StoryDto>(response.bodyAsText())
+        val story = assertNotNull(status.story)
+        assertEquals(status.storyId, story.id)
+        assertEquals(job.jobId, story.jobId)
+        assertEquals(story, json.decodeFromString<StoryDto>(response.bodyAsText()))
         assertTrue(job.jobId.startsWith("job-"))
         assertTrue(story.id.startsWith("story-"))
         assertEquals("Find a star", story.configuration.idea)

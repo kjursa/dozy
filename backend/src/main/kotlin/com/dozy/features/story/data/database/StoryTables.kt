@@ -10,7 +10,6 @@ internal object StoryJobs : Table("story_jobs") {
     val canonical = text("canonical_request")
     val configuration = text("configuration")
     val stage = text("stage")
-    val storyId = text("story_id")
     val assetId = text("asset_id")
     val createdAt = long("created_at")
     val title = text("title").nullable()

@@ -11,11 +11,12 @@ import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.data.database.PlaceEntity
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.data.database.StoryEntity
 
 @ConstructedBy(DozyDatabaseConstructor::class)
 @Database(
-    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class, CreationDraftEntity::class],
-    version = 9,
+    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class, StoryEntity::class, CreationDraftEntity::class],
+    version = 10,
     autoMigrations = [AutoMigration(from = 8, to = 9)],
     exportSchema = true,
 )

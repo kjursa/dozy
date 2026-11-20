@@ -1,6 +1,5 @@
 package com.dozy.mobile
 
-import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
@@ -25,15 +24,15 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
 
 class StoryLibraryTest {
     private fun summary(
@@ -41,36 +40,47 @@ class StoryLibraryTest {
         time: Long = 100,
     ) = StorySummaryDto(id, "Story $id", "https://example.test/$id.png", 3, time)
 
-    @Test fun completeTraversalReplacesRemoteCacheAndFailedDuplicateCycleOrCancellationRetainsIt() = runTest {
-        val dao = FakeGenerationDao()
-        var mode = "seed"
-        val api = object : GenerationApi by ProgressApi() {
-            override suspend fun stories(cursor: String?): StoryPageDto = when (mode) {
-                "seed" -> StoryPageDto(listOf(summary("old")))
-                "empty" -> StoryPageDto(emptyList())
-                else -> if (cursor == null) StoryPageDto(listOf(summary("new")), "next") else when (mode) {
-                    "duplicate" -> StoryPageDto(listOf(summary("new")))
-                    "cycle" -> StoryPageDto(listOf(summary("another")), "next")
-                    "cancel" -> throw CancellationException("cancel second page")
-                    else -> error("failed second page")
+    @Test fun completeTraversalReplacesRemoteCacheAndFailedDuplicateCycleOrCancellationRetainsIt() =
+        runTest {
+            val dao = FakeGenerationDao()
+            var mode = "seed"
+            val api =
+                object : GenerationApi by ProgressApi() {
+                    override suspend fun stories(cursor: String?): StoryPageDto =
+                        when (mode) {
+                            "seed" -> StoryPageDto(listOf(summary("old")))
+                            "empty" -> StoryPageDto(emptyList())
+                            else ->
+                                if (cursor == null) {
+                                    StoryPageDto(listOf(summary("new")), "new")
+                                } else {
+                                    when (mode) {
+                                        "duplicate" -> StoryPageDto(listOf(summary("new")))
+                                        "cycle" -> StoryPageDto(listOf(summary("new")), "new")
+                                        "cancel" -> throw CancellationException("cancel second page")
+                                        else -> error("failed second page")
+                                    }
+                                }
+                        }
                 }
+            val repository = testGenerationRepository(dao, api)
+            assertTrue(repository.refreshStories())
+            val before = dao.observeStories().first()
+            for (failure in listOf("duplicate", "cycle", "failure", "cancel")) {
+                mode = failure
+                try {
+                    repository.refreshStories()
+                    fail("Must reject traversal")
+                } catch (_: IllegalArgumentException) {
+                } catch (_: IllegalStateException) {
+                } catch (_: CancellationException) {
+                }
+                assertEquals(before, dao.observeStories().first())
             }
+            mode = "empty"
+            assertTrue(repository.refreshStories())
+            assertTrue(repository.summaries().first().isEmpty())
         }
-        val repository = testGenerationRepository(dao, api)
-        assertTrue(repository.refreshStories())
-        val before = dao.rows.value
-        for (failure in listOf("duplicate", "cycle", "failure", "cancel")) {
-            mode = failure
-            try { repository.refreshStories(); fail("Must reject traversal") } catch (_: IllegalArgumentException) {
-            } catch (_: IllegalStateException) {
-            } catch (_: CancellationException) {
-            }
-            assertEquals(before, dao.rows.value)
-        }
-        mode = "empty"
-        assertTrue(repository.refreshStories())
-        assertTrue(repository.summaries().first().isEmpty())
-    }
 
     @Test fun mergesAllPagesWithCompletedJobsWithoutDuplicatesAndKeepsSavedText() =
         runTest {
@@ -83,9 +93,9 @@ class StoryLibraryTest {
                         cursors += cursor
                         if (fail && cursor != null) error("Network unavailable")
                         return if (cursor == null) {
-                            StoryPageDto(listOf(summary("story")), "page 2")
+                            StoryPageDto(listOf(summary("story")), "story")
                         } else {
-                            StoryPageDto(listOf(summary("new", 200), summary("older", 50)))
+                            StoryPageDto(listOf(summary("older", 50), summary("new", 200)))
                         }
                     }
                 }
@@ -93,7 +103,7 @@ class StoryLibraryTest {
             val repo = testGenerationRepository(dao, api)
             assertTrue(ObserveStoryLibrary(repo)().first().isEmpty())
             repo.start(GenerationJob.RequestKey("key"), progress.configuration)
-            progress.remote = GenerationStatusDto("job", "READY", "story")
+            progress.remote = progress.ready()
             repo.refresh(GenerationJob.Id("job"))
             assertEquals(
                 "story",
@@ -104,10 +114,10 @@ class StoryLibraryTest {
                     .id.value,
             )
             assertEquals(RefreshStories.Result.Refreshed, RefreshStories(repo)())
-            assertEquals(listOf(null, "page 2"), cursors)
+            assertEquals(listOf(null, "story"), cursors)
             val summaries = repo.summaries().first()
-            assertEquals(listOf("new", "story", "older"), summaries.map { it.id.value })
-            assertEquals(StorySummary.ReadingMinutes(3), summaries[1].readingMinutes)
+            assertEquals(listOf("story", "older", "new"), summaries.map { it.id.value })
+            assertEquals(StorySummary.ReadingMinutes(3), summaries[0].readingMinutes)
             assertEquals("Once upon a time", repo.readStory(Story.Id("story"))?.text)
             fail = true
             assertEquals(RefreshStories.Result.Failure, RefreshStories(repo)())
@@ -142,9 +152,9 @@ class StoryLibraryTest {
                         assertEquals(HttpMethod.Get, request.method)
                         assertEquals("/service/api/v1/stories", request.url.encodedPath)
                         assertEquals("100", request.url.parameters["limit"])
-                        assertEquals("cursor /+", request.url.parameters["cursor"])
+                        assertEquals("b", request.url.parameters["cursor"])
                         respond(
-                            """{"stories":[{"id":"a","title":"Title","coverUrl":"https://example.test/a","readingMinutes":2,"createdAt":123}],"nextCursor":"next"}""",
+                            """{"stories":[{"id":"a","title":"Title","coverUrl":"https://example.test/a","readingMinutes":2,"createdAt":123}],"nextCursor":"a"}""",
                             HttpStatusCode.OK,
                             headersOf(HttpHeaders.ContentType, "application/json"),
                         )
@@ -155,12 +165,12 @@ class StoryLibraryTest {
                 assertEquals(
                     "a",
                     api
-                        .stories("cursor /+")
+                        .stories("b")
                         ?.stories
                         ?.single()
                         ?.id,
                 )
-                assertEquals("next", api.stories("cursor /+")?.nextCursor)
+                assertEquals("a", api.stories("b")?.nextCursor)
                 assertNull(KtorGenerationApi(client, ApiConfig(null)).stories(null))
             } finally {
                 client.close()

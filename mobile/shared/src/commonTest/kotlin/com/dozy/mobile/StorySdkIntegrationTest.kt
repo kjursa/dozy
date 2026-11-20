@@ -58,7 +58,7 @@ class StorySdkIntegrationTest {
                 repository().start(GenerationJob.RequestKey("create"), configuration)
                 repository().refresh(id)
                 val snapshot =
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .configuration
                 try {
@@ -67,7 +67,7 @@ class StorySdkIntegrationTest {
                 }
                 assertEquals(
                     "retry-one",
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .retryKey,
                 )
@@ -76,7 +76,7 @@ class StorySdkIntegrationTest {
                 assertEquals(1, polls)
                 assertEquals(
                     "retry-one",
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .retryKey,
                 )
@@ -84,12 +84,12 @@ class StorySdkIntegrationTest {
                 repository().retry(id, GenerationJob.RequestKey("unused"))
                 assertEquals(listOf("retry-one", "retry-one"), keys)
                 assertNull(
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .retryKey,
                 )
                 assertTrue(
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .statusUnknown,
                 )
@@ -98,13 +98,13 @@ class StorySdkIntegrationTest {
                 assertEquals(listOf("retry-one", "retry-one", "retry-two"), keys)
                 assertEquals(
                     "job",
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .jobId,
                 )
                 assertEquals(
                     snapshot,
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .configuration,
                 )
@@ -124,8 +124,8 @@ class StorySdkIntegrationTest {
                         assertEquals("100", request.url.parameters["limit"])
                         val cursor = request.url.parameters["cursor"]
                         cursors += cursor
-                        val id = if (cursor == null) "a" else "b"
-                        val next = if (cursor == null) "\"opaque /+\"" else "null"
+                        val id = if (cursor == null) "b" else "a"
+                        val next = if (cursor == null) "\"$id\"" else "null"
                         respond(
                             """{"stories":[{"id":"$id","title":"Title","coverUrl":"http://localhost:8080/api/v1/assets/$id","readingMinutes":1,"createdAt":123}],"nextCursor":$next}""",
                         )
@@ -135,8 +135,8 @@ class StorySdkIntegrationTest {
                 val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"))
                 val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories)
                 assertTrue(repo.refreshStories())
-                assertEquals(listOf(null, "opaque /+"), cursors)
-                assertEquals(listOf("a", "b"), repo.summaries().first().map { it.id.value })
+                assertEquals(listOf(null, "b"), cursors)
+                assertEquals(listOf("b", "a"), repo.summaries().first().map { it.id.value })
             } finally {
                 http.close()
             }
@@ -166,7 +166,7 @@ class StorySdkIntegrationTest {
                                     unavailableStatus = false
                                     respond("""{"code":"UNAVAILABLE"}""", HttpStatusCode.ServiceUnavailable)
                                 } else {
-                                    respond("""{"jobId":"job","status":"READY","storyId":"story"}""")
+                                    respond(Json.encodeToString(fixture.ready()))
                                 }
                             else -> {
                                 assertEquals("/api/v1/stories/story", request.url.encodedPath)
@@ -185,9 +185,9 @@ class StorySdkIntegrationTest {
                     repository().start(key, configuration)
                 } catch (_: IllegalStateException) {
                 }
-                assertEquals(1, dao.rows.value.size)
+                assertEquals(1, dao.rows.size)
                 assertNull(
-                    dao.rows.value
+                    dao.rows
                         .single()
                         .jobId,
                 )
@@ -199,16 +199,13 @@ class StorySdkIntegrationTest {
                 assertTrue(unknown?.statusUnknown == true)
                 val ready = repository().refresh(GenerationJob.Id("job"))
                 assertEquals(GenerationJob.Status.READY, ready?.status)
-                assertTrue(
-                    dao.rows.value
-                        .single()
-                        .result != null,
-                )
-                assertEquals(1, reads)
+                assertTrue(dao.rows.isEmpty())
+                assertTrue(dao.findStory("story")?.result != null)
+                assertEquals(0, reads)
                 val first = repository().readStory(Story.Id("story"))
                 val restored = repository().readStory(Story.Id("story"))
                 assertEquals(first, restored)
-                assertEquals(1, reads)
+                assertEquals(0, reads)
                 assertEquals(1, repository().stories().first().size)
             } finally {
                 http.close()

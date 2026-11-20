@@ -142,28 +142,6 @@ value class StoryId private constructor(
 }
 
 @JvmInline
-value class LibrarySnapshotId private constructor(
-    val value: String,
-) {
-    companion object {
-        fun generate() = LibrarySnapshotId("snap-${Uuids.v7()}")
-
-        fun parse(raw: String?): LibrarySnapshotId? = prefixedUuid(raw, "snap", 7)?.let(::LibrarySnapshotId)
-    }
-}
-
-@JvmInline
-value class LibraryCursor private constructor(
-    val value: String,
-) {
-    companion object {
-        fun generate() = LibraryCursor("cur-${Uuids.v4()}")
-
-        fun parse(raw: String?): LibraryCursor? = prefixedUuid(raw, "cur", 4)?.let(::LibraryCursor)
-    }
-}
-
-@JvmInline
 value class LeaseToken private constructor(
     val value: String,
 ) {

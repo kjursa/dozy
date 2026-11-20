@@ -13,7 +13,14 @@ fun interface DatabaseBuilderFactory {
 val databaseModule =
     module {
         single<SQLiteDriver> { BundledSQLiteDriver() }
-        single { get<DatabaseBuilderFactory>().create().setDriver(get()).build() } onClose { it?.close() }
+        single {
+            get<DatabaseBuilderFactory>()
+                .create()
+                .setDriver(get())
+                .addMigrations(storyPublicationMigration)
+                .build()
+        } onClose
+            { it?.close() }
         single { get<DozyDatabase>().characters() }
         single { get<DozyDatabase>().places() }
         single { get<DozyDatabase>().generations() }

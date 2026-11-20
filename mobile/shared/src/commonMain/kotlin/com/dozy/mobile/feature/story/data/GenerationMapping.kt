@@ -8,10 +8,11 @@ import com.dozy.mobile.feature.place.data.toDomain
 import com.dozy.mobile.feature.place.data.toDto
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.data.database.GenerationProgress
+import com.dozy.mobile.feature.story.data.database.StoryEntity
 import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
-import kotlinx.serialization.json.Json
 
 fun GenerationConfiguration.toDto() =
     GenerationRequestDto(
@@ -24,24 +25,27 @@ fun GenerationConfiguration.toDto() =
     )
 
 fun GenerationEntity.toJob(): GenerationJob? =
+    GenerationProgress(jobId, status, null, errorCode, statusUnknown, false, retryKey, createdOrder).toJob()
+
+fun GenerationProgress.toJob(): GenerationJob? =
     jobId?.let {
+        val stage = GenerationJob.Status.valueOf(requireNotNull(status))
         GenerationJob(
             GenerationJob.Id(it),
-            if (status == "READY" &&
-                result == null
-            ) {
-                GenerationJob.Status.CREATING_COVER
-            } else {
-                GenerationJob.Status.valueOf(requireNotNull(status))
-            },
-            result?.let { json ->
-                Json.decodeFromString<StoryDto>(json).toDomain().id
-            },
+            if (stage == GenerationJob.Status.READY && storyId == null) GenerationJob.Status.CREATING_COVER else stage,
+            storyId?.let { id -> Story.Id(id) },
             errorCode?.let(GenerationJob.Failure::valueOf),
             statusUnknown,
             notificationDelivered,
             retryKey != null,
         )
+    }
+
+fun StoryEntity.toCompletedJob(): GenerationJob? =
+    if (requestKey != null && result != null) {
+        GenerationProgress(jobId, "READY", id, null, false, notificationDelivered, null, createdOrder).toJob()
+    } else {
+        null
     }
 
 fun GenerationRequestDto.toDomain() =

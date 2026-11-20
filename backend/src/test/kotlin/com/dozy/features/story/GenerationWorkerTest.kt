@@ -3,6 +3,7 @@ package com.dozy.features.story
 import com.dozy.config.DatabaseConfig
 import com.dozy.config.GenerationConfig
 import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.StoryId
 import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.database.StoryJobs
@@ -78,7 +79,7 @@ class GenerationWorkerTest {
             assertEquals(Stage.CREATING_TEXT, repository.status(ownerId, job.id)?.stage)
             db.write { StoryJobs.update({ StoryJobs.id eq job.id.value }) { it[leaseUntil] = 0 } }
             val failingStorage = object : GenerationRepository by repository {
-                override suspend fun publish(execution: Execution, cover: ByteArray): Boolean = error("Storage temporarily unavailable")
+                override suspend fun publish(execution: Execution, cover: ByteArray): StoryId? = error("Storage temporarily unavailable")
             }
             val text = TextGenerator { GeneratedText("Title", "Text") }
             assertFailsWith<IllegalStateException> { GenerationWorker(failingStorage, text, FakeCoverGenerator(options), options).runOne() }

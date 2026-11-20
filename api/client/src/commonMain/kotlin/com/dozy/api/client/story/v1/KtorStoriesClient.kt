@@ -35,13 +35,10 @@ internal class KtorStoriesClient(
         if (response.status.value in 200..299) {
             val page = clientJson.decodeFromString<StoryPageDto>(response.bodyAsText())
             require(page.stories.size <= request.limit && page.stories.distinctBy { it.id.lowercase() }.size == page.stories.size)
-            require(page.nextCursor?.let { it.isNotBlank() && page.stories.isNotEmpty() } ?: true)
+            require(page.nextCursor?.let { it == page.stories.lastOrNull()?.id } ?: true)
             page.stories.forEach {
                 require(it.id.isNotBlank() && it.title.isNotBlank() && it.readingMinutes >= 1 && it.createdAt >= 0)
-                val cover = Url(it.coverUrl)
-                val base = config.baseUrl?.let(::Url)
-                require(cover.host.isNotBlank() && (cover.protocol == URLProtocol.HTTPS ||
-                    cover.protocol == URLProtocol.HTTP && base?.protocol == URLProtocol.HTTP && cover.host == base.host && cover.port == base.port))
+                validateCoverUrl(it.coverUrl, config)
             }
             return@communicate StoryListResult.Success(page)
         }
@@ -55,20 +52,29 @@ internal class KtorStoriesClient(
         }
         if (response.status.value in 200..299) {
             val story = clientJson.decodeFromString<StoryDto>(response.bodyAsText())
-            require(story.id == storyId && story.title.isNotBlank() && story.text.isNotBlank())
-            val cover = Url(story.coverUrl)
-            val base = config.baseUrl?.let(::Url)
-            require(cover.host.isNotBlank() && (cover.protocol == URLProtocol.HTTPS ||
-                cover.protocol == URLProtocol.HTTP && base?.protocol == URLProtocol.HTTP && cover.host == base.host && cover.port == base.port))
-            require(story.createdAt >= 0)
-            val configuration = story.configuration
-            require(configuration.cast.isNotEmpty() && configuration.cast.distinctBy { it.id.lowercase() }.size == configuration.cast.size)
-            require(GenerationMode.entries.any { it.name == configuration.mode } && StoryLength.entries.any { it.name == configuration.length })
-            require(configuration.cast.all { it.id.isNotBlank() && it.name.isNotBlank() && it.personality.isNotBlank() && it.appearance.isNotBlank() && CharacterType.entries.any { type -> type.name == it.type } })
-            configuration.place?.let { require(it.id.isNotBlank() && it.name.isNotBlank() && it.description.isNotBlank() && it.origin in setOf("USER", "SYSTEM")) }
+            require(story.id == storyId)
+            validateStory(story, config)
             return@communicate StoryReadResult.Success(story)
         }
         response.businessFailure(StoryReadError.serializer(), StoryReadResult::ApiError, StoryReadResult::TechnicalError)
     }
+}
 
+internal fun validateStory(story: StoryDto, config: DozyClientConfig) {
+    require(story.id.matches(Regex("[A-Za-z0-9_-]{1,128}")) && story.title.isNotBlank() && story.text.isNotBlank())
+    validateCoverUrl(story.coverUrl, config)
+    require(story.createdAt >= 0)
+    val configuration = story.configuration
+    require(configuration.cast.isNotEmpty() && configuration.cast.distinctBy { it.id.lowercase() }.size == configuration.cast.size)
+    require(GenerationMode.entries.any { it.name == configuration.mode } && StoryLength.entries.any { it.name == configuration.length })
+    require(configuration.cast.all { it.id.isNotBlank() && it.name.isNotBlank() && it.personality.isNotBlank() && it.appearance.isNotBlank() && CharacterType.entries.any { type -> type.name == it.type } })
+    configuration.place?.let { require(it.id.isNotBlank() && it.name.isNotBlank() && it.description.isNotBlank() && it.origin in setOf("USER", "SYSTEM")) }
+}
+
+private fun validateCoverUrl(value: String, config: DozyClientConfig) {
+    val cover = Url(value)
+    val base = config.baseUrl?.let(::Url)
+    val localDevelopmentUrl = cover.protocol == URLProtocol.HTTP &&
+        base?.protocol == URLProtocol.HTTP && cover.host == base.host && cover.port == base.port
+    require(cover.host.isNotBlank() && (cover.protocol == URLProtocol.HTTPS || localDevelopmentUrl))
 }

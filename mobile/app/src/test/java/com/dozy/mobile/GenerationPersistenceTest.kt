@@ -7,13 +7,13 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.room3.withWriteTransaction
 import androidx.sqlite.driver.AndroidSQLiteDriver
-import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.data.database.StoryEntity
 import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
 import com.dozy.mobile.feature.story.domain.model.Story
@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -47,20 +48,53 @@ class GenerationPersistenceTest {
             try {
                 val dao = database.generations()
                 val pending = GenerationEntity("pending", "configuration", jobId = "job", status = "QUEUED")
-                val old = GenerationEntity("library:old", "", summary = "old")
+                val old = StoryEntity("old", summary = "old")
                 dao.upsert(pending)
                 dao.replaceLibrary(listOf(old))
                 try {
                     database.withWriteTransaction {
-                        dao.replaceLibrary(listOf(GenerationEntity("library:new", "", summary = "new")))
+                        dao.replaceLibrary(listOf(StoryEntity("new", summary = "new")))
                         throw CancellationException("cancel transaction")
                     }
                     fail("Cancellation must propagate")
                 } catch (_: CancellationException) {
                 }
-                assertEquals(setOf(pending, old), dao.observe().first().toSet())
+                assertEquals(listOf(pending), dao.observe().first())
+                assertEquals(listOf(old), dao.observeStories().first())
                 dao.replaceLibrary(emptyList())
                 assertEquals(listOf(pending), dao.observe().first())
+                assertTrue(dao.observeStories().first().isEmpty())
+            } finally {
+                database.close()
+            }
+        }
+
+    @Test fun completionRollbackKeepsPendingRowAndLeavesNoPartialStory() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val database = Room.inMemoryDatabaseBuilder<DozyDatabase>(context).setDriver(AndroidSQLiteDriver()).build()
+            try {
+                val dao = database.generations()
+                val pending = GenerationEntity("pending", "configuration", jobId = "job", status = "CREATING_COVER")
+                val story = StoryEntity("story", jobId = "job", requestKey = "pending", result = "complete")
+                dao.upsert(pending)
+                dao.replaceLibrary(listOf(StoryEntity("story", summary = "preview")))
+                assertEquals(pending, dao.find("pending"))
+
+                try {
+                    database.withWriteTransaction {
+                        dao.completeGeneration("pending", story)
+                        throw CancellationException("cancel transaction")
+                    }
+                    fail("Cancellation must propagate")
+                } catch (_: CancellationException) {
+                }
+                assertEquals(pending, dao.find("pending"))
+                assertNull(dao.findStory("story")?.result)
+
+                dao.completeGeneration("pending", story)
+                assertNull(dao.find("pending"))
+                assertEquals(story, dao.findStory("story"))
             } finally {
                 database.close()
             }
@@ -137,8 +171,10 @@ class GenerationPersistenceTest {
                         .single()
                         .id,
                 )
-                api.remote = GenerationStatusDto("job", "READY", "story")
+                api.remote = api.ready()
                 repository.refresh(id)
+                assertNull(database.generations().find("key"))
+                assertTrue(database.generations().findStory("story")?.result != null)
                 database.close()
                 database = open()
                 val restored = testGenerationRepository(database.generations(), api)
@@ -160,7 +196,7 @@ class GenerationPersistenceTest {
                         .storyId,
                 )
                 assertEquals(1, api.starts)
-                assertEquals(1, api.storyReads)
+                assertEquals(0, api.storyReads)
             } finally {
                 database.close()
                 context.deleteDatabase("generation-test.db")

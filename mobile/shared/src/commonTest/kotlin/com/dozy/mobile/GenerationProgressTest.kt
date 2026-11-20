@@ -2,11 +2,9 @@ package com.dozy.mobile
 
 import androidx.lifecycle.ViewModelStore
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
-import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.testGenerationRepository
-import com.dozy.mobile.feature.story.data.toDto
 import com.dozy.mobile.feature.story.domain.model.*
 import com.dozy.mobile.feature.story.domain.usecase.*
 import com.dozy.mobile.feature.story.presentation.generation.*
@@ -51,15 +49,17 @@ class GenerationProgressTest {
             api.offline = false
             api.remote = GenerationStatusDto("job", "CREATING_COVER")
             assertFalse(resumed.refresh(id)!!.statusUnknown)
-            api.remote = GenerationStatusDto("job", "READY", "story")
-            api.storyUnavailable = true
+            api.remote = api.ready().copy(story = null)
             assertEquals(GenerationJob.Status.CREATING_COVER, resumed.refresh(id)?.status)
             assertTrue(resumed.stories().first().isEmpty())
-            api.storyUnavailable = false
+            assertNotNull(dao.find(key.value))
+            api.remote = api.ready()
             assertEquals(Story.Id("story"), resumed.refresh(id)?.storyId)
             repeat(3) { resumed.refresh(id) }
             assertEquals(1, api.starts)
-            assertEquals(2, api.storyReads)
+            assertEquals(0, api.storyReads)
+            assertNull(dao.find(key.value))
+            assertEquals(Story.Id("story"), resumed.accepted(key)?.storyId)
             assertEquals(1, resumed.stories().first().size)
             assertEquals(
                 api.configuration,
@@ -125,7 +125,7 @@ class GenerationProgressTest {
                     },
                 )
             assertEquals(ReconcileGenerations.Result.Pending, reconcile())
-            api.remote = GenerationStatusDto("job", "READY", "story")
+            api.remote = api.ready()
             assertEquals(ReconcileGenerations.Result.Settled, reconcile())
             assertEquals(
                 Story.Id("story"),
@@ -167,7 +167,7 @@ class GenerationProgressTest {
             } catch (_: IllegalStateException) {
             }
             assertEquals(1, api.starts)
-            api.remote = GenerationStatusDto("job", "READY", "story")
+            api.remote = api.ready()
             repository.refresh(id)
             repository.retry(id, key)
             assertTrue(api.retryKeys.isEmpty())
@@ -273,7 +273,7 @@ class GenerationProgressTest {
                         .status,
                 )
                 api.offline = false
-                api.remote = GenerationStatusDto("job", "READY", "story")
+                api.remote = api.ready()
                 vm.dispatch(GenerationAction.Refresh(id))
                 runCurrent()
                 vm.dispatch(GenerationAction.Open(id))
@@ -288,7 +288,7 @@ class GenerationProgressTest {
         runTest {
             val expected =
                 mutableListOf("GET /api/v1/story-generations/job", "POST /api/v1/story-generations/job/retry", "GET /api/v1/stories/story")
-            val dto = StoryDto("story", "Title", "Text", "https://example.test/cover.png", ProgressApi().configuration.toDto())
+            val dto = ProgressApi().completedStory()
             val http =
                 HttpClient(
                     MockEngine { request ->
@@ -296,7 +296,7 @@ class GenerationProgressTest {
                         when (request.url.encodedPath) {
                             "/api/v1/story-generations/job" ->
                                 respond(
-                                    """{"jobId":"job","status":"READY","storyId":"story"}""",
+                                    Json.encodeToString(GenerationStatusDto("job", "READY", "story", story = dto)),
                                     HttpStatusCode.OK,
                                     headersOf(HttpHeaders.ContentType, "application/json"),
                                 )
@@ -319,7 +319,7 @@ class GenerationProgressTest {
                 ) { install(ContentNegotiation) { json() } }
             try {
                 val api = KtorGenerationApi(http, ApiConfig("https://example.test/"))
-                assertEquals("story", api.status("job")?.storyId)
+                assertEquals(dto, api.status("job")?.story)
                 assertEquals("QUEUED", api.retry("job", "retry-key")?.status)
                 assertEquals(dto, api.story("story"))
                 val disabled = KtorGenerationApi(http, ApiConfig(null))

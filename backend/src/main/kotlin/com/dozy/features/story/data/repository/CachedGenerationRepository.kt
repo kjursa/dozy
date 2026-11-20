@@ -3,6 +3,7 @@ package com.dozy.features.story.data.repository
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.JobId
 import com.dozy.domain.id.OwnerId
+import com.dozy.domain.id.StoryId
 import com.dozy.features.story.domain.model.Execution
 import com.dozy.features.story.domain.model.Failure
 import com.dozy.features.story.domain.model.GeneratedText
@@ -76,10 +77,10 @@ class CachedGenerationRepository(
     override suspend fun publish(
         execution: Execution,
         cover: ByteArray,
-    ): Boolean =
+    ): StoryId? =
         completeTransition {
-            repository.publish(execution, cover).also {
-                if (it) cache.put(execution.ownerId, Job(execution.job.id, Stage.READY, storyId = execution.storyId))
+            repository.publish(execution, cover).also { storyId ->
+                if (storyId != null) cache.put(execution.ownerId, Job(execution.job.id, Stage.READY, storyId = storyId))
             }
         }
 
