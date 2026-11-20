@@ -47,8 +47,8 @@
 .code-screen { flex:1; display:flex; flex-direction:column; min-height:0; padding-bottom:17px; }
 .code-screen .topline { margin-bottom:17px; }.code-screen .lead { margin-bottom:16px; }
 .code-display { min-height:42px; display:flex; align-items:center; justify-content:center; margin:0 0 5px; }
-.digit-slots { width:100%; display:flex; align-items:center; justify-content:center; gap:4px; }
-.digit-slot { width:min(30px, 7vw); height:min(30px, 7vw); border:1.5px solid #a9aa9f; border-radius:50%; display:grid; place-items:center; color:#111; font-size:9px; line-height:1; }
+.digit-slots { width:100%; display:flex; align-items:center; justify-content:center; gap:clamp(3px,1.3vw,7px); }
+.digit-slot { width:clamp(22px,6.4vw,27px); height:clamp(22px,6.4vw,27px); border:1.5px solid #a9aa9f; border-radius:50%; display:grid; place-items:center; color:#111; font-size:9px; line-height:1; }
 .digit-slot.active { border:2px solid var(--focus-ring); }
 .digit-slot.filled { border-color:#202321; }
 .code-separator { color:#90938a; font-size:13px; font-weight:900; padding:0 1px; }
