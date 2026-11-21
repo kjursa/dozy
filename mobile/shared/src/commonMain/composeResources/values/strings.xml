@@ -169,6 +169,9 @@
     <string name="avatar_regenerate">Regenerate avatar</string>
     <string name="avatar_unavailable">Avatar generation is unavailable. Please try again when the service is connected.</string>
     <string name="avatar_failed">Could not generate an avatar. Your descriptions are safe. Try again.</string>
+    <string name="character_preview_eyebrow">A FACE FOR YOUR DESCRIPTION</string>
+    <string name="character_preview_title">Meet your new hero.</string>
+    <string name="character_preview_intro">Describe them below. We’ll imagine their avatar.</string>
     <string name="avatar_description_hint">Describe your hero to generate an avatar. No photo needed.</string>
     <string name="character_inspiration">Your child can be the hero! Describe their favourite traits and let the adventure begin.</string>
     <string name="character_name_placeholder">Their name or a storybook nickname</string>
