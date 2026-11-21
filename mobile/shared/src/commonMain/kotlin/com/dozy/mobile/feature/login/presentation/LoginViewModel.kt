@@ -2,6 +2,7 @@ package com.dozy.mobile.feature.login.presentation
 
 import androidx.lifecycle.viewModelScope
 import com.dozy.mobile.feature.login.domain.repository.LoginRepository
+import com.dozy.mobile.feature.login.domain.repository.OnboardingPreferences
 import com.dozy.mobile.navigation.AppNavigator
 import com.dozy.mobile.navigation.NavigationCommand
 import com.kjursa.foundation.compose.mvi.MviViewModel
@@ -12,20 +13,22 @@ class LoginViewModel(
     val navigator: AppNavigator,
     persistence: StatePersistence<LoginUiState>,
     private val repository: LoginRepository,
+    private val onboardingPreferences: OnboardingPreferences,
 ) : MviViewModel<LoginUiState, LoginAction, Nothing>(LoginUiState(), persistence) {
     override fun onAction(action: LoginAction) {
         when (action) {
             LoginAction.TutorialContinued -> {
-                repository.markTutorialSeen()
-                updateState { copy(tutorialSeen = true) }
+                onboardingPreferences.markTutorialSeen()
                 navigateTo(LoginDestination.OpenEmail)
             }
             is LoginAction.EmailChanged -> updateState { copy(email = action.value, emailError = false, loginError = false) }
             LoginAction.EmailSubmitted -> submitEmail()
             LoginAction.ContinueAsGuest -> {
-                updateState { copy(tutorialSeen = true) }
                 viewModelScope.launch {
-                    if (repository.continueAsGuest()) navigateTo(LoginDestination.OpenMain)
+                    if (repository.continueAsGuest()) {
+                        onboardingPreferences.markTutorialSeen()
+                        navigateTo(LoginDestination.OpenMain)
+                    }
                 }
             }
             LoginAction.BackToEmail -> navigateTo(LoginDestination.ReturnToEmail)

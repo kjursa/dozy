@@ -3,6 +3,8 @@ package com.dozy.mobile
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.CreationExtras
+import com.dozy.api.client.auth.AuthSessionStorage
+import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.core.data.database.CreationDraftDao
@@ -73,6 +75,7 @@ class CharacterModuleTest {
                 )
             val platformModule =
                 module {
+                    single<AuthSessionStorage> { InMemoryAuthSessionStorage() }
                     single { ApiConfig(baseUrl = "https://example.test") }
 
                     single<CharacterDao> { dao }

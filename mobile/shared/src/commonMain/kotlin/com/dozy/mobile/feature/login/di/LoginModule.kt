@@ -21,6 +21,7 @@ val loginModule =
                 get(),
                 SavedStatePersistence(savedStateHandle, LoginUiState.serializer()),
                 get(),
+                get(),
             )
         }
     }

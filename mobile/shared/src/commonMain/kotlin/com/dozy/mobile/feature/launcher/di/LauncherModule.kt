@@ -6,5 +6,5 @@ import org.koin.dsl.module
 
 val launcherModule =
     module {
-        viewModel { LauncherViewModel(get(), get()) }
+        viewModel { LauncherViewModel(get(), get(), get()) }
     }

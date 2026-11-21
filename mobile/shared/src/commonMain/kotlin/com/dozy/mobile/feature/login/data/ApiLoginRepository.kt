@@ -11,13 +11,7 @@ class ApiLoginRepository(
     private val dozyClient: DozyClient,
     private val database: DozyDatabase,
 ) : LoginRepository {
-    private var tutorialSeen = false
     private var sessionId: String? = null
-
-    override fun hasSeenTutorial() = tutorialSeen
-    override fun markTutorialSeen() {
-        tutorialSeen = true
-    }
 
     override suspend fun sendPin(email: String): Boolean =
         when (val result = dozyClient.auth.v1.requestEmailCode(email)) {
@@ -39,9 +33,5 @@ class ApiLoginRepository(
         }
     }
 
-    override suspend fun continueAsGuest(): Boolean {
-        val success = dozyClient.auth.v1.anonymous() is AnonymousResult.Success
-        if (success) tutorialSeen = true
-        return success
-    }
+    override suspend fun continueAsGuest(): Boolean = dozyClient.auth.v1.anonymous() is AnonymousResult.Success
 }
