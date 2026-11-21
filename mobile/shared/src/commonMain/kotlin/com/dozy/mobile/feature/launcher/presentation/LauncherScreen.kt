@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
@@ -15,7 +15,10 @@ internal fun LauncherScreen(
     viewModel: LauncherViewModel,
     tutorialSeen: Boolean,
 ) {
-    LaunchedEffect(viewModel) { viewModel.start(tutorialSeen) }
+    LifecycleStartEffect(viewModel, tutorialSeen) {
+        viewModel.start(tutorialSeen)
+        onStopOrDispose { viewModel.stop() }
+    }
     Box(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,

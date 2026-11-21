@@ -5,22 +5,29 @@ import androidx.lifecycle.viewModelScope
 import com.dozy.api.client.auth.AuthSessionManager
 import com.dozy.api.client.auth.SessionState
 import com.dozy.mobile.navigation.AppNavigator
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class LauncherViewModel(
     private val sessionManager: AuthSessionManager,
     private val navigator: AppNavigator,
 ) : ViewModel() {
-    private var startupJobStarted = false
+    private var startupJob: Job? = null
+    private var startupResolved = false
 
     fun start(tutorialSeen: Boolean) {
-        if (startupJobStarted) return
-        startupJobStarted = true
-        viewModelScope.launch {
+        if (startupResolved || startupJob?.isActive == true) return
+        startupJob = viewModelScope.launch {
             // Keep a saved session on Home; protected requests handle access-token expiry through refresh.
             sessionManager.initialize()
             navigator.navigate(resolveStartupDestination(sessionManager.state.value, tutorialSeen))
+            startupResolved = true
         }
+    }
+
+    fun stop() {
+        startupJob?.cancel()
+        startupJob = null
     }
 }
 
