@@ -48,9 +48,9 @@ fun StoryEntity.toCompletedJob(): GenerationJob? =
         null
     }
 
-fun GenerationRequestDto.toDomain() =
+fun GenerationRequestDto.toDomain(allowLocalAssetHttp: Boolean = false) =
     GenerationConfiguration(
-        cast.map { it.toDomain() },
+        cast.map { it.toDomain(allowLocalAssetHttp) },
         GenerationJob.Mode.valueOf(mode),
         Story.Length.valueOf(length),
         place?.toEntity()?.toDomain(),
@@ -58,9 +58,9 @@ fun GenerationRequestDto.toDomain() =
         ending,
     )
 
-fun StoryDto.toDomain(): Story {
+fun StoryDto.toDomain(allowLocalAssetHttp: Boolean = false): Story {
     require(id.matches(Regex("[A-Za-z0-9_-]{1,128}")))
     require(title.isNotBlank() && text.isNotBlank() && validStoryCoverUrl(coverUrl))
     require(configuration.cast.isNotEmpty() && configuration.cast.distinctBy { it.id }.size == configuration.cast.size)
-    return Story(Story.Id(id), title, text, coverUrl, configuration.toDomain())
+    return Story(Story.Id(id), title, text, coverUrl, configuration.toDomain(allowLocalAssetHttp))
 }
