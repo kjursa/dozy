@@ -295,4 +295,16 @@
     <string name="story_cover_hint">Each story gets its own illustrated cover. The story and cover are saved together, ready to read again.</string>
     <string name="story_submit_hint">No idea to type? Choose “Surprise me”.</string>
     <string name="story_create_character">Create a character</string>
+    <string name="collection_empty_eyebrow">A LITTLE BEGINNING</string>
+    <string name="characters_collection_title">Your characters</string>
+    <string name="characters_collection_eyebrow">THE FACES IN YOUR STORIES</string>
+    <string name="characters_collection_intro">A little like real life. A little like make-believe.</string>
+    <string name="characters_collection_add_title">A new friend</string>
+    <string name="characters_collection_empty_action">Create a character</string>
+    <string name="stories_collection_eyebrow">LITTLE WORLDS TO RETURN TO</string>
+    <string name="stories_collection_title">Your stories</string>
+    <string name="stories_collection_intro">Made with your heroes. Saved for another night.</string>
+    <string name="stories_collection_empty_title">A bookshelf waiting for magic.</string>
+    <string name="stories_collection_empty_description">Your heroes are ready. Create their first story — choose an idea or let us surprise you.</string>
+    <string name="stories_collection_empty_action">Create your first story</string>
 </resources>

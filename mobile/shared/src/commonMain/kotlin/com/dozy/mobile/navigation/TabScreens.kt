@@ -12,14 +12,16 @@ class HomeTabScreen : Screen {
     }
 }
 
-class StoriesTabEntry : Screen {
-    @Composable override fun Content() {
-        StoriesTabScreen()
+class StoriesTabEntry {
+    @Composable
+    fun Content(onBack: () -> Unit) {
+        StoriesTabScreen(onBack)
     }
 }
 
-class CharactersTabEntry : Screen {
-    @Composable override fun Content() {
-        CharactersTabScreen()
+class CharactersTabEntry {
+    @Composable
+    fun Content(onBack: () -> Unit) {
+        CharactersTabScreen(onBack)
     }
 }
