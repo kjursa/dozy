@@ -22,45 +22,45 @@ import kotlinx.coroutines.launch
 
 class CreateCharacterViewModel(
     val navigator: AppNavigator,
-    statePersistence: StatePersistence<CreateCharacterUiState>,
+    statePersistence: StatePersistence<CharacterDraft>,
     private val saveCharacter: SaveCharacter,
     private val generateAvatar: GenerateCharacterAvatar,
     private val observeCharacter: ObserveCharacter,
-    private val creationDraft: CreationDraft<CreateCharacterUiState>,
+    private val creationDraft: CreationDraft<CharacterDraft>,
     private val initialId: String? = null,
 ) : MviViewModel<CreateCharacterUiState, CreateCharacterAction, Nothing>(
-        initialState = CreateCharacterUiState(),
-        statePersistence = statePersistence,
+        initialState = CharacterDraft().editableState(),
+        statePersistence = CharacterFormPersistence(statePersistence),
     ) {
     init {
-        if (initialId != null) loadCharacter() else restoreCreationDraft(CreateCharacterUiState())
+        if (initialId != null) loadCharacter() else restoreCreationDraft(CharacterDraft().editableState())
     }
 
     private fun restoreCreationDraft(emptyForm: CreateCharacterUiState) {
         if (uiState.value != emptyForm) return
         viewModelScope.launch {
             val draft = runCatchingSuspend { creationDraft.load() }.getOrNull()
-            if (draft != null && uiState.value == emptyForm) updateState { draft }
+            if (draft != null && uiState.value == emptyForm) updateState { draft.editableState() }
         }
     }
 
     private fun loadCharacter() {
         val id = initialId ?: return
-        val restoreDraft = uiState.value.editingId == id
-        updateState { copy(loading = true, loadError = null, unavailable = false) }
+        val restoreDraft = uiState.value.draft.editingId == id
+        updateState { CreateCharacterUiState.Loading(draft) }
         viewModelScope.launch {
             runCatchingSuspend {
                 observeCharacter(Character.Id(id)).first()
             }.onSuccess { character ->
                 updateState {
                     when {
-                        character == null -> copy(loading = false, unavailable = true)
-                        restoreDraft -> copy(loading = false)
-                        else -> withCharacter(character)
+                        character == null -> CreateCharacterUiState.Unavailable(draft)
+                        restoreDraft -> draft.editableState()
+                        else -> draft.withCharacter(character).editableState()
                     }
                 }
             }.onFailure {
-                updateState { copy(loading = false, loadError = UiText.Resource(Res.string.character_read_failed)) }
+                updateState { CreateCharacterUiState.LoadFailed(draft, UiText.Resource(Res.string.character_read_failed)) }
             }
         }
     }
@@ -77,10 +77,10 @@ class CreateCharacterViewModel(
             return
         }
         if (action == CreateCharacterAction.RetryLoadClicked) {
-            if (!abandoned && !uiState.value.busy && uiState.value.loadError != null) loadCharacter()
+            if (!abandoned && uiState.value is CreateCharacterUiState.LoadFailed) loadCharacter()
             return
         }
-        if (abandoned || saved || uiState.value.busy || uiState.value.unavailable || uiState.value.loadError != null) return
+        if (abandoned || saved || uiState.value !is CreateCharacterUiState.Editable) return
         when (action) {
             CreateCharacterAction.BackClicked, CreateCharacterAction.RetryLoadClicked -> Unit
             CreateCharacterAction.SaveClicked -> save()
@@ -102,32 +102,18 @@ class CreateCharacterViewModel(
         abandoned = true
         attempt++
         generation?.cancel()
-        updateState { copy(generating = false) }
+        updateState { if (this is CreateCharacterUiState.Generating) draft.editableState() else this }
     }
 
-    private fun validatedInput() =
-        when (val validation = uiState.value.validateInput()) {
-            is CreateCharacterValidation.Valid -> validation.input.also { updateState { withErrors() } }
-            is CreateCharacterValidation.Invalid -> {
-                updateState { withValidationErrors(validation.errors) }
-                null
-            }
-        }
-
     private fun generate() {
-        val state = uiState.value
-        val ready =
-            when (val phase = state.formPhase()) {
-                is CharacterFormPhase.ReadyToGenerate -> phase
-                is CharacterFormPhase.AvatarReady -> phase.generation
-                CharacterFormPhase.Editing -> {
-                    validatedInput()
-                    return
-                }
-                else -> return
-            }
+        val ready = uiState.value as? CreateCharacterUiState.CanGenerate
+        if (ready == null) {
+            showValidationErrors()
+            return
+        }
+        val state = ready.draft
         val activeAttempt = ++attempt
-        updateState { ready.beginGeneration(withErrors()) }
+        updateState { ready.beginGeneration() }
         generation =
             viewModelScope.launch {
                 if (state.editingId == null) runCatchingSuspend { creationDraft.save(state) }
@@ -136,66 +122,65 @@ class CreateCharacterViewModel(
                 updateState {
                     when (result) {
                         is GenerateCharacterAvatar.Result.Success ->
-                            copy(
-                                generating = false,
+                            draft.copy(
                                 avatarId = result.avatar.id.value,
                                 avatarUrl = result.avatar.url.value,
-                                avatarDescription = descriptionKey,
+                                avatarDescription = draft.descriptionKey,
                                 creationKey = null,
-                            )
+                            ).editableState()
                         GenerateCharacterAvatar.Result.Unavailable ->
-                            copy(
-                                generating = false,
-                                generationError = UiText.Resource(Res.string.avatar_unavailable),
-                            )
+                            draft.editableState(UiText.Resource(Res.string.avatar_unavailable))
                         GenerateCharacterAvatar.Result.Failure ->
-                            copy(
-                                generating = false,
-                                generationError = UiText.Resource(Res.string.avatar_failed),
-                            )
+                            draft.editableState(UiText.Resource(Res.string.avatar_failed))
                     }
                 }
             }
     }
 
     private fun save() {
-        val input = validatedInput() ?: return
-        val state = uiState.value
-        val avatar =
-            Character.Avatar(
-                Character.Avatar.Id(state.avatarId ?: return),
-                Character.Avatar.Url(state.avatarUrl ?: return),
-            )
+        val ready = uiState.value as? CreateCharacterUiState.AvatarReady
+        if (ready == null) {
+            showValidationErrors()
+            return
+        }
+        val state = ready.draft.withErrors()
         val requestKey = if (state.editingId == null) state.creationKey ?: newCreationRequestKey() else null
-        updateState { copy(saveStatus = SaveStatus.SAVING, creationKey = requestKey) }
+        val saving = ready.copy(draft = state.copy(creationKey = requestKey), saveFailed = false)
+        updateState { CreateCharacterUiState.Saving(saving) }
         viewModelScope.launch {
             if (state.editingId == null && runCatchingSuspend { creationDraft.save(state.copy(creationKey = requestKey)) }.isFailure) {
-                updateState { copy(saveStatus = SaveStatus.FAILURE) }
+                updateState { saving.copy(saveFailed = true) }
                 return@launch
             }
             val result =
-                state.editingId?.let { saveCharacter(EditCharacterInput.from(Character.Id(it), input), avatar) }
-                    ?: saveCharacter(input, avatar, requestKey)
+                state.editingId?.let { saveCharacter(EditCharacterInput.from(Character.Id(it), ready.input), ready.avatar) }
+                    ?: saveCharacter(ready.input, ready.avatar, requestKey)
             when (result) {
                 is SaveCharacter.Result.Success -> {
                     if (state.editingId == null) runCatchingSuspend { creationDraft.clear() }
                     saved = true
                     if (!abandoned) navigateTo(CreateCharacterDestination.Saved(result.saved.character.id))
                 }
-                SaveCharacter.Result.Unavailable -> updateState { copy(saveStatus = SaveStatus.EDITING, unavailable = true) }
-                SaveCharacter.Result.Failure -> updateState { copy(saveStatus = SaveStatus.FAILURE) }
+                SaveCharacter.Result.Unavailable -> updateState { CreateCharacterUiState.Unavailable(saving.draft) }
+                SaveCharacter.Result.Failure -> updateState { saving.copy(saveFailed = true) }
             }
         }
     }
 
-    private fun updateCharacterState(reducer: CreateCharacterUiState.() -> CreateCharacterUiState) {
-        val edited = uiState.value.reducer()
+    private fun showValidationErrors() {
+        val editing = uiState.value as? CreateCharacterUiState.Editing ?: return
+        val validation = editing.draft.validateInput() as? CreateCharacterValidation.Invalid ?: return
+        updateState { editing.copy(draft = editing.draft.withValidationErrors(validation.errors)) }
+    }
+
+    private fun updateCharacterState(reducer: CharacterDraft.() -> CharacterDraft) {
+        val edited = uiState.value.draft.reducer()
         val validated =
             when (val validation = edited.validateInput()) {
                 is CreateCharacterValidation.Valid -> edited.withErrors()
                 is CreateCharacterValidation.Invalid -> edited.withValidationErrors(validation.errors)
             }
-        updateState { validated.copy(saveStatus = SaveStatus.EDITING, generationError = null, creationKey = null) }
+        updateState { validated.copy(creationKey = null).editableState() }
     }
 
     private fun navigateTo(command: NavigationCommand) {

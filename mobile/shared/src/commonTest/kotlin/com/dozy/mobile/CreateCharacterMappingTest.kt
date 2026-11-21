@@ -2,8 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.mobile.feature.character.domain.model.*
 import com.dozy.mobile.feature.character.domain.model.CreateCharacterErrors
-import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
-import com.dozy.mobile.feature.character.presentation.create.SaveStatus
+import com.dozy.mobile.feature.character.presentation.create.CharacterDraft
 import com.dozy.mobile.feature.character.presentation.create.validateInput
 import com.dozy.mobile.feature.character.presentation.create.withValidationErrors
 import com.dozy.mobile.resources.*
@@ -12,17 +11,16 @@ import kotlin.test.*
 
 class CreateCharacterMappingTest {
     @Test fun emptyFormHasNoProductionSampleData() {
-        val initial = CreateCharacterUiState()
+        val initial = CharacterDraft()
         assertEquals(UiText.Plain(""), initial.displayName)
         assertEquals(UiText.Plain(""), initial.displayPersonality)
         assertEquals(UiText.Plain(""), initial.displayAppearance)
-        assertFalse(initial.canSave)
     }
 
     @Test fun stableTypeValuesValidateIndependentlyOfDisplayLabels() {
         for (type in Character.Type.entries) {
             val state =
-                CreateCharacterUiState(name = "Finn", personality = "Kind", appearance = "Green eyes", selectedType = type.name.lowercase())
+                CharacterDraft(name = "Finn", personality = "Kind", appearance = "Green eyes", selectedType = type.name.lowercase())
             val result = state.validateInput() as CreateCharacterValidation.Valid
             assertEquals(type, result.input.type)
         }
@@ -36,7 +34,7 @@ class CreateCharacterMappingTest {
                 CreateCharacterErrors.Name.MUST_BE_SINGLE_LINE to UiText.Resource(Res.string.character_name_single_line),
             )
         for ((error, text) in cases) {
-            val state = CreateCharacterUiState().withValidationErrors(CreateCharacterErrors(name = error))
+            val state = CharacterDraft().withValidationErrors(CreateCharacterErrors(name = error))
             assertEquals(text, state.nameError)
             assertNull(state.personalityError)
             assertNull(state.appearanceError)
@@ -46,12 +44,11 @@ class CreateCharacterMappingTest {
 
     @Test fun mapsDescriptionsAndTypeWithoutSwappingFields() {
         val state =
-            CreateCharacterUiState(
+            CharacterDraft(
                 name = "Finn",
                 personality = "Curious",
                 appearance = "Green eyes",
                 selectedType = "Fantasy",
-                saveStatus = SaveStatus.FAILURE,
                 nameError = UiText.Plain("Old server error"),
             ).withValidationErrors(
                 CreateCharacterErrors(
@@ -64,7 +61,6 @@ class CreateCharacterMappingTest {
         assertEquals("Curious", state.personality)
         assertEquals("Green eyes", state.appearance)
         assertEquals("Fantasy", state.selectedType)
-        assertEquals(SaveStatus.FAILURE, state.saveStatus)
         assertNull(state.nameError)
         assertEquals(UiText.Resource(Res.string.character_description_required), state.personalityError)
         assertEquals(UiText.Resource(Res.string.character_description_too_long, listOf(2000)), state.appearanceError)
@@ -74,7 +70,6 @@ class CreateCharacterMappingTest {
         assertEquals("Curious", corrected.personality)
         assertEquals("Green eyes", corrected.appearance)
         assertEquals("Fantasy", corrected.selectedType)
-        assertEquals(SaveStatus.FAILURE, corrected.saveStatus)
         assertNull(corrected.nameError)
         assertNull(corrected.personalityError)
         assertNull(corrected.appearanceError)

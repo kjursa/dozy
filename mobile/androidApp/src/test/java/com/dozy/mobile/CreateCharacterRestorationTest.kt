@@ -26,11 +26,11 @@ internal class CreateCharacterRestorationTest : CreateCharacterViewModelFixture(
             runCurrent()
             val restored =
                 vm(SavedStateHandle(mapOf(SavedStatePersistence.DEFAULT_KEY to handle.get<String>(SavedStatePersistence.DEFAULT_KEY))))
-            assertEquals("Draft", restored.uiState.value.name)
-            assertEquals("asset", restored.uiState.value.avatarId)
-            assertFalse(restored.uiState.value.generating)
-            assertNull(restored.uiState.value.nameError)
-            assertEquals(SaveStatus.EDITING, restored.uiState.value.saveStatus)
+            assertEquals("Draft", restored.uiState.value.draft.name)
+            assertEquals("asset", restored.uiState.value.draft.avatarId)
+            assertFalse(restored.uiState.value is CreateCharacterUiState.Generating)
+            assertNull(restored.uiState.value.draft.nameError)
+            assertTrue(restored.uiState.value is CreateCharacterUiState.AvatarReady)
             vm.abandon()
         }
 
@@ -45,18 +45,18 @@ internal class CreateCharacterRestorationTest : CreateCharacterViewModelFixture(
 
             fun restored() = vm(SavedStateHandle(mapOf(SavedStatePersistence.DEFAULT_KEY to snapshot)), "1")
             val restored = restored()
-            assertTrue(restored.uiState.value.loading)
+            assertTrue(restored.uiState.value is CreateCharacterUiState.Loading)
             advanceUntilIdle()
-            assertEquals("Draft", restored.uiState.value.personality)
-            assertTrue(restored.uiState.value.avatarOutdated)
+            assertEquals("Draft", restored.uiState.value.draft.personality)
+            assertTrue(restored.uiState.value.draft.avatarOutdated)
             stored.characters.value = emptyList()
             restored.dispatch(CreateCharacterAction.SaveClicked)
             advanceUntilIdle()
-            assertTrue(restored.uiState.value.unavailable)
+            assertTrue(restored.uiState.value is CreateCharacterUiState.Unavailable)
             assertEquals(0, stored.saves)
             val missing = restored()
             advanceUntilIdle()
-            assertTrue(missing.uiState.value.unavailable)
-            assertFalse(missing.uiState.value.canSave)
+            assertTrue(missing.uiState.value is CreateCharacterUiState.Unavailable)
+            assertFalse(missing.uiState.value is CreateCharacterUiState.AvatarReady)
         }
 }

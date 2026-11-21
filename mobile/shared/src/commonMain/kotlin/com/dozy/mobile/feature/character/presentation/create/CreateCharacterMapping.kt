@@ -8,7 +8,7 @@ import com.dozy.mobile.resources.*
 import com.kjursa.foundation.presentation.text.UiText
 
 /** Validate creation rules while retaining raw form text for editing. */
-fun CreateCharacterUiState.validateInput(): CreateCharacterValidation =
+fun CharacterDraft.validateInput(): CreateCharacterValidation =
     CreateCharacterInput.from(
         name = name.orEmpty(),
         personality = personality.orEmpty(),
@@ -16,7 +16,7 @@ fun CreateCharacterUiState.validateInput(): CreateCharacterValidation =
         type = Character.Type.entries.firstOrNull { it.name.equals(selectedType, ignoreCase = true) },
     )
 
-fun CreateCharacterUiState.withValidationErrors(errors: CreateCharacterErrors) =
+fun CharacterDraft.withValidationErrors(errors: CreateCharacterErrors) =
     withErrors(
         name = errors.name?.toUiText(),
         personality = errors.personality?.toUiText(),
@@ -50,10 +50,9 @@ private fun CreateCharacterErrors.Type.toUiText(): UiText =
         CreateCharacterErrors.Type.REQUIRED -> UiText.Resource(Res.string.character_type_required)
     }
 
-fun CreateCharacterUiState.withCharacter(character: Character): CreateCharacterUiState {
+fun CharacterDraft.withCharacter(character: Character): CharacterDraft {
     val loaded =
         copy(
-            loading = false,
             editingId = character.id.value,
             name = character.details.name.value,
             personality = character.details.personality.value,

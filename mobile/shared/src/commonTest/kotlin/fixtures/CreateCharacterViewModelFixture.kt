@@ -21,7 +21,7 @@ import kotlin.test.BeforeTest
 internal open class CreateCharacterViewModelFixture {
     protected val dispatcher = StandardTestDispatcher()
     protected val stored = FakeCharacterRepository()
-    protected val draft = MemoryCreationDraft<CreateCharacterUiState>()
+    protected val draft = MemoryCreationDraft<CharacterDraft>()
     protected var readFailure: Exception? = null
     protected var generations = 0
     protected var generate: suspend () -> Character.Avatar? = { avatar() }
@@ -68,7 +68,7 @@ internal open class CreateCharacterViewModelFixture {
         id: String? = null,
     ) = CreateCharacterViewModel(
         Navigator(),
-        SavedStatePersistence(handle, CreateCharacterUiState.serializer()),
+        SavedStatePersistence(handle, CharacterDraft.serializer()),
         SaveCharacter(repository),
         GenerateCharacterAvatar(repository),
         ObserveCharacter(repository),

@@ -15,7 +15,7 @@ import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterAction
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterDestination
-import com.dozy.mobile.feature.character.presentation.create.CreateCharacterUiState
+import com.dozy.mobile.feature.character.presentation.create.CharacterDraft
 import com.dozy.mobile.feature.character.presentation.create.CreateCharacterViewModel
 import com.dozy.mobile.feature.character.presentation.details.CharacterDetailsViewModel
 import com.dozy.mobile.feature.character.presentation.list.CharactersViewModel
@@ -107,8 +107,8 @@ class CharacterModuleTest {
                                 mapOf(
                                     SavedStatePersistence.DEFAULT_KEY to
                                         Json.encodeToString(
-                                            CreateCharacterUiState.serializer(),
-                                            CreateCharacterUiState(
+                                            CharacterDraft.serializer(),
+                                            CharacterDraft(
                                                 name = "Koin hero",
                                                 personality = "Curious",
                                                 appearance = "Green eyes",

@@ -91,13 +91,15 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
     MviScreen(
         viewModel = viewModel,
     ) { state, dispatch ->
-        val name = state.displayName.resolve()
-        val personality = state.displayPersonality.resolve()
-        val appearance = state.displayAppearance.resolve()
+        val draft = state.draft
+        val editable = state as? CreateCharacterUiState.Editable
+        val name = draft.displayName.resolve()
+        val personality = draft.displayPersonality.resolve()
+        val appearance = draft.displayAppearance.resolve()
         Box(Modifier.fillMaxSize().imePadding().background(MaterialTheme.colorScheme.background)) {
             CharacterScreenGlows()
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                CharacterHeader(state.editingId != null) { dispatch(CreateCharacterAction.BackClicked) }
+                CharacterHeader(draft.editingId != null) { dispatch(CreateCharacterAction.BackClicked) }
                 Column(
                     Modifier
                         .weight(1f)
@@ -106,28 +108,28 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
                         .padding(horizontal = UiSpacing.x3),
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x3),
                 ) {
-                    if (state.loading) CircularProgressIndicator()
-                    if (state.unavailable) Text(stringResource(Res.string.character_unavailable))
-                    state.loadError?.let {
+                    if (state is CreateCharacterUiState.Loading) CircularProgressIndicator()
+                    if (state is CreateCharacterUiState.Unavailable) Text(stringResource(Res.string.character_unavailable))
+                    (state as? CreateCharacterUiState.LoadFailed)?.error?.let {
                         Text(it.resolve(), color = MaterialTheme.colorScheme.error)
                         OutlinedButton(onClick = { dispatch(CreateCharacterAction.RetryLoadClicked) }) {
                             Text(stringResource(Res.string.characters_retry))
                         }
                     }
-                    CharacterPreview(name, state.avatarUrl)
-                    if (state.avatarOutdated) Text(stringResource(Res.string.avatar_earlier_description))
-                    if (state.editingId == null && name.isBlank()) Text(stringResource(Res.string.character_inspiration))
-                    state.generationError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
+                    CharacterPreview(name, draft.avatarUrl)
+                    if (draft.avatarOutdated) Text(stringResource(Res.string.avatar_earlier_description))
+                    if (draft.editingId == null && name.isBlank()) Text(stringResource(Res.string.character_inspiration))
+                    editable?.generationError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     HeroTypePicker(
-                        state.selectedType,
-                        !state.busy && !state.unavailable && state.loadError == null,
+                        draft.selectedType,
+                        editable != null,
                     ) { dispatch(CreateCharacterAction.TypeSelected(it)) }
-                    state.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
+                    draft.typeError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
                     CharacterDetails(
-                        enabled = !state.busy && !state.unavailable && state.loadError == null,
-                        nameError = state.nameError,
-                        personalityError = state.personalityError,
-                        appearanceError = state.appearanceError,
+                        enabled = editable != null,
+                        nameError = draft.nameError,
+                        personalityError = draft.personalityError,
+                        appearanceError = draft.appearanceError,
                         name = name,
                         onNameChange = { dispatch(CreateCharacterAction.NameChanged(it)) },
                         personality = personality,
@@ -135,34 +137,32 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
                         appearance = appearance,
                         onAppearanceChange = { dispatch(CreateCharacterAction.AppearanceChanged(it)) },
                     )
-                    when (state.saveStatus) {
-                        SaveStatus.SAVING -> Text(stringResource(Res.string.saving_character))
-                        SaveStatus.FAILURE ->
-                            Text(
-                                stringResource(Res.string.character_save_failed),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        SaveStatus.EDITING -> Unit
+                    when (state) {
+                        is CreateCharacterUiState.Saving -> Text(stringResource(Res.string.saving_character))
+                        is CreateCharacterUiState.AvatarReady -> if (state.saveFailed) {
+                            Text(stringResource(Res.string.character_save_failed), color = MaterialTheme.colorScheme.error)
+                        }
+                        else -> Unit
                     }
                     Text(stringResource(Res.string.avatar_description_hint), style = MaterialTheme.typography.bodySmall)
-                    val phase = state.formPhase()
                     val onPreview: (() -> Unit)? =
-                        when (phase) {
-                            is CharacterFormPhase.ReadyToGenerate, is CharacterFormPhase.AvatarReady ->
-                                { { dispatch(CreateCharacterAction.PreviewClicked) } }
-                            else -> null
+                        if (state is CreateCharacterUiState.CanGenerate) {
+                            { dispatch(CreateCharacterAction.PreviewClicked) }
+                        } else {
+                            null
                         }
                     val onSave: (() -> Unit)? =
-                        when (phase) {
-                            is CharacterFormPhase.AvatarReady -> { { dispatch(CreateCharacterAction.SaveClicked) } }
-                            else -> null
+                        if (state is CreateCharacterUiState.AvatarReady) {
+                            { dispatch(CreateCharacterAction.SaveClicked) }
+                        } else {
+                            null
                         }
                     CharacterActions(
                         onPreview = onPreview,
                         onSave = onSave,
-                        saving = phase == CharacterFormPhase.Saving,
-                        generating = phase == CharacterFormPhase.Generating,
-                        hasAvatar = state.avatarId != null,
+                        saving = state is CreateCharacterUiState.Saving,
+                        generating = state is CreateCharacterUiState.Generating,
+                        hasAvatar = draft.avatarId != null,
                     )
                     Spacer(Modifier.height(24.dp))
                 }
