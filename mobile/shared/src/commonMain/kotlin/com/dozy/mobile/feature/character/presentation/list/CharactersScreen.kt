@@ -1,25 +1,19 @@
 package com.dozy.mobile.feature.character.presentation.list
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,27 +23,48 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.dozy.mobile.core.presentation.components.AmbientGlow
+import androidx.compose.ui.unit.sp
 import com.dozy.mobile.core.presentation.components.AvatarImage
-import com.dozy.mobile.core.presentation.components.Eyebrow
-import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.core.presentation.components.CollectionEmptyState
+import com.dozy.mobile.core.presentation.components.CollectionScreen
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.add_a_new_character
+import com.dozy.mobile.resources.add_character
+import com.dozy.mobile.resources.characters_collection_add_title
+import com.dozy.mobile.resources.characters_collection_empty_action
+import com.dozy.mobile.resources.characters_collection_eyebrow
+import com.dozy.mobile.resources.characters_collection_intro
+import com.dozy.mobile.resources.characters_collection_title
+import com.dozy.mobile.resources.characters_empty_description
+import com.dozy.mobile.resources.characters_empty_title
+import com.dozy.mobile.resources.characters_offline
+import com.dozy.mobile.resources.characters_retry
+import com.dozy.mobile.resources.could_not_load_characters
 import com.kjursa.foundation.compose.mvi.MviScreen
-import com.kjursa.foundation.compose.theme.UiSpacing
-import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun CharactersTabScreen() {
+internal fun CharactersTabScreen(onBack: () -> Unit) {
     val charactersViewModel: CharactersViewModel = koinViewModel()
     MviScreen(
         viewModel = charactersViewModel,
     ) { state, dispatch ->
-        CharactersTabContent(state, dispatch)
+        CharactersTabContent(state, dispatch, onBack)
     }
 }
 
@@ -57,129 +72,131 @@ internal fun CharactersTabScreen() {
 internal fun CharactersTabContent(
     state: CharactersUiState,
     onAction: (CharactersAction) -> Unit,
+    onBack: () -> Unit = {},
 ) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        AmbientGlow(Modifier.fillMaxSize())
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
-            ) {
-                Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow(state.eyebrow.resolve())
-                    Text(
-                        state.title.resolve(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        state.subtitle.resolve(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+    val add = { onAction(CharactersAction.AddCharacterClicked) }
+    CollectionScreen(
+        toolbarTitle = stringResource(Res.string.characters_collection_title),
+        eyebrow = stringResource(Res.string.characters_collection_eyebrow),
+        title = stringResource(Res.string.characters_collection_title),
+        intro = stringResource(Res.string.characters_collection_intro),
+        addDescription = stringResource(Res.string.add_character),
+        onBack = onBack,
+        onRefresh = { onAction(CharactersAction.Refresh) },
+        refreshing = state.refreshing,
+        onAdd = add,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (state.loading) CircularProgressIndicator()
+            if (state.characterLoadError) {
+                Text(stringResource(Res.string.could_not_load_characters), color = MaterialTheme.colorScheme.error)
+            }
+            if (state.offline) Text(stringResource(Res.string.characters_offline))
+            if (state.characterLoadError || state.offline) {
+                TextButton(enabled = !state.refreshing, onClick = { onAction(CharactersAction.Refresh) }) {
+                    Text(stringResource(Res.string.characters_retry))
                 }
-                if (state.loading) {
-                    CircularProgressIndicator()
-                } else {
-                    if (state.refreshing) CircularProgressIndicator(Modifier.size(24.dp))
-                    if (state.characterLoadError) {
-                        Text(
-                            stringResource(Res.string.could_not_load_characters),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    if (state.offline) Text(stringResource(Res.string.characters_offline))
-                    TextButton(onClick = { onAction(CharactersAction.Refresh) }, enabled = !state.refreshing) {
-                        Text(stringResource(if (state.characterLoadError) Res.string.characters_retry else Res.string.characters_refresh))
-                    }
-                    if (state.characters.isEmpty() && !state.characterLoadError && !state.refreshing) {
-                        Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                            Text(stringResource(Res.string.characters_empty_title), style = MaterialTheme.typography.headlineSmall)
-                            Text(stringResource(Res.string.characters_empty_description))
-                            Button(onClick = { onAction(CharactersAction.AddCharacterClicked) }) {
-                                Text(stringResource(Res.string.add_a_new_character))
+            }
+            if (!state.loading && !state.refreshing && !state.characterLoadError && state.characters.isEmpty()) {
+                CollectionEmptyState(
+                    Icons.Default.Face,
+                    stringResource(Res.string.characters_empty_title),
+                    stringResource(Res.string.characters_empty_description),
+                    stringResource(Res.string.characters_collection_empty_action),
+                    add,
+                )
+            }
+            if (state.characters.isNotEmpty()) {
+                val tiles = state.characters + listOf(null)
+                tiles.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { character ->
+                            if (character == null) {
+                                AddCharacterTile(Modifier.weight(1f), add)
+                            } else {
+                                CharacterLibraryCard(character, Modifier.weight(1f)) {
+                                    onAction(CharactersAction.CharacterSelected(character))
+                                }
                             }
                         }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
-                }
-                state.characters.chunked(2).forEach { rowCharacters ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                        rowCharacters.forEach { character ->
-                            CharacterLibraryCard(character, Modifier.weight(1f)) { onAction(CharactersAction.CharacterSelected(character)) }
-                        }
-                        if (rowCharacters.size == 1) Spacer(Modifier.weight(1f))
-                    }
-                }
-                if (!state.loading &&
-                    state.characters.isNotEmpty()
-                ) {
-                    CharacterLibraryCard(onAddCharacter = { onAction(CharactersAction.AddCharacterClicked) })
                 }
             }
-            Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
     }
 }
 
 @Composable
-private fun CharacterLibraryCard(
-    character: CharacterListItem,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun CharacterLibraryCard(character: CharacterListItem, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(27.dp)
     Surface(
-        modifier = modifier.shadow(6.dp, MaterialTheme.shapes.large).clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.large,
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 218.dp),
+        shape = shape,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
-    ) {
-        Column(Modifier.padding(UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-            AvatarImage(character.avatarUrl, character.name, Modifier.fillMaxWidth().aspectRatio(1f))
-            Text(character.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-            Text(
-                character.description,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CharacterLibraryCard(onAddCharacter: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onAddCharacter),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
-        Row(
-            Modifier.padding(UiSpacing.x3),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2),
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Default.AddCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(32.dp),
+            AvatarImage(
+                character.avatarUrl,
+                character.name,
+                Modifier.size(106.dp).clip(CircleShape),
+                contentScale = ContentScale.Crop,
             )
-            Column {
-                Text(
-                    stringResource(Res.string.add_a_new_character),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    stringResource(Res.string.create_another_hero_for_your_stories),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                character.name,
+                Modifier.padding(top = 15.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Black),
+                textAlign = TextAlign.Center,
+            )
+            TileCaption(character.description)
         }
     }
+}
+
+@Composable
+private fun AddCharacterTile(modifier: Modifier, onAdd: () -> Unit) {
+    val shape = RoundedCornerShape(27.dp)
+    Column(
+        modifier.heightIn(min = 218.dp).clip(shape).clickable(role = Role.Button, onClick = onAdd)
+            .drawBehind {
+                val stroke = 1.dp.toPx()
+                drawRoundRect(
+                    color = Color(0xFFEBDCC7),
+                    topLeft = Offset(stroke / 2, stroke / 2),
+                    size = Size(size.width - stroke, size.height - stroke),
+                    cornerRadius = CornerRadius(27.dp.toPx()),
+                    style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
+                )
+            }.padding(horizontal = 12.dp, vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Default.Add, null, Modifier.size(48.dp), tint = Color(0xFF4B8C7D))
+        Text(
+            stringResource(Res.string.characters_collection_add_title),
+            Modifier.padding(top = 15.dp),
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.Black),
+            textAlign = TextAlign.Center,
+        )
+        TileCaption(stringResource(Res.string.add_a_new_character))
+    }
+}
+
+@Composable
+private fun TileCaption(text: String) {
+    Text(
+        text,
+        Modifier.padding(top = 8.dp),
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }

@@ -1,46 +1,44 @@
 package com.dozy.mobile.feature.story.presentation.list
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import com.dozy.mobile.core.presentation.components.AmbientGlow
-import com.dozy.mobile.core.presentation.components.Eyebrow
-import com.dozy.mobile.core.presentation.components.SectionHeading
-import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
+import com.dozy.mobile.core.presentation.components.CollectionEmptyState
+import com.dozy.mobile.core.presentation.components.CollectionScreen
 import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.my_stories
+import com.dozy.mobile.resources.stories_collection_empty_action
+import com.dozy.mobile.resources.stories_collection_empty_description
+import com.dozy.mobile.resources.stories_collection_empty_title
+import com.dozy.mobile.resources.stories_collection_eyebrow
+import com.dozy.mobile.resources.stories_collection_intro
+import com.dozy.mobile.resources.stories_collection_title
+import com.dozy.mobile.resources.stories_create
+import com.dozy.mobile.resources.stories_offline
+import com.dozy.mobile.resources.stories_refresh
 import com.kjursa.foundation.compose.mvi.MviScreen
-import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun StoriesTabScreen() {
+internal fun StoriesTabScreen(onBack: () -> Unit) {
     val storiesViewModel: StoriesViewModel = koinViewModel()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { storiesViewModel.navigationHandled() }
     MviScreen(
         viewModel = storiesViewModel,
     ) { state, dispatch ->
-        StoriesTabContent(state, dispatch)
+        StoriesTabContent(state, dispatch, onBack)
     }
 }
 
@@ -48,52 +46,43 @@ internal fun StoriesTabScreen() {
 internal fun StoriesTabContent(
     state: StoriesUiState,
     dispatch: (StoriesAction) -> Unit,
+    onBack: () -> Unit = {},
 ) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        AmbientGlow(Modifier.fillMaxSize())
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()),
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = UiSpacing.x3),
-                verticalArrangement = Arrangement.spacedBy(UiSpacing.x4),
-            ) {
-                Column(Modifier.padding(top = UiSpacing.x2), verticalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-                    Eyebrow(state.eyebrow.resolve())
-                    Text(
-                        state.title.resolve(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        state.subtitle.resolve(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                    SectionHeading(state.collectionEyebrow.resolve(), state.collectionTitle.resolve())
-                    Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
-                        Button(enabled = !state.navigating, onClick = { dispatch(StoriesAction.Create) }) {
-                            Text(stringResource(Res.string.stories_create))
-                        }
-                        TextButton(enabled = !state.refreshing, onClick = { dispatch(StoriesAction.Refresh) }) {
-                            Text(stringResource(Res.string.stories_refresh))
-                        }
-                    }
-                    if (state.loading || state.refreshing) CircularProgressIndicator()
-                    state.error?.let { Text(it.resolve()) }
-                    if (state.offline) Text(stringResource(Res.string.stories_offline))
-                    if (!state.loading && !state.refreshing && state.error == null && state.stories.isEmpty()) {
-                        Text(stringResource(Res.string.stories_empty))
-                    }
-                    state.stories.forEach { story ->
-                        StoryWideCard(story) { dispatch(StoriesAction.StorySelected(it)) }
-                    }
+    val create = { dispatch(StoriesAction.Create) }
+    CollectionScreen(
+        toolbarTitle = stringResource(Res.string.my_stories),
+        eyebrow = stringResource(Res.string.stories_collection_eyebrow),
+        title = stringResource(Res.string.stories_collection_title),
+        intro = stringResource(Res.string.stories_collection_intro),
+        addDescription = stringResource(Res.string.stories_create),
+        onBack = onBack,
+        onRefresh = { dispatch(StoriesAction.Refresh) },
+        refreshing = state.refreshing,
+        onAdd = create,
+        addEnabled = !state.navigating,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (state.loading) CircularProgressIndicator()
+            state.error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error) }
+            if (state.offline) Text(stringResource(Res.string.stories_offline))
+            if (state.error != null || state.offline) {
+                TextButton(enabled = !state.refreshing, onClick = { dispatch(StoriesAction.Refresh) }) {
+                    Text(stringResource(Res.string.stories_refresh))
                 }
             }
-            androidx.compose.foundation.layout
-                .Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+            if (!state.loading && !state.refreshing && state.error == null && state.stories.isEmpty()) {
+                CollectionEmptyState(
+                    Icons.Default.AutoStories,
+                    stringResource(Res.string.stories_collection_empty_title),
+                    stringResource(Res.string.stories_collection_empty_description),
+                    stringResource(Res.string.stories_collection_empty_action),
+                    create,
+                    enabled = !state.navigating,
+                )
+            }
+            state.stories.forEach { story ->
+                StoryWideCard(story) { dispatch(StoriesAction.StorySelected(it)) }
+            }
         }
     }
 }

@@ -82,6 +82,15 @@ fun MainScreen(
     }
     val backStackEntry by tabController.currentBackStackEntryAsState()
     val selectedRoute = backStackEntry?.destination?.route ?: HOME_TAB
+    val selectTab: (String) -> Unit = { route ->
+        if (route != selectedRoute) {
+            tabController.navigate(route) {
+                popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         NavHost(
@@ -90,22 +99,14 @@ fun MainScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             composable(HOME_TAB) { homeScreen.Content() }
-            composable(STORIES_TAB) { storiesScreen.Content() }
-            composable(CHARACTERS_TAB) { charactersScreen.Content() }
+            composable(STORIES_TAB) { storiesScreen.Content(onBack = { selectTab(HOME_TAB) }) }
+            composable(CHARACTERS_TAB) { charactersScreen.Content(onBack = { selectTab(HOME_TAB) }) }
         }
 
         MainBottomPanel(
             modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f),
             selectedRoute = selectedRoute,
-            onSelect = { route ->
-                if (route != selectedRoute) {
-                    tabController.navigate(route) {
-                        popUpTo(tabController.graph.findStartDestination().id) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            },
+            onSelect = selectTab,
         )
     }
 }
