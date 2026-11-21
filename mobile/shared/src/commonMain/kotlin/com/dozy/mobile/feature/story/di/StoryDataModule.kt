@@ -1,5 +1,6 @@
 package com.dozy.mobile.feature.story.di
 
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
 import com.dozy.mobile.feature.story.domain.repository.GenerationRepository
 import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
@@ -16,7 +17,7 @@ import org.koin.dsl.module
 
 val storyDataModule =
     module {
-        single<GenerationRepository> { DefaultGenerationRepository(get(), get(), get()) }
+        single<GenerationRepository> { DefaultGenerationRepository(get(), get(), get(), get<ApiConfig>().allowLocalAssetHttp) }
         factoryOf(::StartGeneration)
         factoryOf(::ObserveGenerations)
         factoryOf(::ObserveSavedStories)

@@ -34,6 +34,7 @@ class DefaultGenerationRepository(
     private val dao: GenerationDao,
     private val generations: StoryGenerationsClients,
     private val reader: StoriesClients,
+    private val allowLocalAssetHttp: Boolean = false,
 ) : GenerationRepository {
     private val mutex = Mutex()
 
@@ -41,7 +42,7 @@ class DefaultGenerationRepository(
 
     override fun stories() =
         dao.observeStories().map { rows ->
-            rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain() } }
+            rows.mapNotNull { it.result?.let { json -> Json.decodeFromString<StoryDto>(json).toDomain(allowLocalAssetHttp) } }
         }
 
     override fun summaries() =
@@ -87,7 +88,7 @@ class DefaultGenerationRepository(
 
     override suspend fun readStory(id: Story.Id): Story? =
         mutex.withLock {
-            dao.findStory(id.value)?.result?.let { return@withLock Json.decodeFromString<StoryDto>(it).toDomain() }
+            dao.findStory(id.value)?.result?.let { return@withLock Json.decodeFromString<StoryDto>(it).toDomain(allowLocalAssetHttp) }
             val dto =
                 when (val response = reader.v1.read(id.value)) {
                     is StoryReadResult.Success -> response.response
@@ -102,7 +103,7 @@ class DefaultGenerationRepository(
                         }
                 }
             require(dto.id == id.value)
-            val story = dto.toDomain()
+            val story = dto.toDomain(allowLocalAssetHttp)
             saveStory(dto, dto.jobId?.let { dao.findJob(it) })
             story
         }
@@ -142,7 +143,7 @@ class DefaultGenerationRepository(
                 if (remote.status == "READY") {
                     val story = requireNotNull(remote.story)
                     require(story.id == remote.storyId && story.jobId == id.value)
-                    story.toDomain()
+                    story.toDomain(allowLocalAssetHttp)
                     return@runCatchingSuspend saveStory(story, saved).toCompletedJob()
                 }
                 val updated =
@@ -207,7 +208,7 @@ class DefaultGenerationRepository(
     private val activeStatuses = setOf("QUEUED", "CREATING_TEXT", "CREATING_COVER")
 
     override suspend fun configuration(key: GenerationJob.RequestKey): GenerationConfiguration? =
-        dao.find(key.value)?.let { Json.decodeFromString<GenerationRequestDto>(it.configuration).toDomain() }
+        dao.find(key.value)?.let { Json.decodeFromString<GenerationRequestDto>(it.configuration).toDomain(allowLocalAssetHttp) }
 
     override suspend fun accepted(key: GenerationJob.RequestKey) =
         dao.find(key.value)?.toJob() ?: dao.findStoryForRequest(key.value)?.toCompletedJob()
