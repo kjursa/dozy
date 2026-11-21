@@ -29,9 +29,11 @@ app-specific dependencies.
 - `FoundationTheme` accepts Material 3 color, typography, and shape configuration.
 - `UiSpacing` provides an eight-dp spacing scale (`x1` through `x8`).
 - `MviViewModel<State, Action, Effect>` provides lifecycle-aware `uiState`, action
-  dispatch, and a channel-backed stream for one-off effects.
+  dispatch, a channel-backed stream for one-off effects, and overridable `start()`/
+  `stop()` hooks.
 - `MviScreen` collects that state with lifecycle awareness and connects it to a
-  stateless content composable. It also forwards one-off effects to the route.
+  stateless content composable. It forwards one-off effects to the route and pairs
+  `start()`/`stop()` with the owning lifecycle's started/stopped interval.
 
 Use Material 3 components directly unless Foundation adds a distinct reusable
 behavior or visual variant; avoid wrappers that only duplicate Material APIs.
