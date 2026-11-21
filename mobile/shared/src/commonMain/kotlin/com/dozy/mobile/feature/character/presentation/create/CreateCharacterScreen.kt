@@ -16,11 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +30,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Stars
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,15 +43,23 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dozy.mobile.core.presentation.components.AvatarImage
-import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.resources.*
+import com.dozy.mobile.ui.common.DozyActionButton
 import com.dozy.mobile.ui.common.DozyFormField
 import com.dozy.mobile.ui.common.DozyLayout
+import com.dozy.mobile.ui.common.DozySecondaryButton
+import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
 import com.kjursa.foundation.presentation.text.UiText
@@ -92,7 +96,7 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
         val appearance = state.displayAppearance.resolve()
         Box(Modifier.fillMaxSize().imePadding().background(MaterialTheme.colorScheme.background)) {
             CharacterScreenGlows()
-            Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 CharacterHeader(state.editingId != null) { dispatch(CreateCharacterAction.BackClicked) }
                 Column(
                     Modifier
@@ -140,43 +144,31 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
                             )
                         SaveStatus.EDITING -> Unit
                     }
-                    Spacer(Modifier.height(mainBottomMenuScrollSpace()))
+                    Text(stringResource(Res.string.avatar_description_hint), style = MaterialTheme.typography.bodySmall)
+                    CharacterActions(
+                        onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
+                        onSave = { dispatch(CreateCharacterAction.SaveClicked) },
+                        saving = state.saveStatus == SaveStatus.SAVING,
+                        generating = state.generating,
+                        canSave = state.canSave,
+                        canGenerate = !state.busy && !state.unavailable && state.loadError == null,
+                        hasAvatar = state.avatarId != null,
+                    )
+                    Spacer(Modifier.height(24.dp))
                 }
             }
-            CharacterActions(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
-                onSave = { dispatch(CreateCharacterAction.SaveClicked) },
-                saving = state.saveStatus == SaveStatus.SAVING,
-                generating = state.generating,
-                canSave = state.canSave,
-                canGenerate = !state.busy && !state.unavailable && state.loadError == null,
-                hasAvatar = state.avatarId != null,
-            )
         }
     }
 }
 
 @Composable
 private fun CharacterScreenGlows() {
-    Box(Modifier.fillMaxSize()) {
-        Box(
-            Modifier
-                .align(
-                    Alignment.TopEnd,
-                ).offset(x = 80.dp, y = (-70).dp)
-                .size(220.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = .08f), CircleShape),
-        )
-        Box(
-            Modifier
-                .align(
-                    Alignment.TopStart,
-                ).offset(x = (-90).dp, y = 420.dp)
-                .size(200.dp)
-                .background(MaterialTheme.colorScheme.secondary.copy(alpha = .08f), CircleShape),
-        )
-    }
+    Box(
+        Modifier.fillMaxSize().drawBehind {
+            drawRect(Brush.radialGradient(listOf(DozyColors.brandTeal.copy(alpha = .075f), Color.Transparent), Offset(size.width, size.height * .03f), size.width))
+            drawRect(Brush.radialGradient(listOf(DozyColors.brandCoral.copy(alpha = .043f), Color.Transparent), Offset(0f, size.height * .18f), size.width * .8f))
+        },
+    )
 }
 
 @Composable
@@ -190,43 +182,26 @@ private fun CharacterHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.size(48.dp).shadow(6.dp, CircleShape).clickable(onClick = onBack),
+            modifier = Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(Res.string.back),
-                    tint = MaterialTheme.colorScheme.secondary,
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = .8f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
-        ) {
-            Row(
-                Modifier.padding(horizontal = UiSpacing.x2, vertical = UiSpacing.x1),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1),
-            ) {
-                Icon(
-                    Icons.Default.Stars,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text(
-                    stringResource(if (editing) Res.string.character_edit else Res.string.new_character),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-        Spacer(Modifier.size(48.dp))
+        Text(
+            stringResource(if (editing) Res.string.character_edit else Res.string.new_character).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.5.sp,
+        )
+        Spacer(Modifier.size(44.dp))
     }
 }
 
@@ -236,9 +211,38 @@ private fun CharacterPreview(
     avatarUrl: String?,
 ) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        AvatarImage(avatarUrl, name, Modifier.size(220.dp))
-        Text(name.ifBlank { stringResource(Res.string.your_hero) }, style = MaterialTheme.typography.headlineLarge)
-        Text(stringResource(Res.string.avatar_description_hint))
+        Surface(
+            modifier = Modifier.padding(top = 15.dp, bottom = 25.dp).size(190.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.background,
+            border = BorderStroke(5.dp, MaterialTheme.colorScheme.surface),
+        ) {
+            if (avatarUrl != null) {
+                AvatarImage(avatarUrl, name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(Icons.Default.Face, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(Res.string.your_hero), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+        Text(
+            stringResource(Res.string.character_preview_eyebrow),
+            style = MaterialTheme.typography.labelSmall,
+            color = DozyColors.textLink,
+        )
+        Text(
+            name.ifBlank { stringResource(Res.string.character_preview_title) },
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 29.sp),
+        )
+        Text(
+            stringResource(Res.string.character_preview_intro),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -257,15 +261,15 @@ private fun HeroTypePicker(
         Row(horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
             heroTypes.forEach { type ->
                 val isSelected = type.value == selected
-                val typeShape = MaterialTheme.shapes.medium
+                val typeShape = RoundedCornerShape(20.dp)
                 Surface(
                     modifier = Modifier.weight(1f).clip(typeShape).clickable(enabled = enabled) { onSelect(type.value) },
                     shape = typeShape,
                     color = MaterialTheme.colorScheme.surface,
                     border =
                         BorderStroke(
-                            1.dp,
-                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            if (isSelected) 2.dp else 1.dp,
+                            if (isSelected) DozyColors.selectionControl else MaterialTheme.colorScheme.outline,
                         ),
                 ) {
                     Column(
@@ -310,8 +314,8 @@ private fun CharacterDetails(
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f)),
-        modifier = Modifier.shadow(6.dp, MaterialTheme.shapes.large),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(DozyLayout.cardPadding), verticalArrangement = Arrangement.spacedBy(DozyLayout.contentGap)) {
             DozyFormField(
@@ -347,7 +351,6 @@ private fun CharacterDetails(
 
 @Composable
 private fun CharacterActions(
-    modifier: Modifier,
     onPreview: () -> Unit,
     onSave: () -> Unit,
     saving: Boolean,
@@ -356,55 +359,21 @@ private fun CharacterActions(
     canGenerate: Boolean,
     hasAvatar: Boolean,
 ) {
-    Surface(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = UiSpacing.x3)
-                .navigationBarsPadding()
-                .padding(bottom = UiSpacing.x3)
-                .shadow(18.dp, RoundedCornerShape(40.dp)),
-        shape = RoundedCornerShape(40.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
-    ) {
-        Row(Modifier.padding(UiSpacing.x1), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x1)) {
-            OutlinedButton(
-                onClick = onPreview,
-                enabled = canGenerate,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = CircleShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-            ) {
-                if (generating) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                } else {
-                    Text(stringResource(if (hasAvatar) Res.string.avatar_regenerate else Res.string.avatar_generate))
-                }
-            }
-            if (saving) {
-                Box(Modifier.weight(1f).height(48.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DozySecondaryButton(onClick = onPreview, enabled = canGenerate) {
+            if (generating) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
-                Button(
-                    onClick = onSave,
-                    enabled = canSave,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(UiSpacing.x1))
-                    Text(
-                        stringResource(Res.string.save_character),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(stringResource(if (hasAvatar) Res.string.avatar_regenerate else Res.string.avatar_generate), fontWeight = FontWeight.Black)
+                Icon(Icons.Default.Stars, null, Modifier.padding(start = 8.dp).size(20.dp))
+            }
+        }
+        DozyActionButton(onClick = onSave, enabled = canSave && !saving) {
+            if (saving) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                Text(stringResource(Res.string.save_character), fontWeight = FontWeight.Black)
+                Icon(Icons.Default.CheckCircle, null, Modifier.padding(start = 8.dp).size(20.dp))
             }
         }
     }
