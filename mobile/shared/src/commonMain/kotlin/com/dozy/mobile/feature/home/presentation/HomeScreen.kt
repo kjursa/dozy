@@ -229,6 +229,7 @@ private fun CharactersSection(
     onCharacterSelected: (HomeCharacter) -> Unit,
     onSeeAll: () -> Unit,
 ) {
+    val avatarSize = 70.dp
     Column(verticalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
         SectionHeading(stringResource(Res.string.home_characters_label), stringResource(Res.string.home_characters_title), onSeeAll)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(UiSpacing.x2)) {
@@ -240,7 +241,7 @@ private fun CharactersSection(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
                 ) {
-                    AvatarImage(character.avatarUrl, character.name, Modifier.size(70.dp).clip(CircleShape))
+                    AvatarImage(character.avatarUrl, character.name, Modifier.size(avatarSize).clip(CircleShape))
                     Text(character.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
@@ -250,7 +251,7 @@ private fun CharactersSection(
                 verticalArrangement = Arrangement.spacedBy(UiSpacing.x1),
             ) {
                 Surface(
-                    modifier = Modifier.size(80.dp),
+                    modifier = Modifier.size(avatarSize),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
