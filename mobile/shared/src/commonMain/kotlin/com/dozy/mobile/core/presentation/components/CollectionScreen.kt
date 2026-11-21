@@ -29,9 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -64,23 +61,10 @@ internal fun CollectionScreen(
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding(),
+        modifier = Modifier.fillMaxSize().statusBarsPadding(),
     ) {
         Column(
-            Modifier.fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .drawBehind {
-                    drawRect(Brush.radialGradient(
-                        listOf(DozyColors.brandTeal.copy(alpha = .075f), Color.Transparent),
-                        Offset(size.width, size.height * .03f),
-                        size.width * .8f,
-                    ))
-                    drawRect(Brush.radialGradient(
-                        listOf(DozyColors.brandCoral.copy(alpha = .043f), Color.Transparent),
-                        Offset(0f, size.height * .18f),
-                        size.width * .65f,
-                    ))
-                }.verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 22.dp, top = 12.dp, end = 22.dp, bottom = 24.dp),

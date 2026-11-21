@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -58,6 +60,19 @@ private const val TAB_EDGE_ANIMATION_MS = 160
 private const val HOME_TAB = "home"
 private const val STORIES_TAB = "stories"
 private const val CHARACTERS_TAB = "characters"
+
+private enum class BottomTabPalette(val active: Color, val background: Color) {
+    HOME(Color(0xFF226D67), Color(0xFFE7F5EF)),
+    STORIES(Color(0xFF77546F), Color(0xFFF3E7F0)),
+    CHARACTERS(Color(0xFFAF4C43), Color(0xFFFFEDE7)),
+}
+
+private fun bottomTabPalette(route: String): BottomTabPalette =
+    when (route) {
+        STORIES_TAB -> BottomTabPalette.STORIES
+        CHARACTERS_TAB -> BottomTabPalette.CHARACTERS
+        else -> BottomTabPalette.HOME
+    }
 
 @Composable
 fun MainScreen(
@@ -102,7 +117,25 @@ fun MainScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    val pageAccent by animateColorAsState(
+        targetValue = bottomTabPalette(selectedRoute).active,
+        animationSpec = tween(durationMillis = TAB_EDGE_ANIMATION_MS * 2),
+        label = "Tab page accent",
+    )
+    Box(
+        Modifier.fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .drawBehind {
+                val glow = pageAccent.copy(alpha = .17f)
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(glow, glow.copy(alpha = .065f), glow.copy(alpha = 0f)),
+                        center = Offset(size.width * .88f, size.height * .04f),
+                        radius = maxOf(size.width * 1.15f, size.height * .55f),
+                    ),
+                )
+            },
+    ) {
         NavHost(
             navController = tabController,
             startDestination = HOME_TAB,
@@ -146,7 +179,7 @@ private fun MainBottomPanel(
             else -> 0
         }
         Row(
-            Modifier.padding(UiSpacing.x1).bottomTabIndicator(selectedIndex),
+            Modifier.padding(UiSpacing.x1).bottomTabIndicator(selectedIndex, bottomTabPalette(selectedRoute).background),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MainBottomItem(stringResource(Res.string.home), Icons.Default.Home, HOME_TAB, selectedRoute, onSelect, Modifier.weight(1f))
@@ -171,10 +204,14 @@ private fun MainBottomPanel(
 }
 
 @Composable
-private fun Modifier.bottomTabIndicator(selectedIndex: Int): Modifier {
+private fun Modifier.bottomTabIndicator(selectedIndex: Int, background: Color): Modifier {
     val start = remember { Animatable(selectedIndex.toFloat()) }
     val end = remember { Animatable(selectedIndex + 1f) }
-    val color = MaterialTheme.colorScheme.secondaryContainer
+    val color by animateColorAsState(
+        targetValue = background,
+        animationSpec = tween(durationMillis = TAB_EDGE_ANIMATION_MS * 2),
+        label = "Bottom tab background",
+    )
 
     LaunchedEffect(selectedIndex) {
         val targetStart = selectedIndex.toFloat()
@@ -217,7 +254,7 @@ private fun MainBottomItem(
 ) {
     val selected = route == selectedRoute
     val tint by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (selected) bottomTabPalette(route).active else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(durationMillis = TAB_EDGE_ANIMATION_MS * 2),
         label = "Bottom tab tint",
     )
