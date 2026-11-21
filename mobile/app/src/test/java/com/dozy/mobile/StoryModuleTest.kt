@@ -1,6 +1,8 @@
 package com.dozy.mobile
 
 import androidx.lifecycle.SavedStateHandle
+import com.dozy.api.client.auth.AuthSessionStorage
+import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.feature.character.domain.repository.CharacterRepository
@@ -31,6 +33,7 @@ class StoryModuleTest {
             val client = HttpClient(MockEngine { error("Disabled configuration must not send HTTP") })
             val platform =
                 module {
+                    single<AuthSessionStorage> { InMemoryAuthSessionStorage() }
                     single { ApiConfig(null) }
 
                     single { client }

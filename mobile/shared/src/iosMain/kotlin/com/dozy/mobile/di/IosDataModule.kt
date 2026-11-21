@@ -12,6 +12,7 @@ import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.databaseModule
 import com.dozy.mobile.core.data.database.iosDatabaseBuilder
 import com.dozy.mobile.feature.character.di.characterDataModule
+import com.dozy.mobile.feature.login.domain.repository.OnboardingPreferences
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.di.placeDataModule
 import com.dozy.mobile.feature.story.di.storyDataModule
@@ -27,6 +28,7 @@ fun iosDataModule(
     single<SQLiteDriver> { BundledSQLiteDriver() }
     includes(databaseModule, httpClientModule, dozyClientModule, characterDataModule, placeDataModule, storyDataModule)
     single { config }
+    single<OnboardingPreferences> { IosOnboardingPreferences() }
     single<AuthSessionStorage> { IosAuthSessionStorage() }
     single { places }
     single<DatabaseBuilderFactory> { DatabaseBuilderFactory { iosDatabaseBuilder() } }

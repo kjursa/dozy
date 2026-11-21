@@ -5,7 +5,6 @@ import kotlinx.serialization.Transient
 
 @Serializable
 data class LoginUiState(
-    val tutorialSeen: Boolean = false,
     val email: String = "",
     val pin: String = "",
     @Transient val emailError: Boolean = false,

@@ -20,7 +20,6 @@ import com.dozy.api.client.auth.SessionState
 import com.dozy.mobile.feature.launcher.presentation.LauncherDestination
 import com.dozy.mobile.feature.launcher.presentation.LauncherScreen
 import com.dozy.mobile.feature.launcher.presentation.LauncherViewModel
-import com.dozy.mobile.feature.login.domain.repository.LoginRepository
 import com.dozy.mobile.feature.login.presentation.LoginViewModel
 import com.dozy.mobile.navigation.AppNavigator
 import com.dozy.mobile.navigation.AppScreens
@@ -54,7 +53,6 @@ fun DozyApp(
     val navController = rememberNavController()
 
     DozyTheme {
-        val loginRepository: LoginRepository = koinInject()
         val loginViewModel: LoginViewModel = koinViewModel()
         val navigator: AppNavigator = koinInject()
         val sessionManager: AuthSessionManager = koinInject()
@@ -99,8 +97,7 @@ fun DozyApp(
         ) {
             composable(LAUNCHER_ROUTE) {
                 val launcherViewModel: LauncherViewModel = koinViewModel()
-                val tutorialSeen = loginRepository.hasSeenTutorial() || loginViewModel.uiState.value.tutorialSeen
-                LauncherScreen(launcherViewModel, tutorialSeen)
+                LauncherScreen(launcherViewModel)
             }
             composable(LOGIN_TUTORIAL_ROUTE) { screens.tutorial.Content() }
             composable(LOGIN_WELCOME_ROUTE) { screens.welcome.Content() }

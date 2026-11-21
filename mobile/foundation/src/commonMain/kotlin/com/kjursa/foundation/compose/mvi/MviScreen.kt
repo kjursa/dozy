@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collect
 
@@ -16,6 +17,11 @@ fun <State : Any, Action : Any, Effect : Any> MviScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentOnEffect by rememberUpdatedState(onEffect)
+
+    LifecycleStartEffect(viewModel) {
+        viewModel.start()
+        onStopOrDispose { viewModel.stop() }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect -> currentOnEffect(effect) }

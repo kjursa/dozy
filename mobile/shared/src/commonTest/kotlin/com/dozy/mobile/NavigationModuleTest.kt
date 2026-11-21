@@ -1,6 +1,7 @@
 package com.dozy.mobile
 
 import com.dozy.mobile.feature.login.data.FakeLoginRepository
+import com.dozy.mobile.feature.login.domain.repository.OnboardingPreferences
 import com.dozy.mobile.feature.login.presentation.LoginUiState
 import com.dozy.mobile.feature.login.presentation.LoginViewModel
 import com.dozy.mobile.navigation.AppNavigator
@@ -20,7 +21,7 @@ class NavigationModuleTest {
         val app = koinApplication { modules(navigationModule) }
         try {
             val navigator = app.koin.get<AppNavigator>()
-            val login = LoginViewModel(navigator, MemoryLoginState(), FakeLoginRepository())
+            val login = LoginViewModel(navigator, MemoryLoginState(), FakeLoginRepository(), TestOnboardingPreferences())
             val options = NavigationHostOptions(null, false)
             val first = app.koin.get<AppScreens> { parametersOf(login, options) }
             val second = app.koin.get<AppScreens> { parametersOf(login, options) }
@@ -38,4 +39,10 @@ class NavigationModuleTest {
 
         override fun save(state: LoginUiState) = Unit
     }
+}
+
+private class TestOnboardingPreferences : OnboardingPreferences {
+    override fun hasSeenTutorial() = false
+
+    override fun markTutorialSeen() = Unit
 }

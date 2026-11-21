@@ -12,6 +12,7 @@ import com.dozy.mobile.core.data.api.httpClientModule
 import com.dozy.mobile.core.data.database.DatabaseBuilderFactory
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
 import com.dozy.mobile.core.data.database.databaseModule
+import com.dozy.mobile.feature.login.domain.repository.OnboardingPreferences
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
 import com.dozy.mobile.feature.story.data.background.GenerationWorkScheduler
 import com.dozy.mobile.feature.story.data.background.GenerationWorkerFactory
@@ -32,6 +33,7 @@ internal val androidModule =
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
         single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL, allowLocalAssetHttp = BuildConfig.ALLOW_LOCAL_ASSET_HTTP) }
         includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
+        single<OnboardingPreferences> { AndroidOnboardingPreferences(androidContext()) }
         single<AuthSessionStorage> { AndroidAuthSessionStorage(androidContext()) }
         single<DatabaseBuilderFactory> { DatabaseBuilderFactory { androidDatabaseBuilder(androidContext()) } }
         single<HttpEngineFactory> { HttpEngineFactory { Android.create() } }

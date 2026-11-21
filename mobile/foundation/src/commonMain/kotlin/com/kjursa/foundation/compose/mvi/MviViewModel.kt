@@ -27,6 +27,14 @@ abstract class MviViewModel<State : Any, Action : Any, Effect : Any>(
 
     protected abstract fun onAction(action: Action)
 
+    /** Called while the owning MVI screen's lifecycle is started. */
+    @MainThread
+    open fun start() = Unit
+
+    /** Called when the owning MVI screen stops or leaves composition. */
+    @MainThread
+    open fun stop() = Unit
+
     /** Call on the main thread. Reducers are pure; persistence runs after the state update commits. */
     @MainThread
     protected fun updateState(reducer: State.() -> State) {
