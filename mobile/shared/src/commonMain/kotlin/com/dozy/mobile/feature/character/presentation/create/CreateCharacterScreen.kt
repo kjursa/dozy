@@ -145,13 +145,23 @@ internal fun CreateCharacterScreen(viewModel: CreateCharacterViewModel) {
                         SaveStatus.EDITING -> Unit
                     }
                     Text(stringResource(Res.string.avatar_description_hint), style = MaterialTheme.typography.bodySmall)
+                    val phase = state.formPhase()
+                    val onPreview: (() -> Unit)? =
+                        when (phase) {
+                            is CharacterFormPhase.ReadyToGenerate, is CharacterFormPhase.AvatarReady ->
+                                { { dispatch(CreateCharacterAction.PreviewClicked) } }
+                            else -> null
+                        }
+                    val onSave: (() -> Unit)? =
+                        when (phase) {
+                            is CharacterFormPhase.AvatarReady -> { { dispatch(CreateCharacterAction.SaveClicked) } }
+                            else -> null
+                        }
                     CharacterActions(
-                        onPreview = { dispatch(CreateCharacterAction.PreviewClicked) },
-                        onSave = { dispatch(CreateCharacterAction.SaveClicked) },
-                        saving = state.saveStatus == SaveStatus.SAVING,
-                        generating = state.generating,
-                        canSave = state.canSave,
-                        canGenerate = !state.busy && !state.unavailable && state.loadError == null,
+                        onPreview = onPreview,
+                        onSave = onSave,
+                        saving = phase == CharacterFormPhase.Saving,
+                        generating = phase == CharacterFormPhase.Generating,
                         hasAvatar = state.avatarId != null,
                     )
                     Spacer(Modifier.height(24.dp))
@@ -351,16 +361,14 @@ private fun CharacterDetails(
 
 @Composable
 private fun CharacterActions(
-    onPreview: () -> Unit,
-    onSave: () -> Unit,
+    onPreview: (() -> Unit)?,
+    onSave: (() -> Unit)?,
     saving: Boolean,
     generating: Boolean,
-    canSave: Boolean,
-    canGenerate: Boolean,
     hasAvatar: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        DozySecondaryButton(onClick = onPreview, enabled = canGenerate) {
+        DozySecondaryButton(onClick = { onPreview?.invoke() }, enabled = onPreview != null) {
             if (generating) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
@@ -368,7 +376,7 @@ private fun CharacterActions(
                 Icon(Icons.Default.Stars, null, Modifier.padding(start = 8.dp).size(20.dp))
             }
         }
-        DozyActionButton(onClick = onSave, enabled = canSave && !saving) {
+        DozyActionButton(onClick = { onSave?.invoke() }, enabled = onSave != null) {
             if (saving) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {

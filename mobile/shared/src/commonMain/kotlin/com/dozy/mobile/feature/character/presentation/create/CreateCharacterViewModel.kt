@@ -115,14 +115,23 @@ class CreateCharacterViewModel(
         }
 
     private fun generate() {
-        val input = validatedInput() ?: return
         val state = uiState.value
+        val ready =
+            when (val phase = state.formPhase()) {
+                is CharacterFormPhase.ReadyToGenerate -> phase
+                is CharacterFormPhase.AvatarReady -> phase.generation
+                CharacterFormPhase.Editing -> {
+                    validatedInput()
+                    return
+                }
+                else -> return
+            }
         val activeAttempt = ++attempt
-        updateState { copy(generating = true, generationError = null) }
+        updateState { ready.beginGeneration(withErrors()) }
         generation =
             viewModelScope.launch {
                 if (state.editingId == null) runCatchingSuspend { creationDraft.save(state) }
-                val result = generateAvatar(input)
+                val result = generateAvatar(ready.input)
                 if (abandoned || activeAttempt != attempt) return@launch
                 updateState {
                     when (result) {
