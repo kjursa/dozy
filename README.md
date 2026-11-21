@@ -86,7 +86,7 @@ already initialized a database with the previous seed data, set
 fresh database.
 
 Run the `debug` variant in Android Studio or build it with
-`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug`.
+`./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug`.
 Release builds take their API base URL from the `dozy.apiBaseUrl` Gradle property
 and require HTTPS.
 

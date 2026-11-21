@@ -6,10 +6,10 @@ The iOS framework exposes an embeddable controller; this repository has no Xcode
 Open `mobile/` in Android Studio, or build it from the repository root with:
 
 ```sh
-./mobile/gradlew -p mobile --no-daemon :app:assembleDebug
+./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug
 ```
 
-The screen uses local images from `design/images` and the bundled Nunito Sans, Playfair Display, and JetBrains Mono variable fonts. Their SIL Open Font License files are included under `app/src/main/res/raw/licenses`.
+The screen uses local images from `design/images` and the bundled Nunito Sans, Playfair Display, and JetBrains Mono variable fonts. Their SIL Open Font License files are included under `androidApp/src/main/res/raw/licenses`.
 
 Shared app colors, typography, shapes, and the 8 dp spacing scale live in `shared/src/commonMain/kotlin/com/dozy/mobile/ui/theme`.
 
@@ -30,16 +30,16 @@ From the repository root, run tests and build the APK:
 
 ```sh
 bash test-all
-./mobile/gradlew -p mobile --no-daemon :app:assembleDebug
+./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug
 ```
 
-The APK is `mobile/app/build/outputs/apk/debug/app-debug.apk`. Inspect the key and
+The APK is `mobile/androidApp/build/outputs/apk/debug/androidApp-debug.apk`. Inspect the key and
 APK certificates with the JDK's `keytool` and Android SDK's `apksigner` (adjust
 the SDK path/build-tools version for your installation):
 
 ```sh
 keytool -list -v -keystore mobile/signing/debug.keystore -alias androiddebugkey -storepass android
-"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs mobile/app/build/outputs/apk/debug/app-debug.apk
+"$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs mobile/androidApp/build/outputs/apk/debug/androidApp-debug.apk
 ```
 
 Both SHA-256 fingerprints must match (ignoring colons and letter case):
@@ -48,7 +48,7 @@ A fresh checkout needs only the normal JDK/Android SDK setup; no existing user
 debug keystore is needed.
 
 A future Firebase App Distribution APK job should check out this file, run the
-same `:app:assembleDebug` task, and distribute the resulting debug APK. It should
+same `:androidApp:assembleDebug` task, and distribute the resulting debug APK. It should
 use this existing debug signing configuration without generating or substituting
 a key. No deployment workflow or Firebase distribution is configured here.
 
@@ -70,7 +70,7 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Koin modules also live here. Repositories directly use DAOs and APIs.
   Packages and constructors are preserved. IDs remain unchanged. ID generators
   and StoryCompletionNotifier are injected contracts with Android implementations
-  in `:app`; iOS uses an explicitly unsupported notifier returning false.
+  in `:androidApp`; iOS uses an explicitly unsupported notifier returning false.
 - `:foundation/commonMain`: cancellation-safe runCatchingSuspend, Compose theme/spacing,
   MVI, UiText with Compose StringResource and resolver, and typed JSON state persistence.
   Lifecycle 2.10.0 and SavedState 1.4.0 provide supported multiplatform APIs.
@@ -88,7 +88,7 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
   Tab owners, saved scroll state, form drafts, return paths and reader settings
   retain the existing implementation. Route values are percent-encoded from UTF-8.
   Common insets, keyboard padding and back handlers adapt to the host.
-- `:app`: Application/Activity/manifest, ID generators,
+- `:androidApp`: Application/Activity/manifest, ID generators,
   WorkManager, notification delivery, permission launcher and signing. MainActivity
   hosts `DozyApp`, forwards notification story IDs and passes narrow notification
   callbacks/capabilities. Scheduling and worker reconciliation remain Android-only.
@@ -114,7 +114,7 @@ compileSdk 36, targetSdk 35). Preserve inherited `GRADLE_OPTS` and use
 - `commonTest` in shared/foundation: portable domain/validation/coroutine tests.
   Repository, mapping, MockEngine, pure ViewModel/MVI and feature-graph
   lifetime/argument tests also run from commonTest.
-  Shared `commonTest/kotlin/fixtures` is also a test source directory of `:app`,
+  Shared `commonTest/kotlin/fixtures` is also a test source directory of `:androidApp`,
   so Android tests reuse domain and DAO fakes. Room reopen and
   mixed data/presentation integration tests remain Android-hosted;
   foundation SavedStateHandle tests remain in `androidHostTest`. Mixed form/reader
@@ -126,7 +126,7 @@ From the repository root:
 ```sh
 bash test-all
 ./mobile/gradlew -p mobile --no-daemon ktlintFormat
-./mobile/gradlew -p mobile --no-daemon :app:assembleDebug :app:assembleRelease
+./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug :androidApp:assembleRelease
 ./mobile/gradlew -p mobile --no-daemon :foundation:compileAndroidMain :shared:compileAndroidMain
 ./mobile/gradlew -p mobile --no-daemon :foundation:compileKotlinIosArm64 :foundation:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :shared:compileKotlinIosSimulatorArm64
 ./mobile/gradlew -p mobile --no-daemon :foundation:compileTestKotlinIosArm64 :foundation:compileTestKotlinIosSimulatorArm64 :shared:compileTestKotlinIosArm64 :shared:compileTestKotlinIosSimulatorArm64
@@ -135,7 +135,7 @@ bash test-all
 
 `test-all` runs backend tests, all app unit-test variants, and the foundation/shared
 Android host tests (including common tests). For mobile only, use
-`:app:test :foundation:testAndroidHostTest :shared:testAndroidHostTest`.
+`:androidApp:test :foundation:testAndroidHostTest :shared:testAndroidHostTest`.
 Native compilation requires macOS with full Xcode 26.0 and its iOS SDK selected
 through xcode-select, plus Kotlin/Native toolchain download access. Both libraries
 set iOS deployment target 15.0. Shared publishes a static `DozyShared` framework;
@@ -161,7 +161,7 @@ The existing Android WorkManager scheduler and
 local completion notifications observe the same persisted jobs. Remote library pagination uses the shared Stories client and persistent backend snapshots. A complete traversal atomically replaces remote summary rows; failed or cancelled traversal retains the cache. Failed-job retry uses the shared SDK. See [the story contract](STORY_GENERATION_API.md).
 
 Run the `debug` variant in Android Studio or build it with
-`./mobile/gradlew -p mobile --no-daemon :app:assembleDebug`. Debug uses
+`./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug`. Debug uses
 `http://10.0.2.2:8080` as its API base URL. Release uses the `dozy.apiBaseUrl`
 Gradle property and requires HTTPS.
 

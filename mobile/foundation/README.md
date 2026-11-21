@@ -100,7 +100,7 @@ because one-off effects are delivered through a single-consumer channel.
 ## Validation
 
 From `mobile/`, run `./gradlew --no-daemon :foundation:testAndroidHostTest` for library unit tests
-and `./gradlew --no-daemon :app:assembleDebug` to check integration with the consuming app.
+and `./gradlew --no-daemon :androidApp:assembleDebug` to check integration with the consuming app.
 
 ## Optional state restoration
 
