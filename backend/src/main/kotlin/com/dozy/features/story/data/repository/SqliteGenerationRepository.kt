@@ -12,9 +12,9 @@ import com.dozy.domain.id.StoryId
 import com.dozy.features.asset.data.database.AssetContents
 import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.story.data.database.Stories
+import com.dozy.features.story.data.database.StoryChangesDao
 import com.dozy.features.story.data.database.StoryExecutions
 import com.dozy.features.story.data.database.StoryJobs
-import com.dozy.features.story.data.database.loadStoryChanges
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
 import com.dozy.features.story.domain.model.Execution
@@ -51,6 +51,7 @@ class SqliteGenerationRepository(
     private val database: SqliteDatabase,
     private val config: GenerationConfig,
     private val clock: Clock,
+    private val storyChangesDao: StoryChangesDao,
 ) : GenerationRepository {
     override suspend fun list(ownerId: OwnerId, limit: Int, cursor: StoryId?): StoryPage? = database.write {
         require(limit in 1..100)
@@ -78,7 +79,7 @@ class SqliteGenerationRepository(
     }
 
     override suspend fun sync(ownerId: OwnerId, after: Long): StorySync =
-        database.write { loadStoryChanges(ownerId, after) }
+        storyChangesDao.sync(ownerId, after)
 
     override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = database.write {
         val existing = StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.key eq key.value) }.singleOrNull()

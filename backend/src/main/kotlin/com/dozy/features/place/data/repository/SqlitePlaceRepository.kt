@@ -4,32 +4,26 @@ import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
+import com.dozy.features.place.data.database.PlaceDao
 import com.dozy.features.place.data.database.existingPlace
 import com.dozy.features.place.data.database.insertPlace
 import com.dozy.features.place.data.database.updatePlace
-import com.dozy.features.place.data.database.visiblePlaces
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.infrastructure.database.ResourceCreation
-import com.dozy.infrastructure.database.SYSTEM_CATALOG_OWNER
 import com.dozy.infrastructure.database.SqliteDatabase
-import com.dozy.infrastructure.database.TrackedCollection
-import com.dozy.infrastructure.database.collectionVersion
 import com.dozy.infrastructure.database.registerOwnerPartition
 
-class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceRepository {
+class SqlitePlaceRepository(
+    private val database: SqliteDatabase,
+    private val dao: PlaceDao,
+) : PlaceRepository {
     override suspend fun list(
         ownerId: OwnerId,
         isCurrent: (String) -> Boolean,
-    ): VersionedCollection<Place> = database.write {
-        val ownVersion = collectionVersion(TrackedCollection.PLACES, ownerId.value)
-        val catalogVersion = collectionVersion(TrackedCollection.PLACES, SYSTEM_CATALOG_OWNER)
-        val version = "$ownVersion.$catalogVersion"
-        if (isCurrent(version)) return@write VersionedCollection(version, null)
-        VersionedCollection(version, visiblePlaces(ownerId))
-    }
+    ): VersionedCollection<Place> = dao.list(ownerId, isCurrent)
 
     override suspend fun create(
         ownerId: OwnerId,

@@ -12,6 +12,7 @@ import com.dozy.features.auth.application.AuthService
 import com.dozy.features.auth.data.repository.SqliteAuthRepository
 import com.dozy.features.auth.domain.repository.AuthRepository
 import com.dozy.features.character.application.CharacterService
+import com.dozy.features.character.data.database.CharacterDao
 import com.dozy.features.character.data.repository.SqliteCharacterRepository
 import com.dozy.features.character.domain.repository.CharacterRepository
 import com.dozy.features.characteravatar.application.AvatarWorker
@@ -22,6 +23,7 @@ import com.dozy.features.characteravatar.domain.repository.AvatarGenerator
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
 import com.dozy.features.characteravatar.domain.repository.AvatarStorage
 import com.dozy.features.place.application.PlaceService
+import com.dozy.features.place.data.database.PlaceDao
 import com.dozy.features.place.data.repository.SqlitePlaceRepository
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.features.story.application.GenerationWorker
@@ -30,6 +32,7 @@ import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.FakeTextGenerator
 import com.dozy.features.story.data.cache.KeyValueJobStatusCache
+import com.dozy.features.story.data.database.StoryChangesDao
 import com.dozy.features.story.data.repository.CachedGenerationRepository
 import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.CoverGenerator
@@ -53,8 +56,9 @@ fun Application.configureDependencies() {
         provide<GenerationConfig> { GenerationConfig.from(configuration) }
         provide<KeyValueStore> { InMemoryKeyValueStore(resolve()) }
         provide<JobStatusCache> { KeyValueJobStatusCache(resolve()) }
+        provide<StoryChangesDao> { StoryChangesDao(resolve()) }
         provide<GenerationRepository> {
-            CachedGenerationRepository(SqliteGenerationRepository(resolve(), resolve(), resolve()), resolve())
+            CachedGenerationRepository(SqliteGenerationRepository(resolve(), resolve(), resolve(), resolve()), resolve())
         }
         provide<TextGenerator> { FakeTextGenerator(resolve()) }
         provide<CoverGenerator> { FakeCoverGenerator(resolve()) }
@@ -71,9 +75,11 @@ fun Application.configureDependencies() {
         provide<SqliteDatabase> { SqliteDatabase(resolve()) }
         provide<AuthRepository> { SqliteAuthRepository(resolve()) }
         provide<AuthService> { AuthService(resolve(), resolve(), resolve(), resolve()) }
-        provide<CharacterRepository> { SqliteCharacterRepository(resolve()) }
+        provide<CharacterDao> { CharacterDao(resolve()) }
+        provide<CharacterRepository> { SqliteCharacterRepository(resolve(), resolve()) }
         provide<CharacterService> { CharacterService(resolve()) }
-        provide<PlaceRepository> { SqlitePlaceRepository(resolve()) }
+        provide<PlaceDao> { PlaceDao(resolve()) }
+        provide<PlaceRepository> { SqlitePlaceRepository(resolve(), resolve()) }
         provide<PlaceService> { PlaceService(resolve()) }
     }
 }

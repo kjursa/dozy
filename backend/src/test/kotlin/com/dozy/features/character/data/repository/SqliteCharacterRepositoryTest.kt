@@ -5,6 +5,7 @@ import com.dozy.domain.id.AssetId
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.OwnerId
 import com.dozy.features.asset.data.database.Assets
+import com.dozy.features.character.data.database.CharacterDao
 import com.dozy.features.character.data.database.Characters
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
@@ -35,7 +36,7 @@ class SqliteCharacterRepositoryTest {
 
     @Test fun replacesWithoutDuplicatesIsolatesOwnersAndPermanentlyReservesDeletedIdsAfterRestart() = runBlocking {
         val id = database().use { db ->
-            val repository = SqliteCharacterRepository(db)
+            val repository = SqliteCharacterRepository(db, CharacterDao(db))
             val id = assertIs<SaveCharacterResult.Created>(repository.create(owner, command())).id
             repeat(2) { assertEquals(SaveCharacterResult.Updated, repository.save(owner, id, command("Edited"))) }
             assertEquals("Edited", repository.list(owner).single().name)
@@ -48,7 +49,7 @@ class SqliteCharacterRepositoryTest {
             id
         }
         database().use { db ->
-            val repository = SqliteCharacterRepository(db)
+            val repository = SqliteCharacterRepository(db, CharacterDao(db))
             assertTrue(repository.delete(owner, id))
             assertEquals(SaveCharacterResult.Conflict, repository.save(owner, id, command()))
             assertEquals(SaveCharacterResult.Conflict, repository.save(stranger, id, command()))
@@ -65,7 +66,7 @@ class SqliteCharacterRepositoryTest {
                     Assets.insert { it[id] = assets.getValue(assetId).value; it[Assets.ownerId] = ownerId.value; it[url] = "https://example.test/$assetId"; it[status] = state }
                 }
             }
-            val repository = SqliteCharacterRepository(db)
+            val repository = SqliteCharacterRepository(db, CharacterDao(db))
             for (assetId in listOf("missing", "foreign", "pending", "failed")) {
                 assertEquals(SaveCharacterResult.ReferenceUnavailable, repository.create(owner, command(avatar = Character.Avatar(assets.getValue(assetId), "https://example.test/$assetId"))))
                 assertTrue(repository.list(owner).isEmpty())
@@ -76,7 +77,7 @@ class SqliteCharacterRepositoryTest {
             assertEquals(avatar, repository.list(owner).single().avatar)
         }
         database().use { db ->
-            val repository = SqliteCharacterRepository(db)
+            val repository = SqliteCharacterRepository(db, CharacterDao(db))
             val saved = repository.list(owner).single()
             val id = saved.id
             assertEquals("https://example.test/ready", saved.avatar?.url)
@@ -91,7 +92,7 @@ class SqliteCharacterRepositoryTest {
     @Test fun concurrentCreatesHaveDistinctIdsAndIsolatedOwners() = runBlocking {
         database().use { first ->
             database().use { second ->
-                val repositories = listOf(SqliteCharacterRepository(first) to owner, SqliteCharacterRepository(second) to stranger)
+                val repositories = listOf(SqliteCharacterRepository(first, CharacterDao(first)) to owner, SqliteCharacterRepository(second, CharacterDao(second)) to stranger)
                 val ids = repositories.map { (repository, ownerId) ->
                     async { assertIs<SaveCharacterResult.Created>(repository.create(ownerId, command())).id }
                 }.awaitAll()

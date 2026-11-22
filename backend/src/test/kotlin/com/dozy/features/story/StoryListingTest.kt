@@ -44,7 +44,7 @@ class StoryListingTest {
         var cursor: StoryId? = null
         lateinit var expected: List<String>
         SqliteDatabase(config).use { database ->
-            val repository = SqliteGenerationRepository(database, options, clock)
+            val repository = testGenerationRepository(database, options, clock)
             assertEquals(emptyList(), repository.list(owner, 2, null)?.stories)
             expected = List(5) { publish(repository).value }.sortedDescending()
             database.write { Stories.update { it[createdAt] = 123 } }
@@ -62,7 +62,7 @@ class StoryListingTest {
             assertNull(repository.list(owner, 2, StoryId.generate()))
         }
         SqliteDatabase(config).use { database ->
-            val repository = SqliteGenerationRepository(database, options, clock)
+            val repository = testGenerationRepository(database, options, clock)
             val second = assertNotNull(repository.list(owner, 2, cursor))
             assertEquals(expected.drop(2).take(2), second.stories.map { it.id.value })
             assertEquals(second, repository.list(owner, 2, cursor))
@@ -78,7 +78,7 @@ class StoryListingTest {
         runBlocking {
             val config = DatabaseConfig(directory.resolve("library.db").toString(), 5000)
             SqliteDatabase(config).use { database ->
-                val repository = SqliteGenerationRepository(database, options, clock)
+                val repository = testGenerationRepository(database, options, clock)
                 val first = publish(repository)
                 val initial = repository.sync(owner, 0)
                 assertEquals(listOf(first), initial.upserts.map { it.id })
