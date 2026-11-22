@@ -4,6 +4,7 @@ import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
@@ -11,11 +12,14 @@ import com.dozy.mobile.feature.story.data.database.GenerationProgress
 import com.dozy.mobile.feature.story.data.database.StoryEntity
 import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.usecase.StartGeneration
+import fixtures.FakeSyncStateQueries
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
-internal class FakeGenerationDao : GenerationDao {
+internal class FakeGenerationDao :
+    GenerationDao,
+    SyncStateQueries by FakeSyncStateQueries() {
     private data class Tables(
         val generations: List<GenerationEntity> = emptyList(),
         val stories: List<StoryEntity> = emptyList(),
@@ -52,8 +56,10 @@ internal class FakeGenerationDao : GenerationDao {
     override suspend fun findStoryForJob(jobId: String) =
         tables.value.stories.find { it.jobId == jobId && it.requestKey != null && it.result != null }
 
-    override suspend fun clearLibrary() {
-        tables.update { it.copy(stories = it.stories.filter { story -> story.result != null }) }
+    override suspend fun storyIds() = tables.value.stories.map { it.id }
+
+    override suspend fun deleteStories(ids: List<String>) {
+        tables.update { it.copy(stories = it.stories.filterNot { story -> story.id in ids }) }
     }
 
     override suspend fun updateSummary(

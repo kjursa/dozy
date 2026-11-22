@@ -215,12 +215,15 @@ legacy full results without it are supported as timestamp zero. New generation
 results must supply it. Order stories by descending StoryId.
 No series, editing or deletion operation is implied.
 
-Each page uses the last returned StoryId as `nextCursor` when more items are
-available. Subsequent pages contain smaller IDs, and the last page returns
-`nextCursor: null`. A refresh starts at the first page and follows all cursors; repeated/blank cursors,
-duplicate IDs, invalid metadata or malformed pages fail the refresh. The client
-validates all pages before replacing remote summary rows in one Room transaction. Cancellation propagates. Retry is an explicit
-idempotent GET starting at page one; no generation, cover generation or POST occurs.
+The paginated endpoint uses the last returned StoryId as `nextCursor` when more
+items are available. Subsequent pages contain smaller IDs, and the last page returns
+`nextCursor: null`.
+
+Mobile library refresh uses `GET /api/v1/stories/sync?after=<revision>`. The first
+request starts at zero and reconciles the local library with current summaries.
+Later requests apply only returned summary upserts and deletions. Room stores
+the changes and `nextRevision` in the same transaction. Failure or cancellation
+leaves the previous library and revision available for retries.
 
 Errors use the shared envelope: 400 INVALID_CURSOR, 400 INVALID_OWNER_ID,
 422 `validation.limit.invalid_value`, 503 UNAVAILABLE. All non-200 responses and invalid bodies show a
@@ -243,13 +246,11 @@ F6 `ObservePlaces` / `RefreshPlaces` ([place contract](PLACE_DATA.md)), F10
 own DAO/API access in the single DozyDatabase; the existing Koin feature modules
 provide these constructor-injected use cases to Home.
 
-On entry/resume, existing GET collection contracts refresh characters, places, and
-`GET /api/v1/stories?limit=100&cursor=...`; Home previews the persisted collections with
-limits/order documented in SPEC §4. These are client preview limits, not new server
-pagination parameters. Existing response DTOs, stable character/place/story IDs,
-error envelopes and cache merging rules remain authoritative. Errors retain each
-section's last known data and provide section-specific retry. Bundled predefined
-places are intentional offline content, not sample user data.
+On entry/resume, Home refreshes characters and places with conditional GETs and
+syncs story summaries by revision. Home previews the persisted collections with
+the limits and order documented in SPEC §4. Errors retain each section's last known
+data and provide section-specific retry. Bundled predefined places are available
+offline.
 
 The displayed job follows F10's active/pending-retry priority, otherwise the latest
 persisted job. Resume uses `GET /api/v1/story-generations/{jobId}` and the existing status DTO;
@@ -286,9 +287,14 @@ produce FAILED. Transport/status failures continue to display unknown state and
 remain eligible for reconciliation. Deterministic text uses approximately 600/1500
 words; a checked-in PNG fixture supplies the single durable cover.
 
-## Shared listing integration (API4)
+## Shared library synchronization
 
-The repository calls `StoriesClients.v1.list(ListStoriesRequest)` directly and traverses the complete backend snapshot before a Room transaction replaces `library:<id>` summary rows. A successful empty traversal clears these rows. Failure, cancellation, duplicate IDs or cursor cycles leave the previous cache intact. Pending generations and persisted full reader results remain independent. Home/library reuse existing flows and states; opening a card uses the shared read operation. Local HTTP covers are accepted only after SDK validation against the configured backend origin. No list or refresh operation submits a generation. Legacy HTTP code retains explicit retry only.
+The repository calls `StoriesClients.v1.sync(after)` and validates the response
+before saving it to Room. Summary upserts preserve downloaded text and completion
+metadata. Deletions remove the local story and its cached text. Pending generation
+rows remain independent. Opening a card uses the shared read operation if no local
+result is available. Local HTTP covers require SDK validation against the configured
+backend origin.
 
 ## Shared SDK result and error contracts
 

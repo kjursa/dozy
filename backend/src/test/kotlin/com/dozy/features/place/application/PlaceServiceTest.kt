@@ -1,5 +1,6 @@
 package com.dozy.features.place.application
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
@@ -66,6 +67,9 @@ class PlaceServiceTest {
     ) : PlaceRepository {
         var lastOwnerId: OwnerId? = null
         var saved: Triple<OwnerId, PlaceId, SavePlace>? = null
+
+        override suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean): VersionedCollection<Place> =
+            error("Unexpected conditional read")
 
         override suspend fun list(ownerId: OwnerId): List<Place> {
             lastOwnerId = ownerId

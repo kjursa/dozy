@@ -18,6 +18,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
@@ -27,6 +28,7 @@ import java.nio.file.Path
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class CharacterRoutesTest {
@@ -56,6 +58,46 @@ class CharacterRoutesTest {
         assertTrue(response.bodyAsText().startsWith("["))
         return Json.decodeFromString(response.bodyAsText())
     }
+
+    @Test fun `characters validators revalidate only the current collection`() =
+        testApplication {
+            environment { config = databaseConfig(directory) }
+            application { module() }
+
+            suspend fun revalidate(
+                ownerId: OwnerId,
+                tag: String,
+            ) = client.get(collection) {
+                asOwner(ownerId)
+                header(HttpHeaders.IfNoneMatch, tag)
+            }
+            val initial = client.get(collection) { asOwner(owner) }
+            val initialTag = requireNotNull(initial.headers[HttpHeaders.ETag])
+            assertEquals(4, UUID.fromString(initialTag.removePrefix("W/").trim('"')).version())
+            val unchanged = revalidate(owner, "\"other\", ${initialTag.removePrefix("W/")}")
+            assertEquals(HttpStatusCode.NotModified, unchanged.status)
+            assertEquals(initialTag, unchanged.headers[HttpHeaders.ETag])
+            assertEquals("", unchanged.bodyAsText())
+
+            assertEquals(HttpStatusCode.Created, client.create().status)
+            val changed = revalidate(owner, initialTag)
+            assertEquals(HttpStatusCode.OK, changed.status)
+            val changedTag = requireNotNull(changed.headers[HttpHeaders.ETag])
+            assertNotEquals(initialTag, changedTag)
+            assertEquals(4, UUID.fromString(changedTag.removePrefix("W/").trim('"')).version())
+            assertEquals(HttpStatusCode.OK, revalidate(stranger, changedTag).status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, changedTag).status)
+            val id = client.list().single().id
+            val removed = client.delete("$collection/$id") { asOwner(owner) }
+            assertEquals(HttpStatusCode.NoContent, removed.status)
+            val afterDelete = revalidate(owner, changedTag)
+            assertEquals(HttpStatusCode.OK, afterDelete.status)
+            val deletedTag = requireNotNull(afterDelete.headers[HttpHeaders.ETag])
+            assertNotEquals(initialTag, deletedTag)
+            assertNotEquals(changedTag, deletedTag)
+            assertEquals(HttpStatusCode.NoContent, client.delete("$collection/$id") { asOwner(owner) }.status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, deletedTag).status)
+        }
 
     @Test fun createsWithServerIdThenUpdatesAndPermanentlyDeletes() = testApplication {
         environment { config = databaseConfig(directory) }

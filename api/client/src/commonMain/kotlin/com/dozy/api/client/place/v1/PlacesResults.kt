@@ -7,7 +7,12 @@ import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.PlacesSaveError
 
 sealed interface PlacesListResult {
-    data class Success(val response: PlacesResponse) : PlacesListResult
+    data class Success(
+        val response: PlacesResponse,
+        val etag: String? = null,
+    ) : PlacesListResult
+
+    data object NotModified : PlacesListResult
     data class ApiError(val error: PlacesListError) : PlacesListResult
     data class TechnicalError(val error: SharedTechnicalError) : PlacesListResult
 }

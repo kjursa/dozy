@@ -10,6 +10,7 @@ import com.dozy.api.client.characteravatar.v1.AvatarStartResult
 import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.character.CharactersSaveError
 import com.dozy.api.contracts.v1.character.CreatedCharacterResponse
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
@@ -19,13 +20,8 @@ import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.character.domain.model.Character
 import com.dozy.mobile.feature.character.domain.model.CharacterSync
 import fixtures.CharactersClientFixture
+import fixtures.FakeSyncStateQueries
 import fixtures.avatarClients
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -33,6 +29,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class CharacterDataTest {
     private fun repository(
@@ -62,6 +64,34 @@ class CharacterDataTest {
             assertEquals(Character.Id("server-character"), result.character.id)
             assertEquals(CharacterSync.SYNCED, result.sync)
             assertEquals(result.character.toEntity(false), dao.rows.value.single())
+        }
+
+    @Test fun conditionalRefreshUsesStoredValidatorAndKeepsRowsOnNotModified() =
+        runTest {
+            val dao = FakeDao()
+            val client = CharactersClientFixture()
+            val character = character()
+            val tag = "W/\"characters\""
+            client.onList = {
+                assertNull(it)
+                CharactersListResult.Success(listOf(character.toDto()), tag)
+            }
+            assertTrue(repository(dao, client).refresh())
+
+            client.onList = {
+                assertEquals(tag, it)
+                CharactersListResult.NotModified
+            }
+            val restored = repository(dao, client)
+            assertTrue(restored.refresh())
+            assertEquals(listOf(character), restored.observe().first())
+
+            client.onList = {
+                assertEquals(tag, it)
+                CharactersListResult.Success(emptyList(), "W/\"empty\"")
+            }
+            assertTrue(restored.refresh())
+            assertTrue(restored.observe().first().isEmpty())
         }
 
     @Test fun unsuccessfulCreationLeavesNoCharacterInTheCache() =
@@ -115,7 +145,19 @@ class CharacterDataTest {
                 dao.upsert(character().toEntity(false))
                 val client =
                     CharactersClientFixture().apply {
-                        onSave = { _, _ -> if (failure) CharactersSaveResult.TechnicalError(TechnicalError.Communication(IllegalStateException("offline"))) else CharactersSaveResult.ApiError(CharactersSaveError.Conflict) }
+                        onSave =
+                            {
+                                _,
+                                _,
+                                ->
+                                if (failure) {
+                                    CharactersSaveResult.TechnicalError(
+                                        TechnicalError.Communication(IllegalStateException("offline")),
+                                    )
+                                } else {
+                                    CharactersSaveResult.ApiError(CharactersSaveError.Conflict)
+                                }
+                            }
                     }
                 assertEquals(CharacterSync.PENDING, repository(dao, client).update(character())?.sync)
                 assertTrue(
@@ -264,7 +306,16 @@ class CharacterDataTest {
                 dao.upsert(character().toEntity(false))
                 val client =
                     CharactersClientFixture().apply {
-                        onDelete = { if (cancel) throw CancellationException() else CharactersDeleteResult.TechnicalError(TechnicalError.Communication(IllegalStateException("offline"))) }
+                        onDelete =
+                            {
+                                if (cancel) {
+                                    throw CancellationException()
+                                } else {
+                                    CharactersDeleteResult.TechnicalError(
+                                        TechnicalError.Communication(IllegalStateException("offline")),
+                                    )
+                                }
+                            }
                     }
                 val repository = repository(dao, client)
                 if (cancel) {
@@ -340,7 +391,9 @@ class CharacterDataTest {
             assertEquals(preview, repository.observe(preview.id).first())
         }
 
-    private class FakeDao : CharacterDao {
+    private class FakeDao :
+        CharacterDao,
+        SyncStateQueries by FakeSyncStateQueries() {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
         var failAt = 0
         var calls = 0

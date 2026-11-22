@@ -8,7 +8,6 @@ import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.application.StoryGenerationScheduler
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.database.StoryJobs
-import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.CoverGenerator
 import com.dozy.features.story.domain.model.Execution
 import com.dozy.features.story.domain.model.GeneratedText
@@ -49,7 +48,7 @@ class GenerationWorkerTest {
     @Test fun `long generator renews claim and stages expose no premature result`() =
         runBlocking {
             SqliteDatabase(dbConfig).use { db ->
-                val repository = SqliteGenerationRepository(db, options, clock)
+                val repository = testGenerationRepository(db, options, clock)
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
                 val started = CompletableDeferred<Unit>()
                 val finish = CompletableDeferred<Unit>()
@@ -80,7 +79,7 @@ class GenerationWorkerTest {
     @Test fun `cancellation and publication storage failures remain recoverable instead of failed`() =
         runBlocking {
             SqliteDatabase(dbConfig).use { db ->
-                val repository = SqliteGenerationRepository(db, options, clock)
+                val repository = testGenerationRepository(db, options, clock)
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
                 val cancelling =
                     GenerationWorker(
@@ -144,7 +143,7 @@ class GenerationWorkerTest {
     @Test fun `configured concurrency bounds active generator calls across owners`() =
         runBlocking {
             SqliteDatabase(dbConfig).use { db ->
-                val repository = SqliteGenerationRepository(db, options, clock)
+                val repository = testGenerationRepository(db, options, clock)
                 val jobs =
                     (1..5).map { index ->
                         val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-00000000000$index"))

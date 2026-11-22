@@ -3,20 +3,20 @@ package com.dozy.mobile.feature.story.data
 import com.dozy.api.client.ApiDisabledException
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.story.StoriesClients
-import com.dozy.api.client.story.v1.StoryListResult
 import com.dozy.api.client.story.v1.StoryReadResult
+import com.dozy.api.client.story.v1.StorySyncResult
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
 import com.dozy.api.client.storygeneration.v1.GenerationRetryResult
 import com.dozy.api.client.storygeneration.v1.GenerationStartResult
 import com.dozy.api.client.storygeneration.v1.GenerationStatusResult
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.api.contracts.v1.story.GenerationRetryError
-import com.dozy.api.contracts.v1.story.ListStoriesRequest
 import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.api.contracts.v1.story.StoryReadError
 import com.dozy.api.contracts.v1.story.StorySummaryDto
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.data.database.GenerationEntity
+import com.dozy.mobile.feature.story.data.database.STORIES_SYNC
 import com.dozy.mobile.feature.story.data.database.StoryEntity
 import com.dozy.mobile.feature.story.domain.model.GenerationConfiguration
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
@@ -57,32 +57,24 @@ class DefaultGenerationRepository(
 
     override suspend fun refreshStories(): Boolean =
         mutex.withLock {
-            val collected = mutableListOf<StorySummaryDto>()
-            val cursors = mutableSetOf<String>()
-            var cursor: String? = null
-            do {
-                val response = reader.v1.list(ListStoriesRequest(cursor = cursor))
-                val page =
-                    when (response) {
-                        is StoryListResult.Success -> response.response
-                        is StoryListResult.ApiError -> error("Library unavailable")
-                        is StoryListResult.TechnicalError -> {
-                            if ((response.error as? TechnicalError.Communication)?.exception is ApiDisabledException) return@withLock false
-                            error("Library unavailable")
-                        }
+            val revision = dao.syncValue(STORIES_SYNC)?.toLong()
+            val after = revision ?: 0L
+            val changes =
+                when (val response = reader.v1.sync(after)) {
+                    is StorySyncResult.Success -> response.response
+                    is StorySyncResult.ApiError -> error("Library unavailable")
+                    is StorySyncResult.TechnicalError -> {
+                        if ((response.error as? TechnicalError.Communication)?.exception is ApiDisabledException) return@withLock false
+                        error("Library unavailable")
                     }
-                require(page.stories.isNotEmpty() || page.nextCursor == null)
-                page.stories.forEach { it.toDomain(allowDevelopmentHttp = true) }
-                collected += page.stories
-                cursor = page.nextCursor
-                if (cursor != null) require(cursor.isNotBlank() && cursors.add(cursor))
-            } while (cursor != null)
-            require(collected.distinctBy { it.id.lowercase() }.size == collected.size)
-            dao.replaceLibrary(
-                collected.map { summary ->
+                }
+            val upserts =
+                changes.upserts.map { summary ->
+                    summary.toDomain(allowDevelopmentHttp = true)
                     StoryEntity(summary.id, summary = Json.encodeToString(summary))
-                },
-            )
+                }
+            if (revision == changes.nextRevision) return@withLock true
+            dao.applyStoryChanges(upserts, changes.deletedIds, changes.nextRevision, initialSync = revision == null)
             true
         }
 

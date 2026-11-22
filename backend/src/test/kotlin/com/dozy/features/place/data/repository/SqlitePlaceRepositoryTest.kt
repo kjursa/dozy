@@ -3,6 +3,7 @@ package com.dozy.features.place.data.repository
 import com.dozy.config.DatabaseConfig
 import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
+import com.dozy.features.place.data.database.PlaceDao
 import com.dozy.features.place.domain.model.ParseResult
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
@@ -140,7 +141,10 @@ class SqlitePlaceRepositoryTest {
 
     private fun database() = SqliteDatabase(DatabaseConfig(directory.resolve("nested/dozy.db").toString(), 5000))
         .also(databases::add)
-    private fun repository() = SqlitePlaceRepository(database())
+    private fun repository(): SqlitePlaceRepository {
+        val database = database()
+        return SqlitePlaceRepository(database, PlaceDao(database))
+    }
     private fun placeId(value: String) = requireNotNull(PlaceId.parse(value))
     private fun savePlace(name: String, description: String, inhabitants: String?) =
         (SavePlace.parse(name, description, inhabitants) as ParseResult.Valid).value

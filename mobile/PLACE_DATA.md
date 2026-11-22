@@ -41,7 +41,8 @@ Missing required fields, blank identifiers/names/descriptions, unknown origin,
 duplicate IDs, or editable predefined entries reject the entire snapshot before
 cache mutation.
 
-Any non-200 status is a failed refresh, including 401/403 (authorization), 404
+A conditional GET can return HTTP 304 to reuse the local snapshot. Responses other
+than 200 or 304 fail the refresh, including 401/403 (authorization), 404
 (endpoint unavailable), 429 (rate limited), and 5xx (server unavailable). The
 client displays a resource-backed error and retains available places. Error
 bodies are not displayed or interpreted as user-facing text. The shared SDK returns operation-specific `PlacesListResult`/`PlacesSaveResult`
@@ -59,8 +60,9 @@ an offline result rather than claiming a remote refresh succeeded.
 
 Android sorts user places first, then by lowercased name and ID. Home uses the
 first three entries from the same collection. Observation reads the Room cache
-without HTTP. A successful GET replaces the remote snapshot in one transaction
-while preserving local changes. Failed refreshes leave cached places available.
+without HTTP. A full GET response replaces the synced places and stores its ETag in
+one transaction. Pending edits stay local. Subsequent refreshes send the stored
+ETag as `If-None-Match`. Failed refreshes leave cached places available.
 
 Creation sends a POST and stores the server-assigned ID upon success. Editing an
 existing place persists the change before attempting PUT. A pending edit survives

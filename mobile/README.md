@@ -158,7 +158,7 @@ See [CHARACTER_DATA.md](CHARACTER_DATA.md) for wire and synchronization semantic
 API3/API5 integrate story submission, durable retry/progress, completion and immutable reading
 through the shared SDK. See the [local Android demo](../README.md#local-android-demo) for the backend setup.
 The existing Android WorkManager scheduler and
-local completion notifications observe the same persisted jobs. Remote library pagination uses the shared Stories client and persistent backend snapshots. A complete traversal atomically replaces remote summary rows; failed or cancelled traversal retains the cache. Failed-job retry uses the shared SDK. See [the story contract](STORY_GENERATION_API.md).
+local completion notifications observe the same persisted jobs. Library refresh applies story summary changes and saves the new revision in a single Room transaction. The reader loads full story content on demand. Failed-job retry uses the shared SDK. See [the story contract](STORY_GENERATION_API.md).
 
 Run the `debug` variant in Android Studio or build it with
 `./mobile/gradlew -p mobile --no-daemon :androidApp:assembleDebug`. Debug uses

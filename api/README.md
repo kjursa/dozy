@@ -206,3 +206,11 @@ are unit/component tests, not E2E.
 ## Story library listing (API4)
 
 `stories.v1.list(ListStoriesRequest(limit = 100, cursor = null))` returns `StoryListResult`. Summaries contain id, title, immutable coverUrl, readingMinutes and createdAt. Reading time counts whitespace-delimited words, rounds up at 150 words/minute, and has minimum one. Limits are 1–100; `StoryListField.LIMIT` permits `ValidationReason.INVALID_VALUE`. Known business errors include InvalidCursor and Validation; future codes remain Unknown. Structural errors and malformed pages become TechnicalError.Communication. Pages are ordered by descending story ID. The client URL-encodes the cursor, which is the last returned story ID when more results are available. The final page returns nextCursor null.
+
+`stories.v1.sync(after)` returns `StorySyncResult`. Start with revision zero,
+then supply the last successfully applied `nextRevision`. The response returns
+current `upserts` as summaries and `deletedIds` for the authenticated owner.
+`StorySyncError.InvalidRevision` represents the server's `INVALID_CURSOR` response.
+
+`characters.v1.list(ifNoneMatch)` and `places.v1.list(ifNoneMatch)` accept the ETag
+from a previous successful response. `NotModified` represents HTTP 304.

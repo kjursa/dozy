@@ -11,7 +11,6 @@ import com.dozy.features.asset.data.repository.SqliteAssetRepository
 import com.dozy.features.story.application.GenerationWorker
 import com.dozy.features.story.data.FakeCoverGenerator
 import com.dozy.features.story.data.FakeTextGenerator
-import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.AvatarSnapshot
 import com.dozy.features.story.domain.model.Failure
 import com.dozy.features.story.domain.model.GeneratedText
@@ -55,7 +54,7 @@ class GenerationRepositoryTest {
     @Test fun `fail once retry survives restart replays before lifecycle and publishes once`() = runBlocking {
         val options = config.copy(textMode = GenerationConfig.TextMode.FAIL_ONCE)
         val first = SqliteDatabase(dbConfig)
-        val repository = SqliteGenerationRepository(first, options, clock)
+        val repository = testGenerationRepository(first, options, clock)
         val originalKey = requestKey()
         val job = assertIs<Submission.Accepted>(repository.start(ownerId, originalKey, "snapshot", command())).job
         val worker = GenerationWorker(repository, FakeTextGenerator(options), FakeCoverGenerator(options), options)
@@ -71,7 +70,7 @@ class GenerationRepositoryTest {
         assertIs<RetrySubmission.JobNotFailed>(repository.retry(ownerId, job.id, requestKey()))
         first.close()
         SqliteDatabase(dbConfig).use { second ->
-            val recovered = SqliteGenerationRepository(second, options, clock)
+            val recovered = testGenerationRepository(second, options, clock)
             assertEquals(accepted.copy(isReplay = true), recovered.retry(ownerId, job.id, key))
             GenerationWorker(recovered, FakeTextGenerator(options), FakeCoverGenerator(options), options).run(assertNotNull(recovered.claim()))
             val ready = assertNotNull(recovered.status(ownerId, job.id))
@@ -84,7 +83,7 @@ class GenerationRepositoryTest {
 
     @Test fun `concurrent retries archive each attempt and stale results cannot change newer execution`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, config, clock)
+            val repository = testGenerationRepository(db, config, clock)
             val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "snapshot", command())).job
             val stale = assertNotNull(repository.claim())
             repository.fail(stale, Failure.GENERATION_FAILED)
@@ -122,7 +121,7 @@ class GenerationRepositoryTest {
 
     @Test fun `atomic concurrent start replay ordering active limit and isolation`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, config, clock)
+            val repository = testGenerationRepository(db, config, clock)
             val key = requestKey()
             val results = List(8) { async { repository.start(ownerId, key, "original", command()) } }.awaitAll()
             val job = assertIs<Submission.Accepted>(results.first()).job
@@ -137,7 +136,7 @@ class GenerationRepositoryTest {
     }
     @Test fun `avatar ownership ready status and URL must match but replay retains accepted snapshots`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, config, clock)
+            val repository = testGenerationRepository(db, config, clock)
             val assetId = AssetId.generate()
             val url = "https://example.test/api/v1/assets/${assetId.value}"
             db.write {
@@ -156,7 +155,7 @@ class GenerationRepositoryTest {
     }
     @Test fun `different simultaneous keys permit exactly one active job`() = runBlocking {
         SqliteDatabase(dbConfig).use { db ->
-            val repository = SqliteGenerationRepository(db, config, clock)
+            val repository = testGenerationRepository(db, config, clock)
             val results = List(8) { async { repository.start(ownerId, requestKey(), "request", command()) } }.awaitAll()
             assertEquals(1, results.count { it is Submission.Accepted })
             assertEquals(7, results.count { it is Submission.ActiveJobExists })
@@ -167,7 +166,7 @@ class GenerationRepositoryTest {
         val first = SqliteDatabase(dbConfig)
         val startedAt = Instant.parse("2026-11-19T12:00:00Z")
         val startedClock = Clock.fixed(startedAt, ZoneOffset.UTC)
-        val repository = SqliteGenerationRepository(first, config, startedClock)
+        val repository = testGenerationRepository(first, config, startedClock)
         val job = assertIs<Submission.Accepted>(repository.start(ownerId, key, "request", command())).job
         val abandoned = assertNotNull(repository.claim())
         assertEquals(Stage.CREATING_TEXT, abandoned.job.stage)
@@ -178,9 +177,9 @@ class GenerationRepositoryTest {
         first.close()
         SqliteDatabase(dbConfig).use { second ->
             val justBeforeExpiry = Clock.offset(startedClock, Duration.ofMillis(config.leaseMillis - 1))
-            assertNull(SqliteGenerationRepository(second, config, justBeforeExpiry).claim())
+            assertNull(testGenerationRepository(second, config, justBeforeExpiry).claim())
             val atExpiry = Clock.offset(startedClock, Duration.ofMillis(config.leaseMillis))
-            val recovered = SqliteGenerationRepository(second, config, atExpiry)
+            val recovered = testGenerationRepository(second, config, atExpiry)
             val execution = assertNotNull(recovered.claim())
             assertEquals(Stage.CREATING_COVER, execution.job.stage)
             assertEquals("Immutable text", execution.text)
@@ -220,7 +219,7 @@ class GenerationRepositoryTest {
                 Triple(GenerationConfig.TextMode.SUCCESS, GenerationConfig.CoverMode.FAILURE, Failure.GENERATION_FAILED),
             )) {
                 val options = config.copy(textMode = textMode, coverMode = coverMode)
-                val repository = SqliteGenerationRepository(db, options, clock)
+                val repository = testGenerationRepository(db, options, clock)
                 val input = command()
                 val avatarInput = command(input.configuration.copy(cast = input.configuration.cast.map { it.copy(avatar = AvatarSnapshot(AssetId.generate(), "https://example.test/missing")) }))
                 assertIs<Submission.ReferenceUnavailable>(repository.start(ownerId, requestKey(), "unavailable", avatarInput))

@@ -1,6 +1,6 @@
 package com.dozy.mobile
 
-import com.dozy.api.contracts.v1.story.StoryPageDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
 import com.dozy.mobile.feature.story.data.api.*
 import com.dozy.mobile.feature.story.data.testGenerationRepository
 import com.dozy.mobile.feature.story.domain.model.GenerationJob
@@ -34,11 +34,11 @@ class StoriesViewModelTest {
             var offline = false
             val api =
                 object : GenerationApi by ProgressApi() {
-                    override suspend fun stories(cursor: String?): StoryPageDto? {
+                    override suspend fun sync(after: Long): StorySyncDto? {
                         calls++
                         gate.await()
                         if (fail) error("Unavailable")
-                        return if (offline) null else StoryPageDto(emptyList())
+                        return if (offline) null else StorySyncDto(emptyList(), emptyList(), after)
                     }
                 }
             val repo = testGenerationRepository(FakeGenerationDao(), api)

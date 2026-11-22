@@ -7,6 +7,8 @@ import androidx.room3.PrimaryKey
 import androidx.room3.Query
 import androidx.room3.Transaction
 import androidx.room3.Upsert
+import com.dozy.mobile.core.data.database.SyncState
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "story_generations")
@@ -33,7 +35,7 @@ data class GenerationProgress(
 )
 
 @Dao
-interface GenerationDao {
+interface GenerationDao : SyncStateQueries {
     @Query("SELECT * FROM story_generations WHERE requestKey = :key")
     suspend fun find(key: String): GenerationEntity?
 
@@ -68,8 +70,11 @@ interface GenerationDao {
     @Query("SELECT * FROM stories WHERE jobId = :jobId AND requestKey IS NOT NULL AND result IS NOT NULL")
     suspend fun findStoryForJob(jobId: String): StoryEntity?
 
-    @Query("DELETE FROM stories WHERE result IS NULL")
-    suspend fun clearLibrary()
+    @Query("SELECT id FROM stories")
+    suspend fun storyIds(): List<String>
+
+    @Query("DELETE FROM stories WHERE id IN (:ids)")
+    suspend fun deleteStories(ids: List<String>)
 
     @Query("UPDATE stories SET summary = :summary WHERE id = :id AND result IS NOT NULL")
     suspend fun updateSummary(
@@ -78,11 +83,24 @@ interface GenerationDao {
     ): Int
 
     @Transaction
-    suspend fun replaceLibrary(entities: List<StoryEntity>) {
-        clearLibrary()
-        entities.forEach {
+    suspend fun applyStoryChanges(
+        upserts: List<StoryEntity>,
+        deletedIds: List<String>,
+        nextRevision: Long,
+        initialSync: Boolean = false,
+    ) {
+        val removed =
+            if (initialSync) {
+                val remoteIds = upserts.map { it.id }.toSet()
+                storyIds().filterNot { it in remoteIds }
+            } else {
+                deletedIds
+            }
+        removed.chunked(500).forEach { deleteStories(it) }
+        upserts.forEach {
             if (updateSummary(it.id, it.summary) == 0) upsertStory(it)
         }
+        saveSyncValue(SyncState(STORIES_SYNC, nextRevision.toString()))
     }
 
     @Query("DELETE FROM story_generations WHERE requestKey = :key")
@@ -106,3 +124,5 @@ interface GenerationDao {
     @Upsert
     suspend fun upsert(entity: GenerationEntity)
 }
+
+internal const val STORIES_SYNC = "stories"

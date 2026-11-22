@@ -5,6 +5,7 @@ import com.dozy.config.DatabaseConfig
 import com.dozy.config.FakeAvatarMode
 import com.dozy.domain.id.AvatarJobId
 import com.dozy.domain.id.OwnerId
+import com.dozy.features.character.data.database.CharacterDao
 import com.dozy.features.character.data.repository.SqliteCharacterRepository
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
@@ -71,7 +72,7 @@ class AvatarJobsTest {
             assertTrue(bytes.contentEquals(assertNotNull(LocalAvatarStorage(config).get(job.assetId))))
             val avatar = Character.Avatar(job.assetId, job.url)
             val command = (SaveCharacter.parse("Hero", input.personality, input.appearance, input.type, avatar) as SaveCharacter.Result.Valid).command
-            val characters = SqliteCharacterRepository(database)
+            val characters = SqliteCharacterRepository(database, CharacterDao(database))
             assertTrue(characters.create(owner, command) is SaveCharacterResult.Created)
             assertEquals(
                 SaveCharacterResult.ReferenceUnavailable,

@@ -12,10 +12,12 @@ import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryPage
+import com.dozy.features.story.domain.model.StorySync
 import com.dozy.features.story.domain.model.Submission
 
 interface GenerationRepository {
     suspend fun list(ownerId: OwnerId, limit: Int, cursor: StoryId?): StoryPage?
+    suspend fun sync(ownerId: OwnerId, after: Long): StorySync
     suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission
     suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission
     suspend fun status(ownerId: OwnerId, id: JobId): Job?

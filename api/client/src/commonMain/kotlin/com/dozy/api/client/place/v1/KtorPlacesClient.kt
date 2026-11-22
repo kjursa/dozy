@@ -18,6 +18,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
@@ -32,20 +33,30 @@ internal class KtorPlacesClient(
         encodeDefaults = true
     }
 
-    override suspend fun list(): PlacesListResult = communicate(PlacesListResult::TechnicalError) {
-        val response = http.get(config.endpoint(ApiVersion.V1, "places")) {
-            expectSuccess = false
+    override suspend fun list(ifNoneMatch: String?): PlacesListResult =
+        communicate(PlacesListResult::TechnicalError) {
+            val response =
+                http.get(config.endpoint(ApiVersion.V1, "places")) {
+                    expectSuccess = false
+                    ifNoneMatch?.let { header(HttpHeaders.IfNoneMatch, it) }
+                }
+            if (response.status == HttpStatusCode.NotModified) {
+                require(ifNoneMatch != null)
+                return@communicate PlacesListResult.NotModified
+            }
+            if (response.status == HttpStatusCode.OK) {
+                PlacesListResult.Success(
+                    json.decodeFromString<PlacesResponse>(response.bodyAsText()),
+                    response.headers[HttpHeaders.ETag],
+                )
+            } else {
+                response.businessFailure(
+                    PlacesListError.serializer(),
+                    PlacesListResult::ApiError,
+                    PlacesListResult::TechnicalError,
+                )
+            }
         }
-        if (response.status.value == 200) {
-            PlacesListResult.Success(json.decodeFromString<PlacesResponse>(response.bodyAsText()))
-        } else {
-            response.businessFailure(
-                PlacesListError.serializer(),
-                PlacesListResult::ApiError,
-                PlacesListResult::TechnicalError
-            )
-        }
-    }
 
     override suspend fun create(
         request: SavePlaceRequest,

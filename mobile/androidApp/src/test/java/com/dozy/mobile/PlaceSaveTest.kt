@@ -11,6 +11,7 @@ import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.api.SavePlaceRequestDto
+import com.dozy.mobile.feature.place.data.toDto
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.place.data.toSaveRequest
 import com.dozy.mobile.feature.place.domain.model.Place
@@ -42,7 +43,7 @@ class PlaceSaveTest {
             val ids = mutableListOf<String>()
             val api =
                 object : PlacesClient {
-                    override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+                    override suspend fun list(ifNoneMatch: String?) = PlacesListResult.Success(PlacesDto(listOf(place().toDto())))
 
                     override suspend fun create(
                         request: SavePlaceRequestDto,
@@ -77,7 +78,7 @@ class PlaceSaveTest {
             dao.upsert(place().toEntity().copy(pendingSync = false))
             val api =
                 object : PlacesClient {
-                    override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+                    override suspend fun list(ifNoneMatch: String?) = PlacesListResult.Success(PlacesDto(emptyList()))
 
                     override suspend fun create(
                         request: SavePlaceRequestDto,
@@ -104,7 +105,7 @@ class PlaceSaveTest {
             var calls = 0
             val api =
                 object : PlacesClient {
-                    override suspend fun list(): PlacesListResult =
+                    override suspend fun list(ifNoneMatch: String?): PlacesListResult =
                         PlacesListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
 
                     override suspend fun create(
@@ -197,7 +198,7 @@ class PlaceSaveTest {
                     dao,
                     fakePlacesClients(
                         object : PlacesClient {
-                            override suspend fun list() = PlacesListResult.Success(PlacesDto(emptyList()))
+                            override suspend fun list(ifNoneMatch: String?) = PlacesListResult.Success(PlacesDto(emptyList()))
 
                             override suspend fun create(
                                 request: SavePlaceRequestDto,

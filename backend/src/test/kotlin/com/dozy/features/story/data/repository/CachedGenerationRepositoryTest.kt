@@ -1,5 +1,6 @@
 package com.dozy.features.story.data.repository
 
+import com.dozy.features.story.testGenerationRepository
 import com.dozy.MutableClock
 import com.dozy.config.DatabaseConfig
 import com.dozy.config.GenerationConfig
@@ -51,7 +52,7 @@ class CachedGenerationRepositoryTest {
     fun pollsFromTheCacheUntilExpiryAndKeepsOwnersIsolated() =
         runBlocking {
             database().use { database ->
-                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
+                val source = CountingRepository(testGenerationRepository(database, GenerationConfig(), clock))
                 val repository = CachedGenerationRepository(source, cache())
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
 
@@ -74,7 +75,7 @@ class CachedGenerationRepositoryTest {
     fun transitionsAndRetriesKeepStatusAvailableWithoutPollingSqlite() =
         runBlocking {
             database().use { database ->
-                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
+                val source = CountingRepository(testGenerationRepository(database, GenerationConfig(), clock))
                 val repository = CachedGenerationRepository(source, cache())
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
                 assertEquals(Stage.QUEUED, repository.status(ownerId, job.id)?.stage)
@@ -182,7 +183,7 @@ class CachedGenerationRepositoryTest {
                     }
                 val repository =
                     CachedGenerationRepository(
-                        SqliteGenerationRepository(database, GenerationConfig(), clock),
+                        testGenerationRepository(database, GenerationConfig(), clock),
                         KeyValueJobStatusCache(unavailable),
                     )
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
@@ -209,7 +210,7 @@ class CachedGenerationRepositoryTest {
                             memory.put(key, value, ttl)
                         }
                     }
-                val source = CountingRepository(SqliteGenerationRepository(database, GenerationConfig(), clock))
+                val source = CountingRepository(testGenerationRepository(database, GenerationConfig(), clock))
                 val repository = CachedGenerationRepository(source, KeyValueJobStatusCache(store))
                 val job = assertIs<Submission.Accepted>(repository.start(ownerId, requestKey(), "request", command())).job
                 failWrites = true

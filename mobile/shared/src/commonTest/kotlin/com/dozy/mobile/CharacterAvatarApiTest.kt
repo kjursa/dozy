@@ -6,6 +6,7 @@ import com.dozy.api.client.characteravatar.CharacterAvatarsClients
 import com.dozy.api.contracts.v1.character.AvatarDto
 import com.dozy.api.contracts.v1.characteravatar.AvatarRequestDto
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import com.dozy.mobile.feature.character.data.DefaultCharacterRepository
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
@@ -15,6 +16,7 @@ import com.dozy.mobile.feature.character.data.toDto
 import com.dozy.mobile.feature.character.data.toEntity
 import com.dozy.mobile.feature.character.domain.usecase.GenerateCharacterAvatar
 import fixtures.CharactersClientFixture
+import fixtures.FakeSyncStateQueries
 import fixtures.avatarClients
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -28,6 +30,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -175,9 +178,14 @@ class CharacterAvatarApiTest {
         runTest {
             var posts = 0
             var gets = 0
+            val secondPost = CompletableDeferred<Unit>()
             val http =
                 client { request ->
-                    if (request.method == HttpMethod.Post) posts++ else gets++
+                    if (request.method == HttpMethod.Post) {
+                        if (++posts == 2) secondPost.complete(Unit)
+                    } else {
+                        gets++
+                    }
                     respond(
                         """{"jobId":"job","status":"RUNNING"}""",
                         if (request.method ==
@@ -197,7 +205,7 @@ class CharacterAvatarApiTest {
                 assertEquals(1, posts)
                 assertEquals(120, gets)
                 val observing = launch { repository.generateAvatar(createInput()) }
-                runCurrent()
+                secondPost.await()
                 observing.cancel()
                 observing.join()
                 advanceTimeBy(5000)
@@ -218,7 +226,7 @@ class CharacterAvatarApiTest {
 
     private fun repository(api: CharacterAvatarsClients) =
         DefaultCharacterRepository(
-            object : CharacterDao {
+            object : CharacterDao, SyncStateQueries by FakeSyncStateQueries() {
                 override fun observe(id: String) = flowOf<CharacterEntity?>(null)
 
                 override suspend fun deletedIds() = emptyList<String>()

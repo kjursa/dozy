@@ -12,6 +12,7 @@ import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryPage
+import com.dozy.features.story.domain.model.StorySync
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.repository.GenerationRepository
 
@@ -19,6 +20,7 @@ import com.dozy.features.story.domain.repository.GenerationRepository
 class UnusedGenerationRepository : GenerationRepository {
     override suspend fun list(ownerId: OwnerId, limit: Int, cursor: StoryId?): StoryPage? = error("unused")
     override suspend fun claim(): Execution? = null
+    override suspend fun sync(ownerId: OwnerId, after: Long): StorySync = error("Unused")
     override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = error("Unused")
     override suspend fun retry(ownerId: OwnerId, id: JobId, key: IdempotencyKey): RetrySubmission = error("Unused")
     override suspend fun status(ownerId: OwnerId, id: JobId): Job? = error("Unused")

@@ -1,12 +1,17 @@
 package com.dozy.features.story
 
+import com.dozy.config.GenerationConfig
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.PlaceId
+import com.dozy.features.story.data.database.StoryChangesDao
+import com.dozy.features.story.data.repository.SqliteGenerationRepository
 import com.dozy.features.story.domain.model.HeroSnapshot
 import com.dozy.features.story.domain.model.PlaceSnapshot
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryConfiguration
+import com.dozy.infrastructure.database.SqliteDatabase
+import java.time.Clock
 import java.util.UUID
 
 internal fun configuration() = StoryConfiguration(
@@ -17,3 +22,10 @@ internal fun configuration() = StoryConfiguration(
 internal fun command(config: StoryConfiguration = configuration()) = (StartGeneration.parse(config) as StartGeneration.Result.Valid).command
 
 internal fun requestKey(): IdempotencyKey = requireNotNull(IdempotencyKey.parse(UUID.randomUUID().toString()))
+
+
+internal fun testGenerationRepository(
+    database: SqliteDatabase,
+    config: GenerationConfig,
+    clock: Clock,
+) = SqliteGenerationRepository(database, config, clock, StoryChangesDao(database))

@@ -12,6 +12,8 @@ import com.dozy.api.client.characteravatar.v1.AvatarStartResult
 import com.dozy.api.client.characteravatar.v1.AvatarStatusResult
 import com.dozy.api.contracts.v1.characteravatar.AvatarJobState
 import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.data.database.SyncState
+import com.dozy.mobile.feature.character.data.database.CHARACTERS_SYNC
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.domain.model.Character
@@ -90,15 +92,16 @@ class DefaultCharacterRepository(
                 .first()
                 .filter { it.pendingSync }
                 .forEach { synchronize(it) }
-            val result = characters.v1.list()
+            val result = characters.v1.list(dao.syncValue(CHARACTERS_SYNC))
             val snapshot =
                 when (result) {
+                    CharactersListResult.NotModified -> return@withLock true
                     is CharactersListResult.Success -> result.response
                     is CharactersListResult.ApiError, is CharactersListResult.TechnicalError -> return@withLock false
                 }
             require(snapshot.map { it.id }.distinct().size == snapshot.size) { "Duplicate character IDs" }
             val entities = snapshot.map { it.toDomain(config.allowLocalAssetHttp).toEntity(pendingSync = false) }
-            dao.replaceSnapshot(entities)
+            dao.replaceSnapshot(entities, result.etag)
             true
         }
 
@@ -121,6 +124,7 @@ class DefaultCharacterRepository(
             val result = characters.v1.create(details.toSaveRequest(avatar), requestKey)
             check(result is CharactersCreateResult.Success) { "Character creation failed" }
             val character = Character(Character.Id(result.response.id), details, avatar)
+            dao.saveSyncValue(SyncState(CHARACTERS_SYNC, null))
             dao.upsert(character.toEntity(pendingSync = false))
             SavedCharacter(character, CharacterSync.SYNCED)
         }
@@ -132,7 +136,11 @@ class DefaultCharacterRepository(
         }
         val acknowledged = characters.v1.save(row.id, row.toDomain().toSaveRequest()) is CharactersSaveResult.Success
         if (!acknowledged) return CharacterSync.PENDING
-        return if (runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }.isSuccess) {
+        return if (runCatchingSuspend {
+                dao.saveSyncValue(SyncState(CHARACTERS_SYNC, null))
+                dao.upsert(row.copy(pendingSync = false))
+            }.isSuccess
+        ) {
             CharacterSync.SYNCED
         } else {
             CharacterSync.PENDING

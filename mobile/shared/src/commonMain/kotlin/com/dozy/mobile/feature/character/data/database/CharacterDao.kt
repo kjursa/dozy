@@ -4,10 +4,12 @@ import androidx.room3.Dao
 import androidx.room3.Query
 import androidx.room3.Transaction
 import androidx.room3.Upsert
+import com.dozy.mobile.core.data.database.SyncState
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface CharacterDao {
+interface CharacterDao : SyncStateQueries {
     @Query("SELECT * FROM characters WHERE deleted = 0 ORDER BY name COLLATE NOCASE, id")
     fun observe(): Flow<List<CharacterEntity>>
 
@@ -28,10 +30,14 @@ interface CharacterDao {
 
     /** One emission for a complete snapshot; local pending edits always win. */
     @Transaction
-    suspend fun replaceSnapshot(characters: List<CharacterEntity>) {
+    suspend fun replaceSnapshot(
+        characters: List<CharacterEntity>,
+        etag: String? = null,
+    ) {
         val pending = pendingIds().toSet()
         deleteSynced()
         characters.filterNot { it.id in pending }.forEach { upsert(it) }
+        saveSyncValue(SyncState(CHARACTERS_SYNC, etag))
     }
 
     @Query(
@@ -52,3 +58,5 @@ interface CharacterDao {
     @Upsert
     suspend fun upsert(character: CharacterEntity)
 }
+
+internal const val CHARACTERS_SYNC = "characters"

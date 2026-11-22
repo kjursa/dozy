@@ -8,6 +8,7 @@ import com.dozy.api.contracts.v1.story.GenerationStatusError
 import com.dozy.api.contracts.v1.story.StoryListError
 import com.dozy.api.contracts.v1.story.StoryListField
 import com.dozy.api.contracts.v1.story.StoryReadError
+import com.dozy.api.contracts.v1.story.StorySyncError
 import com.dozy.domain.id.JobId
 import com.dozy.domain.id.StoryId
 import com.dozy.features.story.application.StoryService
@@ -68,6 +69,13 @@ fun Route.storyV1Routes(service: StoryService) {
         val page = service.list(ownerId, limit, cursor)
             ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
         call.respond(page.toDto())
+    }
+    get("/stories/sync") {
+        val ownerId = call.ownerId()
+        val revisions = call.request.queryParameters.getAll("after")
+        val after = if (revisions == null) 0L else revisions.singleOrNull()?.toLongOrNull()?.takeIf { it >= 0 }
+        if (after == null) throw BusinessApiException(HttpStatusCode.BadRequest, StorySyncError.InvalidRevision)
+        call.respond(service.sync(ownerId, after).toDto())
     }
     get("/stories/{id}") {
         val story = StoryId.parse(call.parameters["id"])?.let { service.read(call.ownerId(), it) }

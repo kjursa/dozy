@@ -1,11 +1,12 @@
 package com.dozy.features.character.data.repository
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
 import com.dozy.features.asset.data.database.Assets
+import com.dozy.features.character.data.database.CharacterDao
 import com.dozy.features.character.data.database.Characters
-import com.dozy.features.character.data.database.toCharacter
 import com.dozy.features.character.domain.model.Character
 import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
@@ -21,13 +22,14 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
-class SqliteCharacterRepository(private val database: SqliteDatabase) : CharacterRepository {
-    override suspend fun list(ownerId: OwnerId): List<Character> = database.write {
-        registerOwnerPartition(ownerId)
-        Characters.selectAll().where {
-            (Characters.ownerId eq ownerId.value) and (Characters.deleted eq false)
-        }.map { it.toCharacter() }
-    }
+class SqliteCharacterRepository(
+    private val database: SqliteDatabase,
+    private val dao: CharacterDao,
+) : CharacterRepository {
+    override suspend fun list(
+        ownerId: OwnerId,
+        isCurrent: (String) -> Boolean,
+    ): VersionedCollection<Character> = dao.list(ownerId, isCurrent)
 
     override suspend fun create(
         ownerId: OwnerId,

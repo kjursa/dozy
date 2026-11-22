@@ -13,6 +13,7 @@ val databaseModule =
         single {
             get<DatabaseBuilderFactory>()
                 .create()
+                .addMigrations(syncStateMigration)
                 .setDriver(get())
                 .build()
         } onClose

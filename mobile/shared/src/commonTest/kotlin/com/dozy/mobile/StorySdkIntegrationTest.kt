@@ -4,6 +4,8 @@ import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.api.client.auth.StoredAuthSession
+import com.dozy.api.contracts.v1.story.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.createHttpClient
 import com.dozy.mobile.feature.story.data.DefaultGenerationRepository
@@ -113,29 +115,32 @@ class StorySdkIntegrationTest {
             }
         }
 
-    @Test fun `shared listing traverses pages and accepts configured local covers without generation`() =
+    @Test fun `story sync uses stored revisions and accepts configured local covers`() =
         runTest {
-            val cursors = mutableListOf<String?>()
+            val revisions = mutableListOf<String>()
+            val cover = "http://localhost:8080/api/v1/assets/"
             val http =
                 HttpClient(
                     MockEngine { request ->
                         assertEquals(HttpMethod.Get, request.method)
-                        assertEquals("/api/v1/stories", request.url.encodedPath)
-                        assertEquals("100", request.url.parameters["limit"])
-                        val cursor = request.url.parameters["cursor"]
-                        cursors += cursor
-                        val id = if (cursor == null) "b" else "a"
-                        val next = if (cursor == null) "\"$id\"" else "null"
-                        respond(
-                            """{"stories":[{"id":"$id","title":"Title","coverUrl":"http://localhost:8080/api/v1/assets/$id","readingMinutes":1,"createdAt":123}],"nextCursor":$next}""",
-                        )
+                        assertEquals("/api/v1/stories/sync", request.url.encodedPath)
+                        val revision = requireNotNull(request.url.parameters["after"])
+                        revisions += revision
+                        val changes =
+                            when (revision) {
+                                "0" -> StorySyncDto(listOf(StorySummaryDto("a", "First", cover + "a", 1, 123)), emptyList(), 4)
+                                "4" -> StorySyncDto(listOf(StorySummaryDto("b", "Second", cover + "b", 1, 456)), emptyList(), 7)
+                                else -> error("Unexpected revision $revision")
+                            }
+                        respond(Json.encodeToString(changes))
                     },
                 )
             try {
                 val sdk = DozyClient(http, DozyClientConfig("http://localhost:8080"))
                 val repo = DefaultGenerationRepository(FakeGenerationDao(), sdk.storyGenerations, sdk.stories)
                 assertTrue(repo.refreshStories())
-                assertEquals(listOf(null, "b"), cursors)
+                assertTrue(repo.refreshStories())
+                assertEquals(listOf("0", "4"), revisions)
                 assertEquals(listOf("b", "a"), repo.summaries().first().map { it.id.value })
             } finally {
                 http.close()

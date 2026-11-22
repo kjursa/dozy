@@ -1,12 +1,13 @@
 package com.dozy.features.place.data.repository
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
+import com.dozy.features.place.data.database.PlaceDao
 import com.dozy.features.place.data.database.existingPlace
 import com.dozy.features.place.data.database.insertPlace
 import com.dozy.features.place.data.database.updatePlace
-import com.dozy.features.place.data.database.visiblePlaces
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
@@ -15,11 +16,14 @@ import com.dozy.infrastructure.database.ResourceCreation
 import com.dozy.infrastructure.database.SqliteDatabase
 import com.dozy.infrastructure.database.registerOwnerPartition
 
-class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceRepository {
-    override suspend fun list(ownerId: OwnerId): List<Place> = database.write {
-        registerOwnerPartition(ownerId)
-        visiblePlaces(ownerId)
-    }
+class SqlitePlaceRepository(
+    private val database: SqliteDatabase,
+    private val dao: PlaceDao,
+) : PlaceRepository {
+    override suspend fun list(
+        ownerId: OwnerId,
+        isCurrent: (String) -> Boolean,
+    ): VersionedCollection<Place> = dao.list(ownerId, isCurrent)
 
     override suspend fun create(
         ownerId: OwnerId,

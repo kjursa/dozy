@@ -437,8 +437,8 @@ No body. First page omits cursor. Return 200:
 Summaries omit text and configuration. `readingMinutes` is a positive integer,
 `max(1, ceil(wordCount / 150))`, matching the reader's whitespace-delimited word
 count. Stories are ordered by descending lexical StoryId. UUIDv7 IDs are assigned
-when a story is published. Mobile requests limit 100; the backend accepts 1–100
-and defaults to 100. Malformed/out-of-range limits return 422
+when a story is published. The backend accepts a limit of 1–100 and defaults to
+100. Malformed/out-of-range limits return 422
 `validation.limit.invalid_value`.
 
 When there are more stories, `nextCursor` equals the last returned ID. The next
@@ -511,8 +511,22 @@ token, and returns 404 `ASSET_NOT_FOUND` for missing/inaccessible assets. Stable
 asset URLs default to HTTPS; the explicit development HTTP settings are documented
 in the root README. There is no third-party image request or real AI provider.
 
-The shared Stories client paginates the library by StoryId. The backend reads an
-owner-scoped range directly from SQLite.
+`GET /api/v1/stories` lists an owner-scoped page ordered by StoryId.
+`GET /api/v1/stories/sync?after=0` synchronizes library summaries. Pass the last
+successfully applied `nextRevision` in subsequent calls. The response contains
+`upserts` (current story summaries), `deletedIds` and `nextRevision`. It contains
+all changes after the supplied revision in one response. If a story changes
+several times, the response represents its latest state. When there are no changes,
+the response contains empty lists and echoes the supplied revision. Invalid revisions
+return HTTP 400 with `INVALID_CURSOR`. Read full story content with
+`GET /api/v1/stories/{storyId}`.
+
+`GET /api/v1/characters` and `GET /api/v1/places` return an `ETag`. When
+`If-None-Match` matches the stored collection version for the authenticated owner,
+the server returns HTTP 304 with an empty body without loading the collection rows.
+Otherwise, it returns HTTP 200 with the current snapshot and its ETag. The places
+validator also includes the shared system catalogue version and the configured
+thumbnail URL base.
 
 Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing

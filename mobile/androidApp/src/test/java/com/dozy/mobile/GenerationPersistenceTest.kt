@@ -7,8 +7,8 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.room3.withWriteTransaction
 import androidx.sqlite.driver.AndroidSQLiteDriver
-import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.background.AndroidStoryCompletionNotifier
@@ -41,7 +41,7 @@ class GenerationPersistenceTest {
         initializeComposeResourceProvider()
     }
 
-    @Test fun libraryReplacementIsAtomicAndLeavesPendingGenerationsIndependent() =
+    @Test fun libraryDeltaAndRevisionRollbackTogetherAndLeavePendingGenerationsIndependent() =
         runBlocking {
             val context: Context = RuntimeEnvironment.getApplication()
             val database = Room.inMemoryDatabaseBuilder<DozyDatabase>(context).setDriver(AndroidSQLiteDriver()).build()
@@ -50,10 +50,10 @@ class GenerationPersistenceTest {
                 val pending = GenerationEntity("pending", "configuration", jobId = "job", status = "QUEUED")
                 val old = StoryEntity("old", summary = "old")
                 dao.upsert(pending)
-                dao.replaceLibrary(listOf(old))
+                dao.applyStoryChanges(listOf(old), emptyList(), 1)
                 try {
                     database.withWriteTransaction {
-                        dao.replaceLibrary(listOf(StoryEntity("new", summary = "new")))
+                        dao.applyStoryChanges(listOf(StoryEntity("new", summary = "new")), listOf("old"), 2)
                         throw CancellationException("cancel transaction")
                     }
                     fail("Cancellation must propagate")
@@ -61,7 +61,9 @@ class GenerationPersistenceTest {
                 }
                 assertEquals(listOf(pending), dao.observe().first())
                 assertEquals(listOf(old), dao.observeStories().first())
-                dao.replaceLibrary(emptyList())
+                assertEquals("1", dao.syncValue("stories"))
+                dao.applyStoryChanges(emptyList(), listOf("old"), 2)
+                assertEquals("2", dao.syncValue("stories"))
                 assertEquals(listOf(pending), dao.observe().first())
                 assertTrue(dao.observeStories().first().isEmpty())
             } finally {
@@ -78,7 +80,7 @@ class GenerationPersistenceTest {
                 val pending = GenerationEntity("pending", "configuration", jobId = "job", status = "CREATING_COVER")
                 val story = StoryEntity("story", jobId = "job", requestKey = "pending", result = "complete")
                 dao.upsert(pending)
-                dao.replaceLibrary(listOf(StoryEntity("story", summary = "preview")))
+                dao.applyStoryChanges(listOf(StoryEntity("story", summary = "preview")), emptyList(), 1)
                 assertEquals(pending, dao.find("pending"))
 
                 try {
@@ -109,12 +111,17 @@ class GenerationPersistenceTest {
             val progress = ProgressApi()
             val api =
                 object : GenerationApi by progress {
-                    override suspend fun stories(cursor: String?) =
-                        StoryPageDto(
-                            listOf(
-                                StorySummaryDto("story", "A star", "https://example.test/cover.png", 1, 100),
-                            ),
-                        )
+                    override suspend fun sync(after: Long): StorySyncDto =
+                        when (after) {
+                            0L ->
+                                StorySyncDto(
+                                    listOf(StorySummaryDto("story", "A star", "https://example.test/cover.png", 1, 100)),
+                                    emptyList(),
+                                    12,
+                                )
+                            12L -> StorySyncDto(emptyList(), emptyList(), 12)
+                            else -> error("Unexpected revision $after")
+                        }
                 }
             var database = open()
             try {
@@ -124,6 +131,8 @@ class GenerationPersistenceTest {
                 database.close()
                 database = open()
                 val restored = testGenerationRepository(database.generations(), api)
+                assertEquals("12", database.generations().syncValue("stories"))
+                assertTrue(restored.refreshStories())
                 assertEquals(
                     "story",
                     restored
