@@ -15,7 +15,8 @@ import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.idempotencyKey
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondConditionalJson
+import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.respondVersionedCollection
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -27,13 +28,20 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import java.security.MessageDigest
+import java.util.HexFormat
 
 fun Route.placeV1Routes(service: PlaceService, assetBaseUrl: String) {
+    val assetVersion = HexFormat.of().formatHex(
+        MessageDigest.getInstance("SHA-256").digest(assetBaseUrl.trimEnd('/').encodeToByteArray()),
+    )
     staticResources("/place-icons", "fixtures/place-icons")
     route("/places") {
         get {
-            val places = service.list(call.ownerId())
-            call.respondConditionalJson(PlacesResponse(places.map { it.toResponse(assetBaseUrl) }))
+            val isCurrent = call.collectionRevalidation()
+            val (version, places) = service.list(call.ownerId()) { isCurrent("$it.$assetVersion") }
+            val response = places?.let { PlacesResponse(it.map { place -> place.toResponse(assetBaseUrl) }) }
+            call.respondVersionedCollection("$version.$assetVersion", response)
         }
         post {
             val ownerId = call.ownerId()

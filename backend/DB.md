@@ -453,6 +453,15 @@ and operation. It retains deletion entries after the story row is removed.
 Sync scans the owner's changes after the requested revision, groups them by story
 ID, and joins current story data for the latest UPSERT per story.
 
+## SQLite collection validators (V11)
+
+`collection_etags` stores one UUIDv4 per collection and owner. The places row
+with an empty owner ID versions the shared system catalogue. Triggers replace
+the affected version in the same transaction as a visible change. Updates that
+leave the collection representation unchanged retain the version. The migration
+initializes versions for existing rows, and empty accounts receive a version
+when they first read a collection.
+
 ## Implemented API2 SQLite jobs
 
 Flyway V5 adds `avatar_jobs`: UUIDv7 primary ID, installation owner, normalized

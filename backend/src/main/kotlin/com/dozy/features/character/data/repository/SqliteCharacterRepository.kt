@@ -1,5 +1,6 @@
 package com.dozy.features.character.data.repository
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
@@ -12,6 +13,8 @@ import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.features.character.domain.repository.CharacterRepository
 import com.dozy.infrastructure.database.ResourceCreation
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.TrackedCollection
+import com.dozy.infrastructure.database.collectionVersion
 import com.dozy.infrastructure.database.registerOwnerPartition
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -22,11 +25,16 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 
 class SqliteCharacterRepository(private val database: SqliteDatabase) : CharacterRepository {
-    override suspend fun list(ownerId: OwnerId): List<Character> = database.write {
-        registerOwnerPartition(ownerId)
-        Characters.selectAll().where {
+    override suspend fun list(
+        ownerId: OwnerId,
+        isCurrent: (String) -> Boolean,
+    ): VersionedCollection<Character> = database.write {
+        val version = collectionVersion(TrackedCollection.CHARACTERS, ownerId.value)
+        if (isCurrent(version)) return@write VersionedCollection(version, null)
+        val characters = Characters.selectAll().where {
             (Characters.ownerId eq ownerId.value) and (Characters.deleted eq false)
         }.map { it.toCharacter() }
+        VersionedCollection(version, characters)
     }
 
     override suspend fun create(

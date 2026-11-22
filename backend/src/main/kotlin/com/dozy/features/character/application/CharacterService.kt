@@ -10,6 +10,8 @@ import com.dozy.features.character.domain.repository.CharacterRepository
 class CharacterService(private val repository: CharacterRepository) {
     suspend fun list(ownerId: OwnerId) = repository.list(ownerId)
         .sortedWith(compareBy<Character> { it.name.lowercase() }.thenBy { it.id.value })
+    suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean) = repository.list(ownerId, isCurrent)
+
     suspend fun create(
         ownerId: OwnerId,
         command: SaveCharacter,

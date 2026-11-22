@@ -11,12 +11,16 @@ import com.dozy.features.place.domain.repository.PlaceRepository
 class PlaceService(
     private val repository: PlaceRepository,
 ) {
-    suspend fun list(ownerId: OwnerId) =
-        repository.list(ownerId).sortedWith(
-            compareBy<Place> { it.origin != Place.Origin.USER }
-                .thenBy { it.name.value.lowercase() }
-                .thenBy { it.id.value },
-        )
+    suspend fun list(ownerId: OwnerId) = repository.list(ownerId).inDisplayOrder()
+
+    suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean) =
+        repository.list(ownerId, isCurrent).let { it.copy(items = it.items?.inDisplayOrder()) }
+
+    private fun List<Place>.inDisplayOrder() = sortedWith(
+        compareBy<Place> { it.origin != Place.Origin.USER }
+            .thenBy { it.name.value.lowercase() }
+            .thenBy { it.id.value },
+    )
 
     suspend fun create(
         ownerId: OwnerId,

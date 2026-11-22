@@ -1,5 +1,6 @@
 package com.dozy.features.character.application
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
@@ -20,6 +21,9 @@ class CharacterServiceTest {
         val characters = listOf(historical, historical.copy(id = second, name = "Oliver"),
             historical.copy(id = first, name = "oliver"))
         val repository = object : CharacterRepository {
+            override suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean): VersionedCollection<Character> =
+                error("Unexpected conditional read")
+
             override suspend fun list(ownerId: OwnerId): List<Character> {
                 assertEquals(owner, ownerId)
                 return characters

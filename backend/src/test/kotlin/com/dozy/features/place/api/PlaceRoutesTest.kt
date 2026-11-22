@@ -8,6 +8,7 @@ import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
 import com.dozy.asOwner
 import com.dozy.databaseConfig
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.AvatarJobId
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
@@ -52,6 +53,7 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.sql.DriverManager
 import java.sql.SQLException
 import java.util.UUID
 import javax.imageio.ImageIO
@@ -85,7 +87,9 @@ class PlaceRoutesTest {
             assertEquals(initialTag, unchanged.headers[HttpHeaders.ETag])
             assertEquals("", unchanged.bodyAsText())
 
+            val strangerTag = requireNotNull(client.get(collection) { asOwner(stranger) }.headers[HttpHeaders.ETag])
             assertEquals(HttpStatusCode.Created, client.create().status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(stranger, strangerTag).status)
             val changed = revalidate(owner, initialTag)
             assertEquals(HttpStatusCode.OK, changed.status)
             val changedTag = requireNotNull(changed.headers[HttpHeaders.ETag])
@@ -98,7 +102,27 @@ class PlaceRoutesTest {
                     .first()
                     .id
             assertEquals(HttpStatusCode.NoContent, client.save(id, body = body(name = "Forest")).status)
-            assertEquals(HttpStatusCode.OK, revalidate(owner, changedTag).status)
+            val edited = revalidate(owner, changedTag)
+            assertEquals(HttpStatusCode.OK, edited.status)
+            val editedTag = requireNotNull(edited.headers[HttpHeaders.ETag])
+            assertEquals(HttpStatusCode.NoContent, client.save(id, body = body(name = "Forest")).status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, editedTag).status)
+
+            DriverManager.getConnection("jdbc:sqlite:${directory.resolve("dozy.db")}").use { connection ->
+                connection.autoCommit = false
+                connection.createStatement().use { statement ->
+                    val changeCatalog = "UPDATE places SET name = 'New catalogue name' WHERE origin = 'SYSTEM'"
+                    statement.executeUpdate(changeCatalog)
+                    connection.rollback()
+                    assertEquals(HttpStatusCode.NotModified, revalidate(owner, editedTag).status)
+                    assertEquals(HttpStatusCode.NotModified, revalidate(stranger, strangerTag).status)
+                    statement.executeUpdate(changeCatalog)
+                    connection.commit()
+                }
+            }
+
+            assertEquals(HttpStatusCode.OK, revalidate(owner, editedTag).status)
+            assertEquals(HttpStatusCode.OK, revalidate(stranger, strangerTag).status)
         }
 
     @Test
@@ -333,7 +357,8 @@ class PlaceRoutesTest {
     }
 
     private class FailingCharacterRepository : CharacterRepository {
-        override suspend fun list(ownerId: OwnerId): List<Character> = throw SQLException("Private database path")
+        override suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean): VersionedCollection<Character> =
+            throw SQLException("Private database path")
         override suspend fun create(ownerId: OwnerId, command: SaveCharacter, requestKey: IdempotencyKey?): SaveCharacterResult =
             throw SQLException("Private database path")
 
@@ -343,7 +368,8 @@ class PlaceRoutesTest {
     }
 
     private class FailingRepository : PlaceRepository {
-        override suspend fun list(ownerId: OwnerId): List<Place> = throw SQLException("Private database path")
+        override suspend fun list(ownerId: OwnerId, isCurrent: (String) -> Boolean): VersionedCollection<Place> =
+            throw SQLException("Private database path")
         override suspend fun create(ownerId: OwnerId, command: SavePlace, requestKey: IdempotencyKey?): SavePlaceResult =
             throw SQLException("Private database path")
 

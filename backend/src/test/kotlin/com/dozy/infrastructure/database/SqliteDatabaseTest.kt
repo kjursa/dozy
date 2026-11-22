@@ -3,6 +3,8 @@ package com.dozy.infrastructure.database
 import com.dozy.config.DatabaseConfig
 import java.nio.file.Path
 import java.sql.DriverManager
+import java.util.UUID
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -21,11 +23,11 @@ class SqliteDatabaseTest {
         repeat(2) { SqliteDatabase(config).use { } }
         val flyway = Flyway.configure().dataSource(url, null, null).load()
         val applied = flyway.info().applied()
-        assertEquals(10, applied.size)
+        assertEquals(11, applied.size)
         assertEquals("1", applied.first().version.version)
         assertEquals("V1__places.sql", applied.first().script)
-        assertEquals("10", applied.last().version.version)
-        assertEquals("V10__story_changes.sql", applied.last().script)
+        assertEquals("11", applied.last().version.version)
+        assertEquals("V11__collection_etags.sql", applied.last().script)
         flyway.validate()
     }
 
@@ -76,6 +78,20 @@ class SqliteDatabaseTest {
                     assertEquals(0, it.getInt(1))
                 }
             }
+        }
+    }
+
+    @Test
+    fun `collection versions persist across database restarts`() = runBlocking {
+        val first =
+            SqliteDatabase(config).use { database ->
+                database.write { collectionVersion(TrackedCollection.CHARACTERS, "owner") }
+            }
+        assertEquals(4, UUID.fromString(first).version())
+
+        SqliteDatabase(config).use { database ->
+            val restored = database.write { collectionVersion(TrackedCollection.CHARACTERS, "owner") }
+            assertEquals(first, restored)
         }
     }
 

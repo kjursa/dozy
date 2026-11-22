@@ -20,7 +20,8 @@ import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.idempotencyKey
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondConditionalJson
+import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.respondVersionedCollection
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -39,8 +40,8 @@ fun Route.characterV1Routes() {
     val service: CharacterService by application.dependencies
     route("/characters") {
         get {
-            val characters = service.list(call.ownerId())
-            call.respondConditionalJson(characters.sortedBy { it.id.value }.map { it.toDto() })
+            val (version, characters) = service.list(call.ownerId(), call.collectionRevalidation())
+            call.respondVersionedCollection(version, characters?.sortedBy { it.id.value }?.map { it.toDto() })
         }
         post {
             val ownerId = call.ownerId()

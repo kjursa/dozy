@@ -1,5 +1,6 @@
 package com.dozy.features.place.data.repository
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
 import com.dozy.domain.id.PlaceId
@@ -12,13 +13,22 @@ import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.features.place.domain.repository.PlaceRepository
 import com.dozy.infrastructure.database.ResourceCreation
+import com.dozy.infrastructure.database.SYSTEM_CATALOG_OWNER
 import com.dozy.infrastructure.database.SqliteDatabase
+import com.dozy.infrastructure.database.TrackedCollection
+import com.dozy.infrastructure.database.collectionVersion
 import com.dozy.infrastructure.database.registerOwnerPartition
 
 class SqlitePlaceRepository(private val database: SqliteDatabase) : PlaceRepository {
-    override suspend fun list(ownerId: OwnerId): List<Place> = database.write {
-        registerOwnerPartition(ownerId)
-        visiblePlaces(ownerId)
+    override suspend fun list(
+        ownerId: OwnerId,
+        isCurrent: (String) -> Boolean,
+    ): VersionedCollection<Place> = database.write {
+        val ownVersion = collectionVersion(TrackedCollection.PLACES, ownerId.value)
+        val catalogVersion = collectionVersion(TrackedCollection.PLACES, SYSTEM_CATALOG_OWNER)
+        val version = "$ownVersion.$catalogVersion"
+        if (isCurrent(version)) return@write VersionedCollection(version, null)
+        VersionedCollection(version, visiblePlaces(ownerId))
     }
 
     override suspend fun create(

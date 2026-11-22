@@ -521,10 +521,12 @@ the response contains empty lists and echoes the supplied revision. Invalid revi
 return HTTP 400 with `INVALID_CURSOR`. Read full story content with
 `GET /api/v1/stories/{storyId}`.
 
-`GET /api/v1/characters` and `GET /api/v1/places` return an `ETag`. When a request's
-`If-None-Match` matches the current authenticated collection, the response is HTTP 304
-with an empty body. A changed collection returns HTTP 200 with the current snapshot
-and its ETag.
+`GET /api/v1/characters` and `GET /api/v1/places` return an `ETag`. When
+`If-None-Match` matches the stored collection version for the authenticated owner,
+the server returns HTTP 304 with an empty body without loading the collection rows.
+Otherwise, it returns HTTP 200 with the current snapshot and its ETag. The places
+validator also includes the shared system catalogue version and the configured
+thumbnail URL base.
 
 Explicit retry is implemented through the shared SDK. `DOZY_STORY_TEXT_MODE=FAIL_ONCE` fails ordinal 1 of each
 logical job and succeeds on later executions, independent of user text. Existing

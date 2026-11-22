@@ -1,5 +1,6 @@
 package com.dozy.features.character.domain.repository
 
+import com.dozy.domain.VersionedCollection
 import com.dozy.domain.id.CharacterId
 import com.dozy.domain.id.IdempotencyKey
 import com.dozy.domain.id.OwnerId
@@ -8,7 +9,12 @@ import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 
 interface CharacterRepository {
-    suspend fun list(ownerId: OwnerId): List<Character>
+    suspend fun list(ownerId: OwnerId): List<Character> = checkNotNull(list(ownerId) { false }.items)
+
+    suspend fun list(
+        ownerId: OwnerId,
+        isCurrent: (String) -> Boolean,
+    ): VersionedCollection<Character>
     suspend fun create(
         ownerId: OwnerId,
         command: SaveCharacter,
