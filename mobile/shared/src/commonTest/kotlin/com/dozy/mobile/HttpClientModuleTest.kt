@@ -2,6 +2,7 @@ package com.dozy.mobile
 
 import com.dozy.api.client.DozyClient
 import com.dozy.api.client.DozyClientConfig
+import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.HttpEngineFactory
 import com.dozy.mobile.core.data.api.httpClientModule
 import io.ktor.client.HttpClient
@@ -34,6 +35,7 @@ class HttpClientModuleTest {
                     modules(
                         httpClientModule,
                         module {
+                            single { ApiConfig(null) }
                             single<HttpEngineFactory> {
                                 HttpEngineFactory {
                                     engines++

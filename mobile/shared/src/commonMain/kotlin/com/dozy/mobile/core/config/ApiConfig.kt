@@ -8,6 +8,7 @@ import io.ktor.http.Url
 data class ApiConfig(
     val baseUrl: String?,
     val allowLocalAssetHttp: Boolean = false,
+    val httpLoggingEnabled: Boolean = false,
 ) {
     val apiBaseUrl: String? get() = baseUrl?.trimEnd('/')?.plus(ApiVersion.V1.path)
 }

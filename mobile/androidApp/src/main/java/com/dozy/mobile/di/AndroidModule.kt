@@ -31,7 +31,13 @@ internal val androidModule =
         single<StoryCompletionNotifier> { AndroidStoryCompletionNotifier(androidContext()) }
         single { GenerationWorkerFactory(get()) }
         single { GenerationWorkScheduler(WorkManager.getInstance(androidContext())) }
-        single { ApiConfig(baseUrl = BuildConfig.DOZY_API_BASE_URL, allowLocalAssetHttp = BuildConfig.ALLOW_LOCAL_ASSET_HTTP) }
+        single {
+            ApiConfig(
+                baseUrl = BuildConfig.DOZY_API_BASE_URL,
+                allowLocalAssetHttp = BuildConfig.ALLOW_LOCAL_ASSET_HTTP,
+                httpLoggingEnabled = BuildConfig.DOZY_LOGGING && BuildConfig.DOZY_HTTP_LOGGING,
+            )
+        }
         includes(databaseModule, httpClientModule, dozyClientModule, imageModule)
         single<OnboardingPreferences> { AndroidOnboardingPreferences(androidContext()) }
         single<AuthSessionStorage> { AndroidAuthSessionStorage(androidContext()) }

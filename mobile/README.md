@@ -187,3 +187,25 @@ New character and selected place results return to the story draft through its
 SavedStateHandle and are cleared after consumption. Notification entry continues
 to open Home and the requested reader. This in-memory navigator has one consumer
 per application host; independent hosts must receive independent navigators.
+
+## HTTP diagnostics
+
+Use `DozyLog.d("MyTag") { "Message" }` from shared or platform code. The logger
+also supports `i`, `w`, and `e`. Android uses the given tag in Logcat. The global
+`-Pdozy.logging=false` switch disables all app logging, including HTTP diagnostics.
+App logging defaults to on in Android debug and off in release. An iOS host can
+control it with the `loggingEnabled` argument to `initializeDozy`.
+
+Android debug builds log HTTP attempts by default. Release builds and the shared
+`ApiConfig` default to off. Use `-Pdozy.httpLogging=false` to disable logging in a
+debug build or `-Pdozy.httpLogging=true` to enable it explicitly for a diagnostic
+build. iOS hosts can opt in with `ApiConfig(httpLoggingEnabled = true, ...)`.
+
+Filter Android Logcat for the `DozyHttp` tag (`adb logcat -s DozyHttp:D`). Each attempt logs the method, URL without
+query parameters, whether an authorization header is present, response status,
+and elapsed time. Match requests and responses by the UUID in brackets. The client sends it as
+`X-Request-ID` on every attempt, including when logging is disabled. Header
+values and cookies are excluded. JSON bodies use the same ID. Auth request
+bodies are omitted, credential fields are redacted, and binary or oversized
+bodies are skipped. Lines starting with `auth` explain the refresh
+decision and whether the client will retry the original request.
