@@ -1,7 +1,6 @@
 package com.dozy.mobile.feature.home.presentation
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -34,8 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -76,8 +73,7 @@ private fun HomeContent(
     state: HomeUiState,
     onAction: (HomeAction) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        HomeBackground()
+    Box(Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -119,26 +115,6 @@ private fun HomeContent(
             }
             Spacer(Modifier.height(mainBottomMenuScrollSpace()))
         }
-    }
-}
-
-@Composable
-private fun HomeBackground() {
-    Canvas(Modifier.fillMaxSize()) {
-        drawRect(
-            Brush.radialGradient(
-                listOf(DozyColors.brandTeal.copy(alpha = .08f), Color.Transparent),
-                center = Offset(size.width, size.height * .03f),
-                radius = size.width * .84f,
-            ),
-        )
-        drawRect(
-            Brush.radialGradient(
-                listOf(DozyColors.brandCoral.copy(alpha = .04f), Color.Transparent),
-                center = Offset(0f, size.height * .18f),
-                radius = size.width * .72f,
-            ),
-        )
     }
 }
 
