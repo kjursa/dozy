@@ -6,6 +6,7 @@ import com.dozy.api.client.DozyClientConfig
 import com.dozy.api.client.TechnicalError
 import com.dozy.api.client.story.v1.StoryListResult
 import com.dozy.api.client.story.v1.StoryReadResult
+import com.dozy.api.client.story.v1.StorySyncResult
 import com.dozy.api.client.storygeneration.v1.GenerationRetryResult
 import com.dozy.api.client.storygeneration.v1.GenerationStartResult
 import com.dozy.api.client.storygeneration.v1.GenerationStatusResult
@@ -31,6 +32,17 @@ class KtorGenerationApi(
                 is StoryListResult.Success -> result.response
                 is StoryListResult.TechnicalError -> legacyTechnical(result.error)
                 is StoryListResult.ApiError -> null
+            }
+        } catch (_: ApiDisabledException) {
+            null
+        }
+
+    override suspend fun sync(after: Long) =
+        try {
+            when (val result = sdk.stories.v1.sync(after)) {
+                is StorySyncResult.Success -> result.response
+                is StorySyncResult.TechnicalError -> legacyTechnical(result.error)
+                is StorySyncResult.ApiError -> error("Library unavailable")
             }
         } catch (_: ApiDisabledException) {
             null

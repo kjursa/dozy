@@ -12,12 +12,15 @@ import com.dozy.api.contracts.v1.story.StoryDto
 import com.dozy.api.contracts.v1.story.StoryLength
 import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
 import com.dozy.features.story.domain.model.GenerationStatus
 import com.dozy.features.story.domain.model.SavedStory
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryPage
+import com.dozy.features.story.domain.model.StorySummary
+import com.dozy.features.story.domain.model.StorySync
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import io.ktor.http.HttpStatusCode
@@ -58,7 +61,12 @@ internal fun JsonObject.command(): StartGeneration {
 internal fun GenerationStatus.toDto() = GenerationStatusDto(job.id.value, job.stage.name, job.storyId?.value, job.failure?.name, story?.toDto())
 internal fun SavedStory.toDto() = StoryDto(id.value, title, text, coverUrl, configuration.toDto(), createdAt, jobId.value)
 
-internal fun StoryPage.toDto() = StoryPageDto(
-    stories.map { StorySummaryDto(it.id.value, it.title, it.coverUrl, it.readingMinutes, it.createdAt) },
-    nextCursor?.value,
-)
+internal fun StoryPage.toDto() =
+    StoryPageDto(
+        stories.map { it.toDto() },
+        nextCursor?.value,
+    )
+
+internal fun StorySync.toDto() = StorySyncDto(upserts.map { it.toDto() }, deletedIds.map { it.value }, nextRevision)
+
+private fun StorySummary.toDto() = StorySummaryDto(id.value, title, coverUrl, readingMinutes, createdAt)

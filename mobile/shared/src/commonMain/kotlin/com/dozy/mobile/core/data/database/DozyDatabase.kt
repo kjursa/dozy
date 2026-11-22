@@ -14,8 +14,8 @@ import com.dozy.mobile.feature.story.data.database.StoryEntity
 
 @ConstructedBy(DozyDatabaseConstructor::class)
 @Database(
-    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class, StoryEntity::class, CreationDraftEntity::class],
-    version = 1,
+    entities = [CharacterEntity::class, PlaceEntity::class, GenerationEntity::class, StoryEntity::class, CreationDraftEntity::class, SyncState::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class DozyDatabase : RoomDatabase() {

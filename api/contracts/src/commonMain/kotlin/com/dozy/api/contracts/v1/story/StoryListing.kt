@@ -12,6 +12,13 @@ data class StorySummaryDto(val id: String, val title: String, val coverUrl: Stri
 @Serializable
 data class StoryPageDto(val stories: List<StorySummaryDto>, val nextCursor: String? = null)
 
+@Serializable
+data class StorySyncDto(
+    val upserts: List<StorySummaryDto>,
+    val deletedIds: List<String>,
+    val nextRevision: Long,
+)
+
 enum class StoryListField(val value: String, val reasons: Set<ValidationReason>) {
     LIMIT("limit", setOf(ValidationReason.INVALID_VALUE));
 }

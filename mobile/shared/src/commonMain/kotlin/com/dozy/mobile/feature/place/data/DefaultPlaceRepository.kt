@@ -4,6 +4,8 @@ import com.dozy.api.client.place.PlacesClients
 import com.dozy.api.client.place.v1.PlacesCreateResult
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
+import com.dozy.mobile.core.data.database.SyncState
+import com.dozy.mobile.feature.place.data.database.PLACES_SYNC
 import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.data.database.PlaceEntity
 import com.dozy.mobile.feature.place.domain.model.Place
@@ -39,15 +41,16 @@ class DefaultPlaceRepository(
     override suspend fun refresh(): Boolean =
         mutations.withLock {
             dao.pending().forEach { synchronize(it) }
-            val response = places.v1.list()
+            val response = places.v1.list(dao.syncValue(PLACES_SYNC))
             val snapshot =
                 when (response) {
+                    PlacesListResult.NotModified -> return@withLock true
                     is PlacesListResult.Success -> response.response.places
                     is PlacesListResult.ApiError, is PlacesListResult.TechnicalError -> return@withLock false
                 }
             val rows = snapshot.map { it.toEntity() }
             require(rows.map { it.id }.distinct().size == rows.size)
-            dao.replaceRemote(rows)
+            dao.replaceRemote(rows, response.etag)
             true
         }
 
@@ -60,6 +63,7 @@ class DefaultPlaceRepository(
             check(result is PlacesCreateResult.Success) { "Place creation failed" }
             val id = Place.Id(result.response.id)
             val place = Place(id, input.name, input.description, input.inhabitants, Place.Origin.USER, true, result.response.imageUrl)
+            dao.saveSyncValue(SyncState(PLACES_SYNC, null))
             dao.upsert(place.toEntity().copy(pendingSync = false))
             place
         }
@@ -78,7 +82,11 @@ class DefaultPlaceRepository(
     private suspend fun synchronize(row: PlaceEntity): PlaceSync {
         val acknowledged = places.v1.save(row.id, row.toDomain().toSaveRequest()) is PlacesSaveResult.Success
         if (!acknowledged) return PlaceSync.PENDING
-        val updated = runCatchingSuspend { dao.upsert(row.copy(pendingSync = false)) }
+        val updated =
+            runCatchingSuspend {
+                dao.saveSyncValue(SyncState(PLACES_SYNC, null))
+                dao.upsert(row.copy(pendingSync = false))
+            }
         return if (updated.isSuccess) PlaceSync.SYNCED else PlaceSync.PENDING
     }
 }

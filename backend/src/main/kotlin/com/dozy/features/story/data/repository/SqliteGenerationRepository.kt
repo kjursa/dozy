@@ -14,6 +14,7 @@ import com.dozy.features.asset.data.database.Assets
 import com.dozy.features.story.data.database.Stories
 import com.dozy.features.story.data.database.StoryExecutions
 import com.dozy.features.story.data.database.StoryJobs
+import com.dozy.features.story.data.database.loadStoryChanges
 import com.dozy.features.story.data.toDomain
 import com.dozy.features.story.data.toDto
 import com.dozy.features.story.domain.model.Execution
@@ -26,6 +27,7 @@ import com.dozy.features.story.domain.model.Stage
 import com.dozy.features.story.domain.model.StartGeneration
 import com.dozy.features.story.domain.model.StoryPage
 import com.dozy.features.story.domain.model.StorySummary
+import com.dozy.features.story.domain.model.StorySync
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.features.story.domain.model.readingMinutes
 import com.dozy.features.story.domain.repository.GenerationRepository
@@ -74,6 +76,9 @@ class SqliteGenerationRepository(
         }
         StoryPage(stories, stories.lastOrNull()?.id?.takeIf { rows.size > limit })
     }
+
+    override suspend fun sync(ownerId: OwnerId, after: Long): StorySync =
+        database.write { loadStoryChanges(ownerId, after) }
 
     override suspend fun start(ownerId: OwnerId, key: IdempotencyKey, canonicalRequest: String, command: StartGeneration): Submission = database.write {
         val existing = StoryJobs.selectAll().where { (StoryJobs.ownerId eq ownerId.value) and (StoryJobs.key eq key.value) }.singleOrNull()
@@ -242,10 +247,16 @@ class SqliteGenerationRepository(
     private fun ResultRow.job(): Job {
         val stage = Stage.valueOf(this[StoryJobs.stage])
         val id = requireNotNull(JobId.parse(this[StoryJobs.id]))
-        val storyId = if (stage == Stage.READY) {
-            val story = Stories.selectAll().where { Stories.jobId eq id.value }.single()
-            requireNotNull(StoryId.parse(story[Stories.id]))
-        } else null
+        val storyId =
+            if (stage == Stage.READY) {
+                Stories
+                    .select(Stories.id)
+                    .where { Stories.jobId eq id.value }
+                    .singleOrNull()
+                    ?.let { requireNotNull(StoryId.parse(it[Stories.id])) }
+            } else {
+                null
+            }
         return Job(id, stage, storyId, this[StoryJobs.error]?.let(Failure::valueOf))
     }
     private fun decodeConfiguration(json: String) = requireNotNull(Json.decodeFromString<GenerationRequestDto>(json).toDomain())

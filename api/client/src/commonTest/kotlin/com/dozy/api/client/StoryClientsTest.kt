@@ -2,6 +2,7 @@ package com.dozy.api.client
 
 import com.dozy.api.client.story.v1.StoryListResult
 import com.dozy.api.client.story.v1.StoryReadResult
+import com.dozy.api.client.story.v1.StorySyncResult
 import com.dozy.api.client.storygeneration.v1.GenerationRetryResult
 import com.dozy.api.client.storygeneration.v1.GenerationStartResult
 import com.dozy.api.client.storygeneration.v1.GenerationStatusResult
@@ -9,6 +10,7 @@ import com.dozy.api.contracts.v1.character.CharacterDto
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationRequestDto
 import com.dozy.api.contracts.v1.story.ListStoriesRequest
+import com.dozy.api.contracts.v1.story.StorySyncError
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -37,6 +39,35 @@ class StoryClientsTest {
         })
         try { assertEquals(emptyList(), assertIs<StoryListResult.Success>(sdk(http).stories.v1.list(ListStoriesRequest(2, "story-019a0000-0000-7000-8000-000000000001"))).response.stories) } finally { http.close() }
     }
+
+    @Test fun `sync reads the requested revision and decodes only summaries and deleted IDs`() =
+        runTest {
+            val http =
+                HttpClient(
+                    MockEngine { request ->
+                        assertEquals("/service/api/v1/stories/sync", request.url.encodedPath)
+                        when (request.url.parameters["after"]) {
+                            "4" ->
+                                respond(
+                                    """{"upserts":[{"id":"new","title":"Title","coverUrl":"https://example.test/cover","readingMinutes":2,"createdAt":123}],"deletedIds":["old"],"nextRevision":7}""",
+                                )
+                            "7" -> respond("""{"upserts":[],"deletedIds":["old"],"nextRevision":7}""")
+                            else -> respond("""{"code":"INVALID_CURSOR"}""", HttpStatusCode.BadRequest)
+                        }
+                    },
+                )
+            try {
+                val client = sdk(http).stories.v1
+                val changes = assertIs<StorySyncResult.Success>(client.sync(4)).response
+                assertEquals("new", changes.upserts.single().id)
+                assertEquals(listOf("old"), changes.deletedIds)
+                assertEquals(7L, changes.nextRevision)
+                assertIs<StorySyncResult.TechnicalError>(client.sync(7))
+                assertEquals(StorySyncResult.ApiError(StorySyncError.InvalidRevision), client.sync(0))
+            } finally {
+                http.close()
+            }
+        }
 
     @Test fun `retry sends no body and maps contract codes independently of status`() = runTest {
         val http = HttpClient(MockEngine { request ->

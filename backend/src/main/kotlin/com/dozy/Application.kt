@@ -18,6 +18,7 @@ import com.dozy.features.place.api.v1.placeV1Routes
 import com.dozy.features.place.application.PlaceService
 import com.dozy.features.auth.application.AccessTokens
 import com.dozy.plugins.OWNER_AUTH
+import com.dozy.plugins.apiJson
 import com.dozy.plugins.configureErrors
 import com.dozy.plugins.configureOwnerAuthentication
 import io.ktor.serialization.kotlinx.json.json
@@ -33,7 +34,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 @Serializable
 data class HelloResponse(val message: String)
@@ -44,7 +44,7 @@ fun Application.module() {
     val accessTokens: AccessTokens by dependencies
     configureOwnerAuthentication(accessTokens)
     configureRequestLogging()
-    install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
+    install(ContentNegotiation) { json(apiJson) }
     val places: PlaceService by dependencies
     val generationConfig: GenerationConfig by dependencies
     val assets: AssetRepository by dependencies

@@ -8,6 +8,7 @@ import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.core.data.api.dozyClientModule
 import com.dozy.mobile.core.data.database.CreationDraftDao
+import com.dozy.mobile.core.data.database.SyncStateQueries
 import com.dozy.mobile.feature.character.data.database.CharacterDao
 import com.dozy.mobile.feature.character.data.database.CharacterEntity
 import com.dozy.mobile.feature.character.di.characterModule
@@ -24,7 +25,6 @@ import com.dozy.mobile.feature.home.presentation.HomeViewModel
 import com.dozy.mobile.feature.place.data.database.PlaceDao
 import com.dozy.mobile.feature.place.di.BundledPlaces
 import com.dozy.mobile.feature.place.di.placeModule
-import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.presentation.form.PlaceFormViewModel
 import com.dozy.mobile.feature.story.data.database.GenerationDao
 import com.dozy.mobile.feature.story.di.storyModule
@@ -34,6 +34,7 @@ import com.dozy.mobile.feature.story.presentation.create.CreateStoryViewModel
 import com.dozy.mobile.feature.story.presentation.list.StoriesViewModel
 import com.dozy.mobile.feature.story.presentation.reader.ReaderViewModel
 import com.kjursa.foundation.compose.mvi.SavedStatePersistence
+import fixtures.FakeSyncStateQueries
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -197,7 +198,9 @@ class CharacterModuleTest {
             }
         }
 
-    private class InMemoryDao : CharacterDao {
+    private class InMemoryDao :
+        CharacterDao,
+        SyncStateQueries by FakeSyncStateQueries() {
         val rows = MutableStateFlow(emptyList<CharacterEntity>())
 
         override suspend fun pendingIds() = rows.value.filter { it.pendingSync }.map { it.id }

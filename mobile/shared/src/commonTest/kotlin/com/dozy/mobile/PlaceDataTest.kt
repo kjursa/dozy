@@ -11,6 +11,7 @@ import com.dozy.mobile.feature.place.data.DefaultPlaceRepository
 import com.dozy.mobile.feature.place.data.api.PlaceDto
 import com.dozy.mobile.feature.place.data.api.PlacesDto
 import com.dozy.mobile.feature.place.data.toDomain
+import com.dozy.mobile.feature.place.data.toDto
 import com.dozy.mobile.feature.place.data.toEntity
 import com.dozy.mobile.feature.place.domain.model.Place
 import com.dozy.mobile.feature.place.domain.model.PlaceInput
@@ -143,6 +144,33 @@ class PlaceDataTest {
             snapshot = PlacesDto(emptyList())
             repository.refresh()
             assertEquals(listOf("same"), repository.observe().first().map { it.id.value })
+        }
+
+    @Test fun conditionalRefreshKeepsCachedPlacesAndDropsMissingSyncedPlaces() =
+        runTest {
+            val dao = FakePlaceDao()
+            val place = place()
+            dao.upsert(place.toEntity().copy(pendingSync = false))
+            val remote = PlacesDto(listOf(place.toDto()))
+            val tag = "W/\"places\""
+            var response: PlacesListResult = PlacesListResult.Success(remote, tag)
+            val requests = mutableListOf<String?>()
+            val clients =
+                fakePlacesClients(
+                    fakePlacesClient {
+                        requests += it
+                        response
+                    },
+                )
+            assertTrue(DefaultPlaceRepository(dao, clients, emptyList()).refresh())
+            val restored = DefaultPlaceRepository(dao, clients, emptyList())
+            response = PlacesListResult.NotModified
+            assertTrue(restored.refresh())
+            assertEquals(place, restored.observe().first().single())
+            response = PlacesListResult.Success(PlacesDto(emptyList()), "W/\"empty\"")
+            assertTrue(restored.refresh())
+            assertTrue(restored.observe().first().isEmpty())
+            assertEquals(listOf(null, tag, tag), requests)
         }
 
     @Test fun typedRefreshFailurePreservesCachedPlaces() =

@@ -35,7 +35,7 @@ internal fun apiFailure(result: PlacesListResult): Any =
     when (result) {
         is PlacesListResult.ApiError -> result.error
         is PlacesListResult.TechnicalError -> result.error
-        is PlacesListResult.Success -> error("Expected failure")
+        is PlacesListResult.Success, PlacesListResult.NotModified -> error("Expected failure")
     }
 
 internal fun apiFailure(result: PlacesSaveResult): Any =
@@ -47,10 +47,10 @@ internal fun apiFailure(result: PlacesSaveResult): Any =
 
 internal fun fakePlacesClient(
     create: suspend (SavePlaceRequest) -> PlacesCreateResult = { error("Unexpected place creation") },
-    list: suspend () -> PlacesListResult,
+    list: suspend (String?) -> PlacesListResult,
 ): PlacesClient =
     object : PlacesClient {
-        override suspend fun list() = list.invoke()
+        override suspend fun list(ifNoneMatch: String?) = list.invoke(ifNoneMatch)
 
         override suspend fun create(
             request: SavePlaceRequest,

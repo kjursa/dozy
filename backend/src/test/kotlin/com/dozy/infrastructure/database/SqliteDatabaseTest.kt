@@ -21,11 +21,11 @@ class SqliteDatabaseTest {
         repeat(2) { SqliteDatabase(config).use { } }
         val flyway = Flyway.configure().dataSource(url, null, null).load()
         val applied = flyway.info().applied()
-        assertEquals(9, applied.size)
+        assertEquals(10, applied.size)
         assertEquals("1", applied.first().version.version)
         assertEquals("V1__places.sql", applied.first().script)
-        assertEquals("9", applied.last().version.version)
-        assertEquals("V9__story_publication.sql", applied.last().script)
+        assertEquals("10", applied.last().version.version)
+        assertEquals("V10__story_changes.sql", applied.last().script)
         flyway.validate()
     }
 
@@ -62,6 +62,13 @@ class SqliteDatabaseTest {
                 ).use {
                     assertEquals(true, it.next())
                     assertEquals("QUEUED", it.getString("stage"))
+                }
+                statement.executeQuery("SELECT owner_id, story_id, operation FROM story_changes").use {
+                    assertEquals(true, it.next())
+                    assertEquals("owner", it.getString("owner_id"))
+                    assertEquals("published", it.getString("story_id"))
+                    assertEquals("UPSERT", it.getString("operation"))
+                    assertEquals(false, it.next())
                 }
                 statement.executeQuery("PRAGMA foreign_key_check").use { assertEquals(false, it.next()) }
                 statement.executeQuery("SELECT count(*) FROM sqlite_master WHERE name IN ('library_snapshots', 'library_cursors')").use {

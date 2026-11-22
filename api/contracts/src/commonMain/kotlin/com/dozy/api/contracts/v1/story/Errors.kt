@@ -79,3 +79,17 @@ sealed interface StoryReadError : ApiBusinessError {
 }
 
 object StoryReadErrorSerializer : KSerializer<StoryReadError> by businessErrorSerializer(StoryReadError.known, StoryReadError::Unknown)
+
+@Serializable(with = StorySyncErrorSerializer::class)
+sealed interface StorySyncError : ApiBusinessError {
+    data object InvalidRevision : StorySyncError {
+        override val code = ApiErrorCode.INVALID_CURSOR.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : StorySyncError
+}
+
+object StorySyncErrorSerializer : KSerializer<StorySyncError> by
+businessErrorSerializer(listOf(StorySyncError.InvalidRevision), StorySyncError::Unknown)

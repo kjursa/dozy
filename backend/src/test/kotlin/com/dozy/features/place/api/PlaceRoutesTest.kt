@@ -39,6 +39,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.plugins.di.dependencies
@@ -65,6 +66,40 @@ class PlaceRoutesTest {
     private val owner = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000001"))
     private val stranger = requireNotNull(OwnerId.parse("owner-019a0000-0000-7000-8000-000000000002"))
     private val collection = "/api/v1/places"
+
+    @Test fun `places validators revalidate only the current collection`() =
+        testApplication {
+            configurePlacesTest()
+
+            suspend fun revalidate(
+                ownerId: OwnerId,
+                tag: String,
+            ) = client.get(collection) {
+                asOwner(ownerId)
+                header(HttpHeaders.IfNoneMatch, tag)
+            }
+            val initial = client.get(collection) { asOwner(owner) }
+            val initialTag = requireNotNull(initial.headers[HttpHeaders.ETag])
+            val unchanged = revalidate(owner, "\"other\", ${initialTag.removePrefix("W/")}")
+            assertEquals(HttpStatusCode.NotModified, unchanged.status)
+            assertEquals(initialTag, unchanged.headers[HttpHeaders.ETag])
+            assertEquals("", unchanged.bodyAsText())
+
+            assertEquals(HttpStatusCode.Created, client.create().status)
+            val changed = revalidate(owner, initialTag)
+            assertEquals(HttpStatusCode.OK, changed.status)
+            val changedTag = requireNotNull(changed.headers[HttpHeaders.ETag])
+            assertEquals(HttpStatusCode.OK, revalidate(stranger, changedTag).status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, changedTag).status)
+            val id =
+                Json
+                    .decodeFromString<PlacesResponse>(changed.bodyAsText())
+                    .places
+                    .first()
+                    .id
+            assertEquals(HttpStatusCode.NoContent, client.save(id, body = body(name = "Forest")).status)
+            assertEquals(HttpStatusCode.OK, revalidate(owner, changedTag).status)
+        }
 
     @Test
     fun `lists system places then saves and replaces a normalized custom place`() = testApplication {

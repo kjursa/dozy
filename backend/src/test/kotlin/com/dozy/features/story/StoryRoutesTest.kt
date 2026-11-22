@@ -4,6 +4,8 @@ import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.story.GenerationAcceptedDto
 import com.dozy.api.contracts.v1.story.GenerationStatusDto
 import com.dozy.api.contracts.v1.story.StoryDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
+import com.dozy.api.contracts.v1.story.StorySyncError
 import com.dozy.asOwner
 import com.dozy.databaseConfig
 import com.dozy.domain.id.JobId
@@ -56,6 +58,20 @@ class StoryRoutesTest {
             assertEquals("INVALID_CURSOR", json.decodeFromString<ApiErrorResponse>(client.read("/api/v1/stories?cursor=$cursor").bodyAsText()).code)
         }
     }
+    @Test fun `sync requires an owner and a nonnegative revision`() =
+        testApplication {
+            environment { config = databaseConfig(directory) }
+            application { module() }
+            val path = "/api/v1/stories/sync"
+            assertEquals(HttpStatusCode.Unauthorized, client.get(path).status)
+            assertEquals(StorySyncDto(emptyList(), emptyList(), 0), json.decodeFromString(client.read(path).bodyAsText()))
+            for (after in listOf("-1", "abc", "", "1&after=2", "9223372036854775808")) {
+                val response = client.read("$path?after=$after")
+                assertEquals(HttpStatusCode.BadRequest, response.status)
+                assertEquals(StorySyncError.InvalidRevision, json.decodeFromString<StorySyncError>(response.bodyAsText()))
+            }
+        }
+
     @Test fun `retry route uses durable same job and typed errors`() = testApplication {
         environment { config = databaseConfig(directory).apply { put("dozy.generation.textMode", "FAIL_ONCE") } }
         application { module() }
@@ -111,6 +127,13 @@ class StoryRoutesTest {
         val story = assertNotNull(status.story)
         assertEquals(status.storyId, story.id)
         assertEquals(job.jobId, story.jobId)
+        val sync = json.decodeFromString<StorySyncDto>(client.read("/api/v1/stories/sync?after=0").bodyAsText())
+        assertEquals(story.id, sync.upserts.single().id)
+        assertTrue(sync.nextRevision > 0)
+        val unchanged = client.read("/api/v1/stories/sync?after=${sync.nextRevision}")
+        assertEquals(StorySyncDto(emptyList(), emptyList(), sync.nextRevision), json.decodeFromString(unchanged.bodyAsText()))
+        val otherOwner = client.read("/api/v1/stories/sync", stranger)
+        assertEquals(StorySyncDto(emptyList(), emptyList(), 0), json.decodeFromString(otherOwner.bodyAsText()))
         assertEquals(story, json.decodeFromString<StoryDto>(response.bodyAsText()))
         assertTrue(job.jobId.startsWith("job-"))
         assertTrue(story.id.startsWith("story-"))

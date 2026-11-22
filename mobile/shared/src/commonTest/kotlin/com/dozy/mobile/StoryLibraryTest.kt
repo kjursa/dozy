@@ -1,8 +1,8 @@
 package com.dozy.mobile
 
 import com.dozy.api.contracts.v1.story.StoryDto
-import com.dozy.api.contracts.v1.story.StoryPageDto
 import com.dozy.api.contracts.v1.story.StorySummaryDto
+import com.dozy.api.contracts.v1.story.StorySyncDto
 import com.dozy.mobile.core.config.ApiConfig
 import com.dozy.mobile.feature.story.data.api.GenerationApi
 import com.dozy.mobile.feature.story.data.api.KtorGenerationApi
@@ -40,62 +40,21 @@ class StoryLibraryTest {
         time: Long = 100,
     ) = StorySummaryDto(id, "Story $id", "https://example.test/$id.png", 3, time)
 
-    @Test fun completeTraversalReplacesRemoteCacheAndFailedDuplicateCycleOrCancellationRetainsIt() =
-        runTest {
-            val dao = FakeGenerationDao()
-            var mode = "seed"
-            val api =
-                object : GenerationApi by ProgressApi() {
-                    override suspend fun stories(cursor: String?): StoryPageDto =
-                        when (mode) {
-                            "seed" -> StoryPageDto(listOf(summary("old")))
-                            "empty" -> StoryPageDto(emptyList())
-                            else ->
-                                if (cursor == null) {
-                                    StoryPageDto(listOf(summary("new")), "new")
-                                } else {
-                                    when (mode) {
-                                        "duplicate" -> StoryPageDto(listOf(summary("new")))
-                                        "cycle" -> StoryPageDto(listOf(summary("new")), "new")
-                                        "cancel" -> throw CancellationException("cancel second page")
-                                        else -> error("failed second page")
-                                    }
-                                }
-                        }
-                }
-            val repository = testGenerationRepository(dao, api)
-            assertTrue(repository.refreshStories())
-            val before = dao.observeStories().first()
-            for (failure in listOf("duplicate", "cycle", "failure", "cancel")) {
-                mode = failure
-                try {
-                    repository.refreshStories()
-                    fail("Must reject traversal")
-                } catch (_: IllegalArgumentException) {
-                } catch (_: IllegalStateException) {
-                } catch (_: CancellationException) {
-                }
-                assertEquals(before, dao.observeStories().first())
-            }
-            mode = "empty"
-            assertTrue(repository.refreshStories())
-            assertTrue(repository.summaries().first().isEmpty())
-        }
-
-    @Test fun mergesAllPagesWithCompletedJobsWithoutDuplicatesAndKeepsSavedText() =
+    @Test fun syncAppliesDeltasFromPersistedRevisionAndKeepsDownloadedText() =
         runTest {
             val progress = ProgressApi()
-            val cursors = mutableListOf<String?>()
-            var fail = false
+            val revisions = mutableListOf<Long>()
+            var unavailable = false
             val api =
                 object : GenerationApi by progress {
-                    override suspend fun stories(cursor: String?): StoryPageDto {
-                        cursors += cursor
-                        if (fail && cursor != null) error("Network unavailable")
-                        return if (cursor == null) {
-                            StoryPageDto(listOf(summary("story")), "story")
-                        } else {
-                            StoryPageDto(listOf(summary("older", 50), summary("new", 200)))
+                    override suspend fun sync(after: Long): StorySyncDto {
+                        revisions += after
+                        check(!unavailable)
+                        return when (after) {
+                            0L -> StorySyncDto(listOf(summary("story"), summary("older", 50)), emptyList(), 4)
+                            4L -> StorySyncDto(listOf(summary("new", 200)), listOf("older"), 9)
+                            9L -> StorySyncDto(emptyList(), listOf("story"), 12)
+                            else -> StorySyncDto(emptyList(), emptyList(), after)
                         }
                     }
                 }
@@ -114,14 +73,49 @@ class StoryLibraryTest {
                     .id.value,
             )
             assertEquals(RefreshStories.Result.Refreshed, RefreshStories(repo)())
-            assertEquals(listOf(null, "story"), cursors)
-            val summaries = repo.summaries().first()
-            assertEquals(listOf("story", "older", "new"), summaries.map { it.id.value })
-            assertEquals(StorySummary.ReadingMinutes(3), summaries[0].readingMinutes)
-            assertEquals("Once upon a time", repo.readStory(Story.Id("story"))?.text)
-            fail = true
-            assertEquals(RefreshStories.Result.Failure, RefreshStories(repo)())
-            assertEquals(summaries, testGenerationRepository(dao, api).summaries().first())
+            assertEquals(
+                StorySummary.ReadingMinutes(3),
+                repo
+                    .summaries()
+                    .first()
+                    .first()
+                    .readingMinutes,
+            )
+
+            val restored = testGenerationRepository(dao, api)
+            unavailable = true
+            assertEquals(RefreshStories.Result.Failure, RefreshStories(restored)())
+            assertEquals(
+                setOf("story", "older"),
+                restored
+                    .summaries()
+                    .first()
+                    .map { it.id.value }
+                    .toSet(),
+            )
+            unavailable = false
+            assertTrue(restored.refreshStories())
+            assertEquals(
+                setOf("story", "new"),
+                restored
+                    .summaries()
+                    .first()
+                    .map { it.id.value }
+                    .toSet(),
+            )
+            assertEquals("Once upon a time", restored.readStory(Story.Id("story"))?.text)
+            assertEquals(0, progress.storyReads)
+            assertTrue(restored.refreshStories())
+            assertEquals(
+                "new",
+                restored
+                    .summaries()
+                    .first()
+                    .single()
+                    .id.value,
+            )
+            assertNull(dao.findStory("story"))
+            assertEquals(listOf(0L, 4L, 4L, 9L), revisions)
         }
 
     @Test fun summaryValidationAndTextReadingTimeMatchReaderEstimate() {
@@ -177,12 +171,12 @@ class StoryLibraryTest {
             }
         }
 
-    @Test fun failedMalformedOrCyclicPaginationCannotEraseCacheAndCancellationPropagates() =
+    @Test fun failedOrMalformedSyncCannotEraseCacheAndCancellationPropagates() =
         runTest {
             for ((status, body) in listOf(
                 HttpStatusCode.ServiceUnavailable to "{}",
-                HttpStatusCode.OK to """{"stories":[{"id":"a"}]}""",
-                HttpStatusCode.OK to """{"stories":[],"nextCursor":"loop"}""",
+                HttpStatusCode.OK to """{"upserts":[{"id":"a"}],"deletedIds":[],"nextRevision":1}""",
+                HttpStatusCode.OK to """{"upserts":[],"deletedIds":["story"],"nextRevision":0}""",
             )) {
                 val client =
                     HttpClient(
@@ -210,7 +204,7 @@ class StoryLibraryTest {
             }
             val api =
                 object : GenerationApi by ProgressApi() {
-                    override suspend fun stories(cursor: String?): StoryPageDto = throw CancellationException("cancel")
+                    override suspend fun sync(after: Long): StorySyncDto = throw CancellationException("cancel")
                 }
             try {
                 RefreshStories(testGenerationRepository(FakeGenerationDao(), api))()

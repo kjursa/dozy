@@ -6,6 +6,7 @@ import com.dozy.api.client.story.StoriesClients
 import com.dozy.api.client.story.v1.StoriesClient
 import com.dozy.api.client.story.v1.StoryListResult
 import com.dozy.api.client.story.v1.StoryReadResult
+import com.dozy.api.client.story.v1.StorySyncResult
 import com.dozy.api.client.storygeneration.StoryGenerationsClients
 import com.dozy.api.client.storygeneration.v1.GenerationRetryResult
 import com.dozy.api.client.storygeneration.v1.GenerationStartResult
@@ -59,6 +60,12 @@ internal fun testGenerationRepository(
                     fixtureCall(StoryListResult::TechnicalError) {
                         api.stories(request.cursor)?.let { StoryListResult.Success(it) }
                             ?: StoryListResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
+                    }
+
+                override suspend fun sync(after: Long): StorySyncResult =
+                    fixtureCall(StorySyncResult::TechnicalError) {
+                        api.sync(after)?.let { StorySyncResult.Success(it) }
+                            ?: StorySyncResult.TechnicalError(TechnicalError.Communication(ApiDisabledException()))
                     }
 
                 override suspend fun read(storyId: String): StoryReadResult =

@@ -2,6 +2,7 @@ package com.dozy.api.client
 
 import com.dozy.api.client.auth.InMemoryAuthSessionStorage
 import com.dozy.api.client.auth.StoredAuthSession
+import com.dozy.api.client.character.v1.CharactersListResult
 import com.dozy.api.contracts.v1.place.PlacesListError
 import com.dozy.api.client.place.v1.PlacesListResult
 import com.dozy.api.client.place.v1.PlacesSaveResult
@@ -27,6 +28,35 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 class DozyClientTest {
+    @Test
+    fun `collection clients pass validators and accept a bodyless 304`() =
+        runTest {
+            val etag = "W/\"revision\""
+            val http =
+                HttpClient(
+                    MockEngine { request ->
+                        val responseHeaders = headersOf(HttpHeaders.ETag, etag)
+                        when (val validator = request.headers[HttpHeaders.IfNoneMatch]) {
+                            null -> {
+                                val body = if (request.url.encodedPath.endsWith("/places")) """{"places":[]}""" else "[]"
+                                respond(body, headers = responseHeaders)
+                            }
+                            etag -> respond("", HttpStatusCode.NotModified, responseHeaders)
+                            else -> error("Unexpected validator $validator")
+                        }
+                    },
+                )
+            try {
+                val client = DozyClient(http, DozyClientConfig("https://example.test"))
+                assertEquals(PlacesListResult.Success(PlacesResponse(emptyList()), etag), client.places.v1.list())
+                assertEquals(PlacesListResult.NotModified, client.places.v1.list(etag))
+                assertEquals(CharactersListResult.Success(emptyList(), etag), client.characters.v1.list())
+                assertEquals(CharactersListResult.NotModified, client.characters.v1.list(etag))
+            } finally {
+                http.close()
+            }
+        }
+
     @Test
     fun `lists through v1 and tolerates additive response fields`() = runTest {
         val http = HttpClient(MockEngine { request ->
@@ -187,11 +217,12 @@ class DozyClientTest {
 
     private fun value(result: PlacesListResult): PlacesResponse = assertIs<PlacesListResult.Success>(result).response
 
-    private fun failure(result: PlacesListResult): Any = when (result) {
-        is PlacesListResult.ApiError -> result.error
-        is PlacesListResult.TechnicalError -> result.error
-        is PlacesListResult.Success -> error("Expected failure")
-    }
+    private fun failure(result: PlacesListResult): Any =
+        when (result) {
+            is PlacesListResult.ApiError -> result.error
+            is PlacesListResult.TechnicalError -> result.error
+            is PlacesListResult.Success, PlacesListResult.NotModified -> error("Expected failure")
+        }
 
     private fun failure(result: PlacesSaveResult): Any = when (result) {
         is PlacesSaveResult.ApiError -> result.error

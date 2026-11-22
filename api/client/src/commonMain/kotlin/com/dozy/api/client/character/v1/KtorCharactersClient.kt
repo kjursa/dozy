@@ -20,6 +20,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.appendPathSegments
 import io.ktor.http.contentType
@@ -34,14 +35,21 @@ internal class KtorCharactersClient(
         encodeDefaults = true
     }
 
-    override suspend fun list(): CharactersListResult =
+    override suspend fun list(ifNoneMatch: String?): CharactersListResult =
         communicate(CharactersListResult::TechnicalError) {
-            val response = http.get(config.endpoint(ApiVersion.V1, "characters")) {
-                expectSuccess = false
+            val response =
+                http.get(config.endpoint(ApiVersion.V1, "characters")) {
+                    expectSuccess = false
+                    ifNoneMatch?.let { header(HttpHeaders.IfNoneMatch, it) }
+                }
+            if (response.status == HttpStatusCode.NotModified) {
+                require(ifNoneMatch != null)
+                return@communicate CharactersListResult.NotModified
             }
-            if (response.status.value in 200..299) {
+            if (response.status == HttpStatusCode.OK) {
                 return@communicate CharactersListResult.Success(
-                    json.decodeFromString<List<CharacterDto>>(response.bodyAsText())
+                    json.decodeFromString<List<CharacterDto>>(response.bodyAsText()),
+                    response.headers[HttpHeaders.ETag],
                 )
             }
             response.businessFailure(

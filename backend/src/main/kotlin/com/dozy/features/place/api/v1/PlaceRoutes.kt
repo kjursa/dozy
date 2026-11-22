@@ -15,6 +15,7 @@ import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.idempotencyKey
 import com.dozy.plugins.ownerId
+import com.dozy.plugins.respondConditionalJson
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
@@ -32,7 +33,7 @@ fun Route.placeV1Routes(service: PlaceService, assetBaseUrl: String) {
     route("/places") {
         get {
             val places = service.list(call.ownerId())
-            call.respond(PlacesResponse(places.map { it.toResponse(assetBaseUrl) }))
+            call.respondConditionalJson(PlacesResponse(places.map { it.toResponse(assetBaseUrl) }))
         }
         post {
             val ownerId = call.ownerId()

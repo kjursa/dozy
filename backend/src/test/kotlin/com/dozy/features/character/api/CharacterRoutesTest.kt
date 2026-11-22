@@ -18,6 +18,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
@@ -56,6 +57,37 @@ class CharacterRoutesTest {
         assertTrue(response.bodyAsText().startsWith("["))
         return Json.decodeFromString(response.bodyAsText())
     }
+
+    @Test fun `characters validators revalidate only the current collection`() =
+        testApplication {
+            environment { config = databaseConfig(directory) }
+            application { module() }
+
+            suspend fun revalidate(
+                ownerId: OwnerId,
+                tag: String,
+            ) = client.get(collection) {
+                asOwner(ownerId)
+                header(HttpHeaders.IfNoneMatch, tag)
+            }
+            val initial = client.get(collection) { asOwner(owner) }
+            val initialTag = requireNotNull(initial.headers[HttpHeaders.ETag])
+            val unchanged = revalidate(owner, "\"other\", ${initialTag.removePrefix("W/")}")
+            assertEquals(HttpStatusCode.NotModified, unchanged.status)
+            assertEquals(initialTag, unchanged.headers[HttpHeaders.ETag])
+            assertEquals("", unchanged.bodyAsText())
+
+            assertEquals(HttpStatusCode.Created, client.create().status)
+            val changed = revalidate(owner, initialTag)
+            assertEquals(HttpStatusCode.OK, changed.status)
+            val changedTag = requireNotNull(changed.headers[HttpHeaders.ETag])
+            assertEquals(HttpStatusCode.OK, revalidate(stranger, changedTag).status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, changedTag).status)
+            val removed = client.delete("$collection/${client.list().single().id}") { asOwner(owner) }
+            assertEquals(HttpStatusCode.NoContent, removed.status)
+            assertEquals(HttpStatusCode.OK, revalidate(owner, changedTag).status)
+            assertEquals(HttpStatusCode.NotModified, revalidate(owner, initialTag).status)
+        }
 
     @Test fun createsWithServerIdThenUpdatesAndPermanentlyDeletes() = testApplication {
         environment { config = databaseConfig(directory) }

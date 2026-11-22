@@ -444,6 +444,15 @@ preserves existing completed stories and job executions. It drops the former
 pagination tables and adds an index on owner and descending StoryId. New IDs
 are assigned when the successful result is inserted.
 
+## SQLite story synchronization (V10)
+
+`V10__story_changes.sql` seeds one UPSERT for each existing story. SQLite triggers
+record inserts, changes to summary data and deletes in the same transaction as
+the story change. The append-only table stores a revision, owner ID, story ID
+and operation. It retains deletion entries after the story row is removed.
+Sync scans the owner's changes after the requested revision, groups them by story
+ID, and joins current story data for the latest UPSERT per story.
+
 ## Implemented API2 SQLite jobs
 
 Flyway V5 adds `avatar_jobs`: UUIDv7 primary ID, installation owner, normalized

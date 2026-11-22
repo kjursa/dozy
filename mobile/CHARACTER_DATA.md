@@ -56,8 +56,10 @@ Network failures leave the deletion pending and hidden. Before explicit refresh,
 tombstone DELETEs and pending live PUTs are retried. Failed writes remain protected
 from the collection snapshot. There is no new background upload worker.
 
-Snapshots are decoded and mapped fully before one transactional replacement:
-pending local rows and tombstones win, synced absent rows disappear, and remote
+Refresh sends the last stored ETag in `If-None-Match`. HTTP 304 keeps the cache.
+Full snapshots are decoded and mapped before one transactional replacement that
+also stores the new ETag.
+Pending local rows and tombstones win, synced absent rows disappear, and remote
 rows replace synced records. Duplicate IDs or malformed transport data reject the
 entire snapshot. Tombstones remain even after acknowledgement, across database
 reopening, and are never uploaded as PUTs. They protect against stale snapshots.

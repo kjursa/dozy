@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room3.Room
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import androidx.sqlite.execSQL
 import com.dozy.mobile.core.data.database.CreationDraftEntity
 import com.dozy.mobile.core.data.database.DozyDatabase
 import com.dozy.mobile.core.data.database.androidDatabaseBuilder
@@ -75,6 +76,44 @@ class DozyDatabaseTest {
                 assertEquals(draft.payload, extracted.creationDrafts().load(draft.form))
             } finally {
                 extracted.close()
+                context.deleteDatabase("dozy.db")
+            }
+        }
+
+    @Test fun migrationAddsEmptySyncStateAndPreservesTheExistingCache() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            context.deleteDatabase("dozy.db")
+            val driver = AndroidSQLiteDriver()
+            val story = StoryEntity("cached-story", result = "full text")
+            val original = androidDatabaseBuilder(context).setDriver(driver).build()
+            try {
+                original.generations().upsertStory(story)
+            } finally {
+                original.close()
+            }
+            // Version 1 had the same tables, except for sync_state.
+            val connection = driver.open(context.getDatabasePath("dozy.db").path)
+            try {
+                connection.execSQL("DROP TABLE sync_state")
+                connection.execSQL("PRAGMA user_version = 1")
+            } finally {
+                connection.close()
+            }
+            val graph =
+                koinApplication {
+                    androidContext(context)
+                    modules(androidModule, module { single<SQLiteDriver> { driver } })
+                }
+            try {
+                val dao = graph.koin.get<DozyDatabase>().generations()
+                assertEquals(story, dao.findStory(story.id))
+                assertEquals(null, dao.syncValue("stories"))
+                dao.applyStoryChanges(listOf(StoryEntity(story.id, summary = "summary")), emptyList(), 5, initialSync = true)
+                assertEquals("5", dao.syncValue("stories"))
+                assertEquals(story.copy(summary = "summary"), dao.findStory(story.id))
+            } finally {
+                graph.close()
                 context.deleteDatabase("dozy.db")
             }
         }

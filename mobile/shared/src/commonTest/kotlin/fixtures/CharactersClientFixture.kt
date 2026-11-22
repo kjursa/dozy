@@ -13,7 +13,7 @@ class CharactersClientFixture :
     CharactersClients,
     CharactersClient {
     override val v1: CharactersClient get() = this
-    var onList: suspend () -> CharactersListResult = { CharactersListResult.TechnicalError(TechnicalError.Server(503)) }
+    var onList: suspend (String?) -> CharactersListResult = { CharactersListResult.TechnicalError(TechnicalError.Server(503)) }
     var onCreate: suspend (
         SaveCharacterRequest,
     ) -> CharactersCreateResult = { CharactersCreateResult.TechnicalError(TechnicalError.Server(503)) }
@@ -23,7 +23,7 @@ class CharactersClientFixture :
     ) -> CharactersSaveResult = { _, _ -> CharactersSaveResult.TechnicalError(TechnicalError.Server(503)) }
     var onDelete: suspend (String) -> CharactersDeleteResult = { CharactersDeleteResult.TechnicalError(TechnicalError.Server(503)) }
 
-    override suspend fun list() = onList()
+    override suspend fun list(ifNoneMatch: String?) = onList(ifNoneMatch)
 
     override suspend fun create(
         request: SaveCharacterRequest,
