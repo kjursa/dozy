@@ -12,6 +12,9 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("dozy.apiBaseUrl").orNull
 val apiBaseUrlLiteral = apiBaseUrl?.let { "\"${it.replace("\\", "\\\\").replace("\"", "\\\"")}\"" } ?: "null"
 
+val appLogging = providers.gradleProperty("dozy.logging").map { it.toBooleanStrict() }.orNull
+val httpLogging = providers.gradleProperty("dozy.httpLogging").map { it.toBooleanStrict() }.orNull
+
 android {
     namespace = "com.dozy.mobile"
     compileSdk = 36
@@ -29,9 +32,13 @@ android {
         getByName("debug") {
             buildConfigField("String", "DOZY_API_BASE_URL", "\"http://10.0.2.2:8080\"")
             buildConfigField("boolean", "ALLOW_LOCAL_ASSET_HTTP", "true")
+            buildConfigField("boolean", "DOZY_LOGGING", (appLogging ?: true).toString())
+            buildConfigField("boolean", "DOZY_HTTP_LOGGING", (httpLogging ?: true).toString())
         }
         getByName("release") {
             buildConfigField("boolean", "ALLOW_LOCAL_ASSET_HTTP", "false")
+            buildConfigField("boolean", "DOZY_LOGGING", (appLogging ?: false).toString())
+            buildConfigField("boolean", "DOZY_HTTP_LOGGING", (httpLogging ?: false).toString())
         }
     }
 

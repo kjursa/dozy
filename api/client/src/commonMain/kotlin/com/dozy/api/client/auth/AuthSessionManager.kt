@@ -84,12 +84,38 @@ class AuthSessionManager internal constructor(
             }
         }
 
-    internal suspend fun refreshForRequest(sent: StoredAuthSession): StoredAuthSession? = mutex.withLock {
-        val current = storage.load() ?: return@withLock null
-        if (current.ownerId != sent.ownerId) return@withLock null
-        if (current != sent) return@withLock current
-        refreshLocked(current.ownerId, current.refreshToken, current)
-        storage.load()?.takeIf { it != current }
+    internal suspend fun refreshForRequest(
+        sent: StoredAuthSession,
+        trace: ((String) -> Unit)? = null,
+    ): StoredAuthSession? = mutex.withLock {
+        val current = storage.load()
+        when {
+            current == null -> {
+                trace?.invoke("refresh skipped (session no longer available)")
+                null
+            }
+            current.ownerId != sent.ownerId -> {
+                trace?.invoke("refresh skipped (session changed)")
+                null
+            }
+            current != sent -> {
+                trace?.invoke("using session already refreshed by another request")
+                current
+            }
+            else -> {
+                trace?.invoke("refresh started")
+                when (val result = refreshLocked(current.ownerId, current.refreshToken, current)) {
+                    is RefreshResult.Success -> trace?.invoke("refresh succeeded")
+                    is RefreshResult.ApiError ->
+                        trace?.invoke(
+                            if (result.error == AuthError.InvalidRefreshToken) "refresh failed (invalid refresh token)"
+                            else "refresh failed (API error)",
+                        )
+                    is RefreshResult.TechnicalError -> trace?.invoke("refresh failed (technical error)")
+                }
+                storage.load()?.takeIf { it != current }
+            }
+        }
     }
 
     internal suspend fun refresh(ownerId: String, refreshToken: String): RefreshResult =

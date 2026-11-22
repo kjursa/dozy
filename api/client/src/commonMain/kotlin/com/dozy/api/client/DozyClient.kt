@@ -35,7 +35,7 @@ class DozyClient(
     val auth: AuthClients = DefaultAuthClients(ManagedAuthClient(authClient, sessionManager))
     val assetHttpClient: HttpClient = if (config.baseUrl != null) httpClient.config {
         followRedirects = false
-        install(ownerAuthorization(config.baseUrl, sessionManager))
+        install(ownerAuthorization(config.baseUrl, sessionManager, config.authDiagnostics))
     } else httpClient
     val storyGenerations: StoryGenerationsClients = DefaultStoryGenerationsClients(KtorStoryGenerationsClient(assetHttpClient, config))
     val stories: StoriesClients = DefaultStoriesClients(KtorStoriesClient(assetHttpClient, config))
@@ -50,6 +50,8 @@ class DozyClient(
 
 data class DozyClientConfig(
     val baseUrl: String?,
+    /** Optional diagnostic sink for automatic refresh decisions. Messages exclude credentials. */
+    val authDiagnostics: ((String) -> Unit)? = null,
 ) {
     init {
         require(baseUrl == null || baseUrl.startsWith("http://") || baseUrl.startsWith("https://"))

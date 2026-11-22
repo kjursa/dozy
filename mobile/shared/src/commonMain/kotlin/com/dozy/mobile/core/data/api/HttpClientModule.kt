@@ -1,5 +1,7 @@
 package com.dozy.mobile.core.data.api
 
+import com.dozy.mobile.core.config.ApiConfig
+import com.dozy.mobile.core.logging.DozyLog
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
@@ -13,10 +15,21 @@ fun interface HttpEngineFactory {
     fun create(): HttpClientEngine
 }
 
-fun createHttpClient(factory: HttpEngineFactory): HttpClient {
+fun createHttpClient(
+    factory: HttpEngineFactory,
+    httpLoggingEnabled: Boolean = false,
+): HttpClient = createHttpClient(factory, httpLoggingEnabled) { DozyLog.d("DozyHttp") { it } }
+
+internal fun createHttpClient(
+    factory: HttpEngineFactory,
+    httpLoggingEnabled: Boolean,
+    log: (String) -> Unit,
+): HttpClient {
     val engine = factory.create()
     val client =
         HttpClient(engine) {
+            install(httpDiagnostics(log.takeIf { httpLoggingEnabled }))
+            if (httpLoggingEnabled) installHttpResponseBodies(log)
             install(ContentNegotiation) { json() }
             install(HttpTimeout) { requestTimeoutMillis = 5000 }
         }
@@ -27,5 +40,5 @@ fun createHttpClient(factory: HttpEngineFactory): HttpClient {
 
 val httpClientModule =
     module {
-        single { createHttpClient(get()) } onClose { it?.close() }
+        single { createHttpClient(get(), get<ApiConfig>().httpLoggingEnabled) } onClose { it?.close() }
     }

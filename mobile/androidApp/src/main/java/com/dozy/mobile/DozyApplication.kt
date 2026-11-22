@@ -2,6 +2,8 @@ package com.dozy.mobile
 
 import android.app.Application
 import androidx.work.Configuration
+import com.dozy.mobile.core.logging.DozyLog
+import com.dozy.mobile.di.AndroidLogSink
 import com.dozy.mobile.di.androidModule
 import com.dozy.mobile.feature.character.di.characterModule
 import com.dozy.mobile.feature.home.di.homeModule
@@ -25,6 +27,7 @@ class DozyApplication :
 
     override fun onCreate() {
         super.onCreate()
+        DozyLog.configure(if (BuildConfig.DOZY_LOGGING) AndroidLogSink else null)
         startKoin {
             androidContext(this@DozyApplication)
             modules(placeModule, characterModule, homeModule, loginModule, storyModule, androidModule)

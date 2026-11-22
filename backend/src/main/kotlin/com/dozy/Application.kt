@@ -25,7 +25,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.authenticate
 import io.ktor.server.netty.EngineMain
-import io.ktor.server.plugins.calllogging.CallLogging
+import com.dozy.plugins.configureRequestLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.response.respond
@@ -43,7 +43,7 @@ fun Application.module() {
     configureErrors()
     val accessTokens: AccessTokens by dependencies
     configureOwnerAuthentication(accessTokens)
-    install(CallLogging)
+    configureRequestLogging()
     install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
     val places: PlaceService by dependencies
     val generationConfig: GenerationConfig by dependencies
