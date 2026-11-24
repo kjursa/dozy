@@ -66,3 +66,33 @@
 .home-place h3{font-size:14px;margin:0 0 4px}
 .home-place .reading-tag{margin-top:4px;font-size:10px}
 .home-place+.home-place{margin-top:10px}
+
+/* Match each toolbar to the active bottom-tab palette with a soft tint. */
+body[data-page="home"],body[data-page="create-story"],body[data-page="generating"],body[data-page="places"],body[data-page="place-form"]{--toolbar-tint:#e7f5ef;}
+body[data-page="stories"],body[data-page="reader"]{--toolbar-tint:#f3e7f0;}
+body[data-page="characters"],body[data-page="character"],body[data-page="character-form"]{--toolbar-tint:#ffede7;}
+.toolbar-region {
+  background: linear-gradient(
+    to bottom,
+    var(--paper),
+    color-mix(in srgb, var(--toolbar-tint, var(--paper)) 50%, var(--paper))
+  );
+  border-bottom: 1px solid var(--line);
+}
+.toolbar-region .statusbar { padding-block: 14px 3px; }
+.toolbar-region .topbar { padding-block: 0 2px; }
+.toolbar-region .icon-button { background: transparent; border-color: transparent; }
+.toolbar-region + main { background: var(--paper); }
+.home-content > .home-heading { padding: 12px 0 var(--card-padding); }
+
+body:is([data-page="home"], [data-page="stories"], [data-page="characters"]) .device {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: min(850px, calc(100dvh - 36px));
+  min-height: 0;
+}
+body:is([data-page="home"], [data-page="stories"], [data-page="characters"]) .device > main {
+  overflow-y: auto;
+}
+
+body.night { --toolbar-tint: var(--night-surface); }

@@ -58,6 +58,11 @@ shared stylesheet and the corresponding Compose theme or component. Compare
 focused and error states as well as the default state, and check at a narrow
 viewport and with larger Android text.
 
+The shared app toolbars follow the selected Home, My Stories, or Characters
+bottom-tab palette. A vertical gradient spans the status bar and toolbar, with
+a crisp edge above the light content area. On the three main tabs, content
+scrolls between the toolbar and bottom navigation.
+
 ## Sign-in prototype
 
 Start at `login-tutorial.html` for the first visit, or `login-welcome.html` for subsequent visits. Email sign-in proceeds through `login-email.html` to `login-code.html`. These screens use `login.css` alongside the shared styles. Authentication and account creation are simulated; no email is sent.
