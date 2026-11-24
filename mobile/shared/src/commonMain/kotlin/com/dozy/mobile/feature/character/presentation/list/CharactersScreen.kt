@@ -54,6 +54,7 @@ import com.dozy.mobile.resources.characters_empty_title
 import com.dozy.mobile.resources.characters_offline
 import com.dozy.mobile.resources.characters_retry
 import com.dozy.mobile.resources.could_not_load_characters
+import com.dozy.mobile.ui.theme.BottomTabPalette
 import com.kjursa.foundation.compose.mvi.MviScreen
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -76,6 +77,7 @@ internal fun CharactersTabContent(
 ) {
     val add = { onAction(CharactersAction.AddCharacterClicked) }
     CollectionScreen(
+        palette = BottomTabPalette.CHARACTERS,
         toolbarTitle = stringResource(Res.string.characters_collection_title),
         eyebrow = stringResource(Res.string.characters_collection_eyebrow),
         title = stringResource(Res.string.characters_collection_title),
@@ -128,7 +130,11 @@ internal fun CharactersTabContent(
 }
 
 @Composable
-private fun CharacterLibraryCard(character: CharacterListItem, modifier: Modifier, onClick: () -> Unit) {
+private fun CharacterLibraryCard(
+    character: CharacterListItem,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     val shape = RoundedCornerShape(27.dp)
     Surface(
         onClick = onClick,
@@ -160,10 +166,16 @@ private fun CharacterLibraryCard(character: CharacterListItem, modifier: Modifie
 }
 
 @Composable
-private fun AddCharacterTile(modifier: Modifier, onAdd: () -> Unit) {
+private fun AddCharacterTile(
+    modifier: Modifier,
+    onAdd: () -> Unit,
+) {
     val shape = RoundedCornerShape(27.dp)
     Column(
-        modifier.heightIn(min = 218.dp).clip(shape).clickable(role = Role.Button, onClick = onAdd)
+        modifier
+            .heightIn(min = 218.dp)
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onAdd)
             .drawBehind {
                 val stroke = 1.dp.toPx()
                 drawRoundRect(

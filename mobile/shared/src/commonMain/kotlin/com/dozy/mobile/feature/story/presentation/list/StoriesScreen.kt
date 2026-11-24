@@ -26,6 +26,7 @@ import com.dozy.mobile.resources.stories_collection_title
 import com.dozy.mobile.resources.stories_create
 import com.dozy.mobile.resources.stories_offline
 import com.dozy.mobile.resources.stories_refresh
+import com.dozy.mobile.ui.theme.BottomTabPalette
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.presentation.text.resolve
 import org.jetbrains.compose.resources.stringResource
@@ -50,6 +51,7 @@ internal fun StoriesTabContent(
 ) {
     val create = { dispatch(StoriesAction.Create) }
     CollectionScreen(
+        palette = BottomTabPalette.STORIES,
         toolbarTitle = stringResource(Res.string.my_stories),
         eyebrow = stringResource(Res.string.stories_collection_eyebrow),
         title = stringResource(Res.string.stories_collection_title),

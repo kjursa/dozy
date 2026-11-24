@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.LayoutDirection
@@ -51,6 +50,7 @@ import com.dozy.mobile.resources.Res
 import com.dozy.mobile.resources.characters
 import com.dozy.mobile.resources.home
 import com.dozy.mobile.resources.my_stories
+import com.dozy.mobile.ui.theme.BottomTabPalette
 import com.kjursa.foundation.compose.theme.UiSpacing
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -60,12 +60,6 @@ private const val TAB_EDGE_ANIMATION_MS = 160
 private const val HOME_TAB = "home"
 private const val STORIES_TAB = "stories"
 private const val CHARACTERS_TAB = "characters"
-
-private enum class BottomTabPalette(val active: Color, val background: Color) {
-    HOME(Color(0xFF226D67), Color(0xFFE7F5EF)),
-    STORIES(Color(0xFF77546F), Color(0xFFF3E7F0)),
-    CHARACTERS(Color(0xFFAF4C43), Color(0xFFFFEDE7)),
-}
 
 private fun bottomTabPalette(route: String): BottomTabPalette =
     when (route) {
@@ -117,25 +111,7 @@ fun MainScreen(
         }
     }
 
-    val pageAccent by animateColorAsState(
-        targetValue = bottomTabPalette(selectedRoute).active,
-        animationSpec = tween(durationMillis = TAB_EDGE_ANIMATION_MS * 2),
-        label = "Tab page accent",
-    )
-    Box(
-        Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .drawBehind {
-                val glow = pageAccent.copy(alpha = .17f)
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(glow, glow.copy(alpha = .065f), glow.copy(alpha = 0f)),
-                        center = Offset(size.width * .88f, size.height * .04f),
-                        radius = maxOf(size.width * 1.15f, size.height * .55f),
-                    ),
-                )
-            },
-    ) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         NavHost(
             navController = tabController,
             startDestination = HOME_TAB,
@@ -173,11 +149,12 @@ private fun MainBottomPanel(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
-        val selectedIndex = when (selectedRoute) {
-            STORIES_TAB -> 1
-            CHARACTERS_TAB -> 2
-            else -> 0
-        }
+        val selectedIndex =
+            when (selectedRoute) {
+                STORIES_TAB -> 1
+                CHARACTERS_TAB -> 2
+                else -> 0
+            }
         Row(
             Modifier.padding(UiSpacing.x1).bottomTabIndicator(selectedIndex, bottomTabPalette(selectedRoute).background),
             verticalAlignment = Alignment.CenterVertically,
@@ -204,7 +181,10 @@ private fun MainBottomPanel(
 }
 
 @Composable
-private fun Modifier.bottomTabIndicator(selectedIndex: Int, background: Color): Modifier {
+private fun Modifier.bottomTabIndicator(
+    selectedIndex: Int,
+    background: Color,
+): Modifier {
     val start = remember { Animatable(selectedIndex.toFloat()) }
     val end = remember { Animatable(selectedIndex + 1f) }
     val color by animateColorAsState(
@@ -229,11 +209,12 @@ private fun Modifier.bottomTabIndicator(selectedIndex: Int, background: Color): 
     return drawBehind {
         val tabWidth = size.width / 3f
         val width = (end.value - start.value) * tabWidth
-        val left = if (layoutDirection == LayoutDirection.Ltr) {
-            start.value * tabWidth
-        } else {
-            size.width - end.value * tabWidth
-        }
+        val left =
+            if (layoutDirection == LayoutDirection.Ltr) {
+                start.value * tabWidth
+            } else {
+                size.width - end.value * tabWidth
+            }
         drawRoundRect(
             color = color,
             topLeft = Offset(left, 0f),

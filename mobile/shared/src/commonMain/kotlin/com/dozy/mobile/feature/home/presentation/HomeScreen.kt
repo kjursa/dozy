@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,11 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.dozy.mobile.core.presentation.components.AvatarImage
+import com.dozy.mobile.core.presentation.components.MainTabToolbar
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.place.presentation.list.PlaceCard
@@ -46,10 +45,39 @@ import com.dozy.mobile.feature.story.presentation.components.StoryWideCard
 import com.dozy.mobile.feature.story.presentation.generation.GenerationAction
 import com.dozy.mobile.feature.story.presentation.generation.message
 import com.dozy.mobile.feature.story.presentation.list.Story
-import com.dozy.mobile.resources.*
+import com.dozy.mobile.resources.Res
+import com.dozy.mobile.resources.add
+import com.dozy.mobile.resources.add_character
+import com.dozy.mobile.resources.create_story
+import com.dozy.mobile.resources.generation_progress
+import com.dozy.mobile.resources.generation_read
+import com.dozy.mobile.resources.generation_unavailable
+import com.dozy.mobile.resources.good_evening
+import com.dozy.mobile.resources.home
+import com.dozy.mobile.resources.home_banner_body
+import com.dozy.mobile.resources.home_banner_eyebrow
+import com.dozy.mobile.resources.home_banner_title
+import com.dozy.mobile.resources.home_characters_label
+import com.dozy.mobile.resources.home_characters_title
+import com.dozy.mobile.resources.home_first_story
+import com.dozy.mobile.resources.home_header_subtitle
+import com.dozy.mobile.resources.home_job_active_body
+import com.dozy.mobile.resources.home_job_active_label
+import com.dozy.mobile.resources.home_job_active_title
+import com.dozy.mobile.resources.home_job_failed_label
+import com.dozy.mobile.resources.home_job_failed_title
+import com.dozy.mobile.resources.home_job_ready_label
+import com.dozy.mobile.resources.home_job_ready_title
+import com.dozy.mobile.resources.home_places_label
+import com.dozy.mobile.resources.home_stories_label
+import com.dozy.mobile.resources.home_stories_title
+import com.dozy.mobile.resources.place_empty
+import com.dozy.mobile.resources.place_retry
+import com.dozy.mobile.resources.places_heading
 import com.dozy.mobile.ui.common.DozyActionButton
 import com.dozy.mobile.ui.common.DozyLayout
 import com.dozy.mobile.ui.common.DozyTextStyles
+import com.dozy.mobile.ui.theme.BottomTabPalette
 import com.dozy.mobile.ui.theme.DozyColors
 import com.kjursa.foundation.compose.mvi.MviScreen
 import com.kjursa.foundation.compose.theme.UiSpacing
@@ -73,11 +101,12 @@ private fun HomeContent(
     state: HomeUiState,
     onAction: (HomeAction) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
+        MainTabToolbar(title = stringResource(Res.string.home), palette = BottomTabPalette.HOME)
         Column(
             Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
         ) {
             HomeHeader()
