@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dozy · Pick a character</title>
+  <link rel="stylesheet" href="../screens/styles.css">
+  <link rel="stylesheet" href="../brand.css">
+  <link rel="stylesheet" href="avatars.css">
+  <script src="portraits.js" defer></script>
+  <script src="editor.js" defer></script>
+</head>
+<body>
+  <aside class="review">
+    <a class="wordmark" href="index.html"><img class="brand-icon" src="../images/dozy-sleepy-cloud.png" alt="">dozy</a>
+    <h1>Pick a character</h1>
+    <p>Choose a ready-made character, then personalize it on the same screen.</p>
+    <a href="../proposal-avatars/index.html">← Compare with the first proposal</a>
+  </aside>
+  <div class="device">
+    <div class="statusbar"><span>9:41</span><span aria-hidden="true">◒ ▰</span></div>
+    <header class="topbar"><span class="topbar-spacer"></span><span>CHARACTER</span><span class="topbar-spacer"></span></header>
+    <main class="content">
+      <h1>Choose a portrait</h1>
+      <div class="segmented" role="group" aria-label="Character type">
+        <button type="button" data-type="person" aria-pressed="true">Person</button>
+        <button type="button" data-type="creature" aria-pressed="false">Animals &amp; fantasy</button>
+      </div>
+      <div class="portrait-stage">
+        <canvas id="preview" width="360" height="360" role="img" aria-label="Selected portrait"></canvas>
+      </div>
+      <section class="options">
+        <div id="characters" class="option-picker" role="group" aria-label="Character"></div>
+        <div id="person-options">
+          <div id="clothes" class="option-picker" role="group" aria-label="Clothes"></div>
+          <div id="hats" class="option-picker" role="group" aria-label="Hat"></div>
+        </div>
+        <h2 id="palette-label">Skin tone</h2>
+        <div id="palette" class="palette" role="group" aria-labelledby="palette-label"></div>
+      </section>
+      <form id="character-form">
+        <label class="form-label" for="name">Name</label>
+        <input class="form-field" id="name" maxlength="80" required placeholder="e.g. Oliver">
+        <button class="button primary" type="submit">Save character</button>
+        <p id="result" class="muted" role="status"></p>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

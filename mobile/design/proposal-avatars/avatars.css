@@ -1,0 +1,105 @@
+.toolbar-region {
+  background: #ffede7;
+  border-bottom: 1px solid var(--line);
+}
+.toolbar-region .topbar { padding-block: 0 2px; }
+.toolbar-region .icon-button { background: transparent; border-color: transparent; }
+#character > h1 { margin-bottom: 12px; }
+#character .segmented { margin: 0 0 16px; }
+#character .form-field, #character textarea { margin-bottom: 18px; }
+#character textarea { min-height: 76px; }
+#character > .muted { margin-top: -8px; }
+#character > .button { margin-top: 20px; }
+.portrait-editor {
+  margin-bottom: 20px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+}
+.portrait {
+  display: block;
+  border-radius: 22px;
+}
+.portrait-preview {
+  width: 112px;
+  height: 112px;
+  margin: 0 auto 10px;
+}
+.portrait-option {
+  display: grid;
+  grid-template-columns: minmax(60px, 1fr) 44px minmax(64px, 1.4fr) 44px;
+  align-items: center;
+  gap: 3px;
+  min-height: 48px;
+  font-size: 13px;
+}
+.portrait-option + .portrait-option { border-top: 1px solid var(--line); }
+.portrait-option strong { text-align: center; }
+.portrait-arrow {
+  min-height: 44px;
+  border-radius: 14px;
+  background: transparent;
+  color: #af4c43;
+  font-size: 25px;
+}
+.portrait-arrow:hover { background: #ffede7; }
+.character-card .portrait { width: 86px; height: 86px; margin-bottom: 12px; }
+
+.style-references {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+.style-references img {
+  width: 64px;
+  height: 64px;
+  padding: 5px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+}
+#type.segmented {
+  padding: 4px;
+  border-radius: 18px;
+  background: #f1e8dd;
+}
+#type button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+#type button[aria-pressed="true"] {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 2px 6px #39243114;
+}
+.portrait-editor {
+  padding: 8px;
+  border-radius: 26px;
+  box-shadow: 0 8px 24px #3924310a;
+}
+.portrait-stage {
+  display: grid;
+  place-items: center;
+  min-height: 178px;
+  border-radius: 19px;
+  background: radial-gradient(circle at 50% 55%, #fffaf3 0 43%, #f7e4de 44% 100%);
+  overflow: hidden;
+}
+.portrait-preview {
+  width: 158px;
+  height: 158px;
+  margin: 0;
+}
+.portrait-controls { padding: 6px 5px 0; }
+.portrait-option { min-height: 53px; }
+.portrait-option > span { color: var(--muted); font-weight: 700; }
+.portrait-arrow {
+  background: #f8efe7;
+  font-weight: 700;
+}
+.character-card .portrait { background: #f7e4de; }
