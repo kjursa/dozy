@@ -22,6 +22,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,21 +58,29 @@ internal fun CollectionScreen(
     addEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        MainTabToolbar(
-            title = toolbarTitle,
-            palette = palette,
-            leading = {
-                CollectionIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back), onBack)
-            },
-            trailing = { CollectionIconButton(Icons.Default.Add, addDescription, onAdd, addEnabled) },
-        )
+    MainTabLayout(
+        title = toolbarTitle,
+        palette = palette,
+        leading = {
+            CollectionIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back), onBack)
+        },
+        trailing = { CollectionIconButton(Icons.Default.Add, addDescription, onAdd, addEnabled) },
+    ) { topSpace ->
+        val refreshState = rememberPullToRefreshState()
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            state = refreshState,
+            modifier = Modifier.fillMaxSize(),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = refreshState,
+                    isRefreshing = refreshing,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = topSpace),
+                )
+            },
         ) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = topSpace)) {
                 Column(Modifier.padding(horizontal = 24.dp).padding(top = 8.dp)) {
                     Eyebrow(eyebrow)
                     Spacer(Modifier.height(12.dp))

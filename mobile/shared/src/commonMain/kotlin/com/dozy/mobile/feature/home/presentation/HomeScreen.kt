@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.dozy.mobile.core.presentation.components.AvatarImage
-import com.dozy.mobile.core.presentation.components.MainTabToolbar
+import com.dozy.mobile.core.presentation.components.MainTabLayout
 import com.dozy.mobile.core.presentation.components.SectionHeading
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.feature.place.presentation.list.PlaceCard
@@ -101,13 +101,12 @@ private fun HomeContent(
     state: HomeUiState,
     onAction: (HomeAction) -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        MainTabToolbar(title = stringResource(Res.string.home), palette = BottomTabPalette.HOME)
+    MainTabLayout(title = stringResource(Res.string.home), palette = BottomTabPalette.HOME) { topSpace ->
         Column(
             Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = topSpace),
         ) {
             HomeHeader()
             Column(
