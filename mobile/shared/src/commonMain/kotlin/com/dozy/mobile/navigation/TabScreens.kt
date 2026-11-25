@@ -14,14 +14,14 @@ class HomeTabScreen : Screen {
 
 class StoriesTabEntry {
     @Composable
-    fun Content(onBack: () -> Unit) {
-        StoriesTabScreen(onBack)
+    fun Content() {
+        StoriesTabScreen()
     }
 }
 
 class CharactersTabEntry {
     @Composable
-    fun Content(onBack: () -> Unit) {
-        CharactersTabScreen(onBack)
+    fun Content() {
+        CharactersTabScreen()
     }
 }

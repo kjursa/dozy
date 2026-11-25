@@ -60,12 +60,12 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun CharactersTabScreen(onBack: () -> Unit) {
+internal fun CharactersTabScreen() {
     val charactersViewModel: CharactersViewModel = koinViewModel()
     MviScreen(
         viewModel = charactersViewModel,
     ) { state, dispatch ->
-        CharactersTabContent(state, dispatch, onBack)
+        CharactersTabContent(state, dispatch)
     }
 }
 
@@ -73,7 +73,6 @@ internal fun CharactersTabScreen(onBack: () -> Unit) {
 internal fun CharactersTabContent(
     state: CharactersUiState,
     onAction: (CharactersAction) -> Unit,
-    onBack: () -> Unit = {},
 ) {
     val add = { onAction(CharactersAction.AddCharacterClicked) }
     CollectionScreen(
@@ -83,7 +82,6 @@ internal fun CharactersTabContent(
         title = stringResource(Res.string.characters_collection_title),
         intro = stringResource(Res.string.characters_collection_intro),
         addDescription = stringResource(Res.string.add_character),
-        onBack = onBack,
         onRefresh = { onAction(CharactersAction.Refresh) },
         refreshing = state.refreshing,
         onAdd = add,
@@ -102,6 +100,7 @@ internal fun CharactersTabContent(
             if (!state.loading && !state.refreshing && !state.characterLoadError && state.characters.isEmpty()) {
                 CollectionEmptyState(
                     Icons.Default.Face,
+                    BottomTabPalette.CHARACTERS,
                     stringResource(Res.string.characters_empty_title),
                     stringResource(Res.string.characters_empty_description),
                     stringResource(Res.string.characters_collection_empty_action),

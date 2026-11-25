@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,7 +26,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,11 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.resources.Res
-import com.dozy.mobile.resources.back
 import com.dozy.mobile.resources.collection_empty_eyebrow
 import com.dozy.mobile.ui.common.DozyActionButton
 import com.dozy.mobile.ui.theme.BottomTabPalette
-import com.dozy.mobile.ui.theme.DozyColors
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +47,6 @@ internal fun CollectionScreen(
     title: String,
     intro: String,
     addDescription: String,
-    onBack: () -> Unit,
     onAdd: () -> Unit,
     onRefresh: () -> Unit,
     refreshing: Boolean,
@@ -61,9 +56,6 @@ internal fun CollectionScreen(
     MainTabLayout(
         title = toolbarTitle,
         palette = palette,
-        leading = {
-            CollectionIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back), onBack)
-        },
         trailing = { CollectionIconButton(Icons.Default.Add, addDescription, onAdd, addEnabled) },
     ) { topSpace ->
         val refreshState = rememberPullToRefreshState()
@@ -114,6 +106,7 @@ private fun CollectionIconButton(
 @Composable
 internal fun CollectionEmptyState(
     icon: ImageVector,
+    palette: BottomTabPalette,
     title: String,
     description: String,
     action: String,
@@ -125,11 +118,11 @@ internal fun CollectionEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(175.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(175.dp).background(Color(0x55E2F0E7), CircleShape))
-            Box(Modifier.size(145.dp).background(Color(0xFFE2F0E7), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = .6f))
+            Box(Modifier.size(175.dp).background(palette.background.copy(alpha = 0.34f), CircleShape))
+            Box(Modifier.size(145.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(56.dp), tint = palette.active)
             }
-            Icon(Icons.Default.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(32.dp), tint = DozyColors.brandCoral)
+            Icon(Icons.Default.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(32.dp), tint = palette.active)
         }
         Spacer(Modifier.height(18.dp))
         Eyebrow(stringResource(Res.string.collection_empty_eyebrow))

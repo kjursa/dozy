@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
@@ -33,6 +34,8 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
+internal val LocalMainTabHazeState = staticCompositionLocalOf<HazeState?> { null }
+
 private val toolbarHeight = 46.dp
 private val dividerHeight = 1.dp
 
@@ -40,17 +43,16 @@ private val dividerHeight = 1.dp
 internal fun MainTabLayout(
     title: String,
     palette: BottomTabPalette,
-    leading: @Composable () -> Unit = {},
     trailing: @Composable () -> Unit = {},
     content: @Composable (topSpace: Dp) -> Unit,
 ) {
-    val hazeState = rememberHazeState()
+    val hazeState = LocalMainTabHazeState.current ?: rememberHazeState()
     val topSpace = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + toolbarHeight + dividerHeight
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().hazeSource(hazeState).background(MaterialTheme.colorScheme.background)) {
             content(topSpace)
         }
-        MainTabToolbar(title, palette, hazeState, leading, trailing)
+        MainTabToolbar(title, palette, hazeState, trailing)
     }
 }
 
@@ -59,7 +61,6 @@ private fun MainTabToolbar(
     title: String,
     palette: BottomTabPalette,
     hazeState: HazeState,
-    leading: @Composable () -> Unit = {},
     trailing: @Composable () -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
@@ -84,7 +85,7 @@ private fun MainTabToolbar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { leading() }
+            Box(Modifier.size(44.dp))
             Text(
                 title.uppercase(),
                 style =

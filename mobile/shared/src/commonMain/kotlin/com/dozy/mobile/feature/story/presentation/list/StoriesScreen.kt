@@ -33,13 +33,13 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-internal fun StoriesTabScreen(onBack: () -> Unit) {
+internal fun StoriesTabScreen() {
     val storiesViewModel: StoriesViewModel = koinViewModel()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { storiesViewModel.navigationHandled() }
     MviScreen(
         viewModel = storiesViewModel,
     ) { state, dispatch ->
-        StoriesTabContent(state, dispatch, onBack)
+        StoriesTabContent(state, dispatch)
     }
 }
 
@@ -47,7 +47,6 @@ internal fun StoriesTabScreen(onBack: () -> Unit) {
 internal fun StoriesTabContent(
     state: StoriesUiState,
     dispatch: (StoriesAction) -> Unit,
-    onBack: () -> Unit = {},
 ) {
     val create = { dispatch(StoriesAction.Create) }
     CollectionScreen(
@@ -57,7 +56,6 @@ internal fun StoriesTabContent(
         title = stringResource(Res.string.stories_collection_title),
         intro = stringResource(Res.string.stories_collection_intro),
         addDescription = stringResource(Res.string.stories_create),
-        onBack = onBack,
         onRefresh = { dispatch(StoriesAction.Refresh) },
         refreshing = state.refreshing,
         onAdd = create,
@@ -75,6 +73,7 @@ internal fun StoriesTabContent(
             if (!state.loading && !state.refreshing && state.error == null && state.stories.isEmpty()) {
                 CollectionEmptyState(
                     Icons.Default.AutoStories,
+                    BottomTabPalette.STORIES,
                     stringResource(Res.string.stories_collection_empty_title),
                     stringResource(Res.string.stories_collection_empty_description),
                     stringResource(Res.string.stories_collection_empty_action),
