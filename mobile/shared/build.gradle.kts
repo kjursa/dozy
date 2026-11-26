@@ -44,6 +44,7 @@ kotlin {
         commonMain.dependencies {
             api("com.dozy.api:client:0.1.0")
             implementation(libs.ui)
+            implementation(libs.haze)
             implementation(libs.ui.backhandler)
             implementation(libs.compose.material3)
             implementation(libs.material.icons.extended)

@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,10 +21,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,11 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dozy.mobile.core.presentation.layout.mainBottomMenuScrollSpace
 import com.dozy.mobile.resources.Res
-import com.dozy.mobile.resources.back
 import com.dozy.mobile.resources.collection_empty_eyebrow
 import com.dozy.mobile.ui.common.DozyActionButton
 import com.dozy.mobile.ui.theme.BottomTabPalette
-import com.dozy.mobile.ui.theme.DozyColors
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,28 +47,32 @@ internal fun CollectionScreen(
     title: String,
     intro: String,
     addDescription: String,
-    onBack: () -> Unit,
     onAdd: () -> Unit,
     onRefresh: () -> Unit,
     refreshing: Boolean,
     addEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        MainTabToolbar(
-            title = toolbarTitle,
-            palette = palette,
-            leading = {
-                CollectionIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(Res.string.back), onBack)
-            },
-            trailing = { CollectionIconButton(Icons.Default.Add, addDescription, onAdd, addEnabled) },
-        )
+    MainTabLayout(
+        title = toolbarTitle,
+        palette = palette,
+        trailing = { CollectionIconButton(Icons.Default.Add, addDescription, onAdd, addEnabled) },
+    ) { topSpace ->
+        val refreshState = rememberPullToRefreshState()
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            state = refreshState,
+            modifier = Modifier.fillMaxSize(),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = refreshState,
+                    isRefreshing = refreshing,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = topSpace),
+                )
+            },
         ) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = topSpace)) {
                 Column(Modifier.padding(horizontal = 24.dp).padding(top = 8.dp)) {
                     Eyebrow(eyebrow)
                     Spacer(Modifier.height(12.dp))
@@ -104,6 +106,7 @@ private fun CollectionIconButton(
 @Composable
 internal fun CollectionEmptyState(
     icon: ImageVector,
+    palette: BottomTabPalette,
     title: String,
     description: String,
     action: String,
@@ -115,11 +118,11 @@ internal fun CollectionEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(175.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(175.dp).background(Color(0x55E2F0E7), CircleShape))
-            Box(Modifier.size(145.dp).background(Color(0xFFE2F0E7), CircleShape), contentAlignment = Alignment.Center) {
-                Icon(icon, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = .6f))
+            Box(Modifier.size(175.dp).background(palette.background.copy(alpha = 0.34f), CircleShape))
+            Box(Modifier.size(145.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(56.dp), tint = palette.active)
             }
-            Icon(Icons.Default.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(32.dp), tint = DozyColors.brandCoral)
+            Icon(Icons.Default.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(32.dp), tint = palette.active)
         }
         Spacer(Modifier.height(18.dp))
         Eyebrow(stringResource(Res.string.collection_empty_eyebrow))

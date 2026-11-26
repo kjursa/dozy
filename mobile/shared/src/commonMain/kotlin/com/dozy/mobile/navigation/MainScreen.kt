@@ -1,5 +1,7 @@
 package com.dozy.mobile.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -25,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -46,12 +49,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.dozy.mobile.core.presentation.components.LocalMainTabHazeState
 import com.dozy.mobile.resources.Res
 import com.dozy.mobile.resources.characters
 import com.dozy.mobile.resources.home
 import com.dozy.mobile.resources.my_stories
 import com.dozy.mobile.ui.theme.BottomTabPalette
 import com.kjursa.foundation.compose.theme.UiSpacing
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.rememberHazeState
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -111,32 +120,42 @@ fun MainScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        NavHost(
-            navController = tabController,
-            startDestination = HOME_TAB,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            composable(HOME_TAB) { homeScreen.Content() }
-            composable(STORIES_TAB) { storiesScreen.Content(onBack = { selectTab(HOME_TAB) }) }
-            composable(CHARACTERS_TAB) { charactersScreen.Content(onBack = { selectTab(HOME_TAB) }) }
-        }
+    val hazeState = rememberHazeState()
+    CompositionLocalProvider(LocalMainTabHazeState provides hazeState) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            NavHost(
+                navController = tabController,
+                startDestination = HOME_TAB,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
+            ) {
+                composable(HOME_TAB) { homeScreen.Content() }
+                composable(STORIES_TAB) { storiesScreen.Content() }
+                composable(CHARACTERS_TAB) { charactersScreen.Content() }
+            }
 
-        MainBottomPanel(
-            modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f),
-            selectedRoute = selectedRoute,
-            onSelect = selectTab,
-        )
+            MainBottomPanel(
+                modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f),
+                hazeState = hazeState,
+                selectedRoute = selectedRoute,
+                onSelect = selectTab,
+            )
+        }
     }
 }
 
 @Composable
 private fun MainBottomPanel(
     modifier: Modifier,
+    hazeState: HazeState,
     selectedRoute: String,
     onSelect: (String) -> Unit,
 ) {
     val shape = RoundedCornerShape(40.dp)
+    val surface = MaterialTheme.colorScheme.surface
     Surface(
         modifier =
             modifier
@@ -144,9 +163,22 @@ private fun MainBottomPanel(
                 .padding(horizontal = UiSpacing.x3)
                 .navigationBarsPadding()
                 .padding(bottom = 4.dp)
-                .shadow(20.dp, shape),
+                .shadow(20.dp, shape)
+                .clip(shape)
+                .hazeEffect(
+                    state = hazeState,
+                    style =
+                        HazeStyle(
+                            backgroundColor = MaterialTheme.colorScheme.background,
+                            tint = HazeTint(surface.copy(alpha = 0.66f)),
+                            fallbackTint = HazeTint(surface),
+                            blurRadius = 16.dp,
+                            noiseFactor = 0f,
+                        ),
+                ),
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
+        color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f)),
     ) {
         val selectedIndex =
