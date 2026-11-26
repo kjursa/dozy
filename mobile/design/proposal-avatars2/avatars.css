@@ -1,0 +1,57 @@
+.device .statusbar, .device .topbar { background: #f8eee9; }
+.device .topbar { padding-block: 0; min-height: 46px; border-bottom: 1px solid var(--line); }
+.content { padding-top: 20px; }
+.segmented { padding: 4px; background: #eee6db; border-radius: 17px; margin: 14px 0; }
+.segmented button { min-width: 0; min-height: 42px; background: transparent; border: 0; font-weight: 800; }
+.segmented button[aria-pressed="true"] { background: white; box-shadow: 0 2px 7px #35262916; }
+.portrait-stage {
+  display: grid;
+  place-items: center;
+  min-height: 195px;
+  border-radius: 26px;
+  background: radial-gradient(circle at 50% 55%, #fffaf3 0 37%, #f4e6df 38% 100%);
+}
+#preview { width: min(180px, 100%); height: auto; margin: auto; }
+.portrait-arrow { height: 44px; border-radius: 50%; background: var(--white); color: var(--action); font-size: 28px; }
+.option-picker {
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  min-height: 64px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+}
+.current-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+.current-option canvas { width: 46px; height: 46px; }
+.option-picker .portrait-arrow { background: #f8efe7; }
+.palette button[aria-pressed="true"] {
+  border-color: #af4c43;
+  box-shadow: inset 0 0 0 1px #af4c43;
+  background: #ffede7;
+}
+.options { margin: 18px 0 24px; }
+.options h2 { font-size: 15px; margin: 12px 0 6px; text-align: center; }
+.palette { display: flex; justify-content: safe center; flex-wrap: wrap; gap: 6px; }
+.palette button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: white; }
+.palette button span { width: 24px; height: 24px; border-radius: 50%; background: var(--swatch); border: 1px solid #30252a40; }
+#character-form .button { margin-top: 14px; }
+#result { margin-top: 8px; }
+
+.palette {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+}
+.palette button { flex: 0 0 44px; }
