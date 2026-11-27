@@ -18,9 +18,10 @@ import com.dozy.features.character.domain.model.SaveCharacter
 import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.collectionRevalidation
 import com.dozy.plugins.idempotencyKey
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.respondApiError
 import com.dozy.plugins.respondVersionedCollection
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -50,69 +51,78 @@ fun Route.characterV1Routes() {
                 service.create(
                     ownerId,
                     call.receive<SaveCharacterRequest>().toCommand(),
-                    requestKey
-                )
+                    requestKey,
+                ),
             )
         }
         put("/{id}") {
             val ownerId = call.ownerId()
             val id = requireCharacterId(call.parameters["id"])
             call.respondToSave(
-                service.save(ownerId, id, call.receive<SaveCharacterRequest>().toCommand())
+                service.save(ownerId, id, call.receive<SaveCharacterRequest>().toCommand()),
             )
         }
         delete("/{id}") {
             val ownerId = call.ownerId()
             if (!service.delete(ownerId, requireCharacterId(call.parameters["id"]))) {
-                throw BusinessApiException(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
+                call.respondApiError(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
+                return@delete
             }
             call.respond(HttpStatusCode.NoContent)
         }
     }
 }
 
-private fun SaveCharacterRequest.toCommand(): SaveCharacter = when (
-    val parsed = SaveCharacter.parse(
-        name,
-        personality,
-        appearance,
-        type,
-        avatar?.let {
-            val id = AssetId.parse(it.id) ?: throw BusinessApiException(
-                HttpStatusCode.UnprocessableEntity,
-                CharactersSaveError.ReferenceUnavailable,
+private fun SaveCharacterRequest.toCommand(): SaveCharacter =
+    when (
+        val parsed =
+            SaveCharacter.parse(
+                name,
+                personality,
+                appearance,
+                type,
+                avatar?.let {
+                    val id =
+                        AssetId.parse(it.id) ?: throw BusinessApiException(
+                            HttpStatusCode.UnprocessableEntity,
+                            CharactersSaveError.ReferenceUnavailable,
+                        )
+                    Character.Avatar(id, it.url)
+                },
             )
-            Character.Avatar(id, it.url)
-        }
-    )
-) {
-    is SaveCharacter.Result.Valid -> parsed.command
-    is SaveCharacter.Result.Invalid -> throw parsed.toApiException()
-}
+    ) {
+        is SaveCharacter.Result.Valid -> parsed.command
+        is SaveCharacter.Result.Invalid -> throw parsed.toApiException()
+    }
 
 private suspend fun ApplicationCall.respondToSave(result: SaveCharacterResult) {
     when (result) {
-        is SaveCharacterResult.Created -> respond(
-            HttpStatusCode.Created,
-            CreatedCharacterResponse(result.id.value)
-        )
+        is SaveCharacterResult.Created ->
+            respond(
+                HttpStatusCode.Created,
+                CreatedCharacterResponse(result.id.value),
+            )
         SaveCharacterResult.Updated -> respond(HttpStatusCode.NoContent)
-        SaveCharacterResult.NotFound -> throw BusinessApiException(
-            HttpStatusCode.NotFound,
-            CharactersSaveError.NotFound
-        )
-        SaveCharacterResult.IdempotencyConflict -> throw BusinessApiException(
-            HttpStatusCode.Conflict,
-            CharactersSaveError.IdempotencyConflict
-        )
-        SaveCharacterResult.Conflict -> throw BusinessApiException(
-            HttpStatusCode.Conflict,
-            CharactersSaveError.Conflict
-        )
-        SaveCharacterResult.ReferenceUnavailable -> throw BusinessApiException(
-            HttpStatusCode.UnprocessableEntity,
-            CharactersSaveError.ReferenceUnavailable
-        )
+        SaveCharacterResult.NotFound ->
+            respondApiError(
+                HttpStatusCode.NotFound,
+                CharactersSaveError.NotFound,
+            )
+        SaveCharacterResult.IdempotencyConflict ->
+            respondApiError(
+                HttpStatusCode.Conflict,
+                CharactersSaveError.IdempotencyConflict,
+            )
+        SaveCharacterResult.Conflict ->
+            respondApiError(
+                HttpStatusCode.Conflict,
+                CharactersSaveError.Conflict,
+            )
+        SaveCharacterResult.ReferenceUnavailable ->
+            respondApiError(
+                HttpStatusCode.UnprocessableEntity,
+                CharactersSaveError.ReferenceUnavailable,
+            )
     }
 }
 
@@ -125,17 +135,18 @@ private fun SaveCharacter.Result.Invalid.toApiException(): BusinessApiException 
     check(reason in field.reasons)
     return BusinessApiException(
         HttpStatusCode.UnprocessableEntity,
-        CharactersSaveError.Validation(field, reason)
+        CharactersSaveError.Validation(field, reason),
     )
 }
 
-private fun Character.toDto() = CharacterDto(
-    id.value,
-    name,
-    personality,
-    appearance,
-    CharacterType.valueOf(type.name).name,
-    avatar?.let {
-        AvatarDto(it.id.value, it.url)
-    }
-)
+private fun Character.toDto() =
+    CharacterDto(
+        id.value,
+        name,
+        personality,
+        appearance,
+        CharacterType.valueOf(type.name).name,
+        avatar?.let {
+            AvatarDto(it.id.value, it.url)
+        },
+    )

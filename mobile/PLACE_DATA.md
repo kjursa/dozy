@@ -50,8 +50,8 @@ with Success, ApiError and TechnicalError branches. Shared technical errors are
 `TechnicalError.Server(status)` for 5xx and `TechnicalError.Communication(exception)`
 for all other Exceptions, including request/response/transport and argument errors.
 Cancellation propagates; clients need no exception handling around these calls. Places validation uses shared serializable `contracts.v1.place.PlacesSaveError`
-values with flat codes such as `validation.name.too_long`; backend and SDK use the
-same error type. Future codes decode as `Unknown(code)`.
+values selected by `code` and carrying typed `field` and `reason` details. Unknown
+codes or incomplete known variants decode as `Unknown(code)`; extra fields are ignored.
 Network/decoding/storage failures have the same retry behavior. Coroutine
 cancellation propagates. A null base URL makes no requests and explicitly returns
 an offline result rather than claiming a remote refresh succeeded.

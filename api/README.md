@@ -73,8 +73,8 @@ and return the backend-assigned UUIDv7. Supply a UUIDv4 as the optional
 `requestKey` and reuse it for an uncertain retry with the same input.
 
 `contracts.v1.ApiErrorCode` defines common request/server and reusable machine codes.
-Operation error contracts define their known business cases and flat validation
-codes. Shared serializers retain future codes as `Unknown(code)`.
+Operation error contracts define their known business cases and typed validation
+variants. Shared serializers retain future codes as `Unknown(code)`.
 
 ### Places error handling
 
@@ -84,12 +84,12 @@ Places returns operation-specific sealed results `PlacesListResult`,
 contains `response: PlacesResponse`. Create success contains `response: CreatedPlaceResponse`. Save success has no payload and accepts every HTTP 2xx status.
 Business errors use serializable `contracts.v1.place.PlacesListError`/`PlacesSaveError`.
 Backend sends the shared error object and the client deserializes that exact type,
-just like success DTOs. The contract serializer owns the flat code lookup and
+just like success DTOs. The contract serializer owns the code-and-fields lookup and
 `Unknown(code)` fallback; there is no client-side business-error mapper. Shared technical failures
 live in `api.client.TechnicalError`, not the transport contracts.
 
-- `ApiError(error)`: a decoded HTTP 4xx business failure. Save recognizes flat
-  contract-owned `PlacesSaveError` values for required/too-long fields, forbidden
+- `ApiError(error)`: a decoded HTTP 4xx business failure. Save recognizes
+  contract-owned `PlacesSaveError` values for invalid fields, forbidden
   and conflict. An unfamiliar code remains the operation's shared `Unknown(code)`.
 - `TechnicalError(TechnicalError.Server(status))`: every HTTP 5xx, before reading or decoding its body,
   including HTML or an empty proxy response.
@@ -100,9 +100,9 @@ live in `api.client.TechnicalError`, not the transport contracts.
   never user-facing text. A failure does not prove a write was not committed.
 
 The backend uses 422 for validation, 403 for forbidden and 409 for conflict. The
-body code determines the business detail; the client does not parse field/reason
-combinations. Example: `{"code":"validation.name.too_long"}`. Envelope field/reason
-properties remain nullable legacy metadata; business-error mapping needs only code. Every public Places operation catches
+body `code` selects the error variant. Validation variants also require `field`
+and `reason`; extra fields are ignored and an unknown code or incomplete known
+variant becomes `Unknown(code)`. Example: `{"code":"place.invalid.field","field":"name","reason":"too_long"}`. Every public Places operation catches
 all `Exception` values except `CancellationException`, which propagates. Local checks
 (such as a blank save ID) are inside this boundary. Fatal errors are not caught.
 Consumers do not need try/catch around Places calls. Mobile retains cached/pending
@@ -114,8 +114,8 @@ Every operation exposes its own sealed result with `Success`, `ApiError(error)`
 and `TechnicalError(error)`, following Places. Business error classes live in
 `contracts.v1.<feature>` and implement `ApiBusinessError`. Backend serializes the
 same objects the SDK decodes, using shared contract serializers. Validation wire
-codes are flat (`validation.<field>.<reason>`); operation-specific `Validation`
-values expose typed fields/reasons without client-side lookup or translation.
+codes identify an error variant; operation-specific validation variants carry
+typed `field` and `reason` values without client-side lookup or translation.
 Future codes become the operation's `Unknown(code)`.
 
 `ClientTransport` applies the same policy to every client: 5xx wins over body

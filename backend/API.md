@@ -172,7 +172,7 @@ and appearance are trimmed, required and at most 2000 each. Reads preserve
 historical values. Unknown types are field validation failures.
 
 Errors: 400 `INVALID_REQUEST` for structure/invalid resource ID; 422
-flat validation codes such as `validation.name.too_long` from the shared
+`character.invalid.field` with field/reason details from the shared
 `CharactersSaveError` contract for business
 input; 404 `CHARACTER_NOT_FOUND` for a PUT to a missing ID; 422 `REFERENCE_UNAVAILABLE` for avatar references that do not match an owned
 READY asset's ID and URL; 409 `CONFLICT` for another owner's or permanently
@@ -278,18 +278,19 @@ PUT takes the existing ID in the path and returns empty `204`. Omitting
 custom place. The backend rejects changes to records with stored origin `SYSTEM`.
 
 Implemented place business errors are shared serializable `PlacesSaveError` values
-from `api/contracts`. Backend sends that object and the SDK deserializes the same
-type. Its contract serializer encodes flat codes and preserves future values as
-`Unknown(code)`, without a client-side error mapper.
-The common envelope's `field`/`reason` properties are null and are not parsed for Places:
+from `api/contracts`. The backend maps service results to an HTTP status and the
+shared `ApiErrorResponse` envelope. The SDK deserializes the operation error type.
+`code` selects the variant; validation variants require `field` and `reason`.
+Unknown codes or incomplete known variants become `Unknown(code)`, while extra
+fields are ignored:
 
 ```json
-{"code":"validation.name.too_long","field":null,"reason":null}
+{"code":"place.invalid.field","field":"name","reason":"too_long"}
 ```
 
-Validation codes are `validation.name.required`, `validation.name.too_long`,
-`validation.description.required`, `validation.description.too_long`, and
-`validation.inhabitants.too_long`. Required means trimmed empty input; too_long
+Validation uses code `place.invalid.field`; `field` is `name`, `description`, or
+`inhabitants`, and `reason` is `required` or `too_long` as allowed for that field.
+Required means trimmed empty input; too_long
 means a trimmed value exceeds its write limit (UTF-16 units). Existing records
 remain readable even if write limits change.
 
@@ -297,7 +298,7 @@ remain readable even if write limits change.
 | --- | --- | --- |
 | 400 | `INVALID_REQUEST` | Invalid request structure |
 | 401 | | Missing or invalid access token |
-| 422 | Flat validation code above | Invalid user input |
+| 422 | `place.invalid.field` | Invalid user input; details are in `field` and `reason` |
 | 403 | `place.not_editable` | Existing place with stored origin `SYSTEM` |
 | 404 | `place.not_found` | PUT references a missing custom place |
 | 409 | `IDEMPOTENCY_CONFLICT` | The creation key was used with different input |
@@ -439,7 +440,7 @@ Summaries omit text and configuration. `readingMinutes` is a positive integer,
 count. Stories are ordered by descending lexical StoryId. UUIDv7 IDs are assigned
 when a story is published. The backend accepts a limit of 1–100 and defaults to
 100. Malformed/out-of-range limits return 422
-`validation.limit.invalid_value`.
+`story.invalid.field` with `field: "limit"` and `reason: "invalid_value"`.
 
 When there are more stories, `nextCursor` equals the last returned ID. The next
 page returns only the owner's stories with IDs smaller than that cursor. Newer
@@ -490,8 +491,9 @@ without current creation length caps. Unknown enums/malformed structures return
 including their URL, or return 422 `REFERENCE_UNAVAILABLE`. Snapshot origin and
 editable flags confer no permissions. MANUAL optional idea/ending are trimmed and
 limited to 1000/500 UTF-16 units. AUTOMATIC forbids submitting place/idea/ending,
-even as null. Validation returns shared error objects with flat 422 codes, e.g.
-`validation.cast.required`: cast supports REQUIRED
+even as null. Validation returns shared error objects with 422 codes and typed
+`field`/`reason` details, e.g. `story-generation.invalid.field` with
+`field: "cast"` and `reason: "required"`: cast supports REQUIRED
 and INVALID_VALUE; idea/ending support TOO_LONG.
 
 Bindings include the owner ID, operation, UUIDv4 key, original canonical request

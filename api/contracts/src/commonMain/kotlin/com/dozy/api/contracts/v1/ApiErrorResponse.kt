@@ -7,5 +7,5 @@ data class ApiErrorResponse(
     val code: String,
     val field: String? = null,
     val reason: String? = null,
+    val attemptsLeft: Int? = null,
 )
-
