@@ -268,7 +268,7 @@ class PlaceSaveTest {
                             when (status) {
                                 403 -> """{"code":"place.not_editable"}"""
                                 409 -> """{"code":"place.conflict"}"""
-                                422 -> """{"code":"validation.name.too_long"}"""
+                                422 -> """{"code":"place.invalid.field","field":"name","reason":"too_long"}"""
                                 else -> """{"code":"FUTURE_ERROR"}"""
                             }
                         respond(error, HttpStatusCode.fromValue(status))

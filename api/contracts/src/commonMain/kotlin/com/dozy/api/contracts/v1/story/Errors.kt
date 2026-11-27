@@ -9,60 +9,136 @@ import kotlinx.serialization.Serializable
 
 @Serializable(with = GenerationStartErrorSerializer::class)
 sealed interface GenerationStartError : ApiBusinessError {
-    data class Validation(val field: GenerationField, val reason: ValidationReason) : GenerationStartError {
-        init { require(reason in field.reasons) }
-        override val code: String get() = "validation.${this.field.value}.${reason.value.lowercase()}"
+    data class Validation(
+        val invalidField: GenerationField,
+        val invalidReason: ValidationReason,
+    ) : GenerationStartError {
+        init {
+            require(invalidReason in invalidField.reasons)
+        }
+
+        override val code: String get() = "story-generation.invalid.field"
+        override val fieldName: String get() = invalidField.value
+        override val reasonCode: String get() = invalidReason.value.lowercase()
     }
-    data object IdempotencyConflict : GenerationStartError { override val code = ApiErrorCode.IDEMPOTENCY_CONFLICT.value }
-    data object ActiveJobExists : GenerationStartError { override val code = ApiErrorCode.ACTIVE_JOB_EXISTS.value }
-    data object ReferenceUnavailable : GenerationStartError { override val code = ApiErrorCode.REFERENCE_UNAVAILABLE.value }
-    data class Unknown(override val code: String) : GenerationStartError
+
+    data object IdempotencyConflict : GenerationStartError {
+        override val code = ApiErrorCode.IDEMPOTENCY_CONFLICT.value
+    }
+
+    data object ActiveJobExists : GenerationStartError {
+        override val code = ApiErrorCode.ACTIVE_JOB_EXISTS.value
+    }
+
+    data object ReferenceUnavailable : GenerationStartError {
+        override val code = ApiErrorCode.REFERENCE_UNAVAILABLE.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : GenerationStartError
 
     companion object {
-        val known: List<GenerationStartError> = listOf<GenerationStartError>(IdempotencyConflict, ActiveJobExists, ReferenceUnavailable) + GenerationField.entries.flatMap { field -> field.reasons.map { Validation(field, it) } }
+        fun invalidField(
+            field: GenerationField,
+            reason: ValidationReason,
+        ) = Validation(field, reason)
+
+        val known: List<GenerationStartError> =
+            listOf<GenerationStartError>(IdempotencyConflict, ActiveJobExists, ReferenceUnavailable) +
+                GenerationField.entries.flatMap { field -> field.reasons.map { Validation(field, it) } }
     }
 }
 
-object GenerationStartErrorSerializer : KSerializer<GenerationStartError> by businessErrorSerializer(GenerationStartError.known, GenerationStartError::Unknown)
+object GenerationStartErrorSerializer : KSerializer<GenerationStartError> by businessErrorSerializer(
+    GenerationStartError.known,
+    GenerationStartError::Unknown,
+)
 
 @Serializable(with = GenerationStatusErrorSerializer::class)
 sealed interface GenerationStatusError : ApiBusinessError {
-    data object NotFound : GenerationStatusError { override val code = ApiErrorCode.JOB_NOT_FOUND.value }
-    data class Unknown(override val code: String) : GenerationStatusError
+    data object NotFound : GenerationStatusError {
+        override val code = ApiErrorCode.JOB_NOT_FOUND.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : GenerationStatusError
 
     companion object {
         val known: List<GenerationStatusError> = listOf<GenerationStatusError>(NotFound)
     }
 }
 
-object GenerationStatusErrorSerializer : KSerializer<GenerationStatusError> by businessErrorSerializer(GenerationStatusError.known, GenerationStatusError::Unknown)
+object GenerationStatusErrorSerializer : KSerializer<GenerationStatusError> by businessErrorSerializer(
+    GenerationStatusError.known,
+    GenerationStatusError::Unknown,
+)
 
 @Serializable(with = GenerationRetryErrorSerializer::class)
 sealed interface GenerationRetryError : ApiBusinessError {
-    data object JobNotFound : GenerationRetryError { override val code = ApiErrorCode.JOB_NOT_FOUND.value }
-    data object JobNotFailed : GenerationRetryError { override val code = ApiErrorCode.JOB_NOT_FAILED.value }
-    data object ActiveJobExists : GenerationRetryError { override val code = ApiErrorCode.ACTIVE_JOB_EXISTS.value }
-    data object IdempotencyConflict : GenerationRetryError { override val code = ApiErrorCode.IDEMPOTENCY_CONFLICT.value }
-    data class Unknown(override val code: String) : GenerationRetryError
+    data object JobNotFound : GenerationRetryError {
+        override val code = ApiErrorCode.JOB_NOT_FOUND.value
+    }
+
+    data object JobNotFailed : GenerationRetryError {
+        override val code = ApiErrorCode.JOB_NOT_FAILED.value
+    }
+
+    data object ActiveJobExists : GenerationRetryError {
+        override val code = ApiErrorCode.ACTIVE_JOB_EXISTS.value
+    }
+
+    data object IdempotencyConflict : GenerationRetryError {
+        override val code = ApiErrorCode.IDEMPOTENCY_CONFLICT.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : GenerationRetryError
 
     companion object {
-        val known: List<GenerationRetryError> = listOf<GenerationRetryError>(JobNotFound, JobNotFailed, ActiveJobExists, IdempotencyConflict)
+        val known: List<GenerationRetryError> =
+            listOf<GenerationRetryError>(JobNotFound, JobNotFailed, ActiveJobExists, IdempotencyConflict)
     }
 }
 
-object GenerationRetryErrorSerializer : KSerializer<GenerationRetryError> by businessErrorSerializer(GenerationRetryError.known, GenerationRetryError::Unknown)
+object GenerationRetryErrorSerializer : KSerializer<GenerationRetryError> by businessErrorSerializer(
+    GenerationRetryError.known,
+    GenerationRetryError::Unknown,
+)
 
 @Serializable(with = StoryListErrorSerializer::class)
 sealed interface StoryListError : ApiBusinessError {
-    data class Validation(val field: StoryListField, val reason: ValidationReason) : StoryListError {
-        init { require(reason in field.reasons) }
-        override val code: String get() = "validation.${this.field.value}.${reason.value.lowercase()}"
+    data class Validation(
+        val invalidField: StoryListField,
+        val invalidReason: ValidationReason,
+    ) : StoryListError {
+        init {
+            require(invalidReason in invalidField.reasons)
+        }
+
+        override val code: String get() = "story.invalid.field"
+        override val fieldName: String get() = invalidField.value
+        override val reasonCode: String get() = invalidReason.value.lowercase()
     }
-    data object InvalidCursor : StoryListError { override val code = ApiErrorCode.INVALID_CURSOR.value }
-    data class Unknown(override val code: String) : StoryListError
+
+    data object InvalidCursor : StoryListError {
+        override val code = ApiErrorCode.INVALID_CURSOR.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : StoryListError
 
     companion object {
-        val known: List<StoryListError> = listOf<StoryListError>(InvalidCursor) + StoryListField.entries.flatMap { field -> field.reasons.map { Validation(field, it) } }
+        fun invalidField(
+            field: StoryListField,
+            reason: ValidationReason,
+        ) = Validation(field, reason)
+
+        val known: List<StoryListError> =
+            listOf<StoryListError>(InvalidCursor) + StoryListField.entries.flatMap { field -> field.reasons.map { Validation(field, it) } }
     }
 }
 
@@ -70,8 +146,13 @@ object StoryListErrorSerializer : KSerializer<StoryListError> by businessErrorSe
 
 @Serializable(with = StoryReadErrorSerializer::class)
 sealed interface StoryReadError : ApiBusinessError {
-    data object NotFound : StoryReadError { override val code = ApiErrorCode.STORY_NOT_FOUND.value }
-    data class Unknown(override val code: String) : StoryReadError
+    data object NotFound : StoryReadError {
+        override val code = ApiErrorCode.STORY_NOT_FOUND.value
+    }
+
+    data class Unknown(
+        override val code: String,
+    ) : StoryReadError
 
     companion object {
         val known: List<StoryReadError> = listOf<StoryReadError>(NotFound)

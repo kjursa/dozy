@@ -1,7 +1,9 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
+import com.dozy.api.contracts.v1.place.PlaceField
 import com.dozy.api.contracts.v1.place.PlacesResponse
 import com.dozy.api.contracts.v1.place.PlacesSaveError
 import com.dozy.api.contracts.v1.place.SavePlaceRequest
@@ -13,9 +15,10 @@ import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.collectionRevalidation
 import com.dozy.plugins.idempotencyKey
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.respondApiError
 import com.dozy.plugins.respondVersionedCollection
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -31,10 +34,14 @@ import io.ktor.server.routing.route
 import java.security.MessageDigest
 import java.util.HexFormat
 
-fun Route.placeV1Routes(service: PlaceService, assetBaseUrl: String) {
-    val assetVersion = HexFormat.of().formatHex(
-        MessageDigest.getInstance("SHA-256").digest(assetBaseUrl.trimEnd('/').encodeToByteArray()),
-    )
+fun Route.placeV1Routes(
+    service: PlaceService,
+    assetBaseUrl: String,
+) {
+    val assetVersion =
+        HexFormat.of().formatHex(
+            MessageDigest.getInstance("SHA-256").digest(assetBaseUrl.trimEnd('/').encodeToByteArray()),
+        )
     staticResources("/place-icons", "fixtures/place-icons")
     route("/places") {
         get {
@@ -50,7 +57,7 @@ fun Route.placeV1Routes(service: PlaceService, assetBaseUrl: String) {
                 service.create(
                     ownerId,
                     call.receive<SavePlaceRequest>().toCommand(),
-                    requestKey
+                    requestKey,
                 ),
                 assetBaseUrl,
             )
@@ -70,14 +77,15 @@ private fun requirePlaceId(path: String?): PlaceId =
     PlaceId.parse(path) ?: throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
 
 private fun SavePlace.Error.toApiException(): BusinessApiException {
-    val error = when (this) {
-        SavePlace.Error.Name.Required -> PlacesSaveError.NameRequired
-        SavePlace.Error.Name.TooLong -> PlacesSaveError.NameTooLong
-        SavePlace.Error.Description.Required -> PlacesSaveError.DescriptionRequired
-        SavePlace.Error.Description.TooLong -> PlacesSaveError.DescriptionTooLong
-        SavePlace.Error.Inhabitants.TooLong -> PlacesSaveError.InhabitantsTooLong
-    }
-    return BusinessApiException(HttpStatusCode.UnprocessableEntity, error)
+    val (field, reason) =
+        when (this) {
+            SavePlace.Error.Name.Required -> PlaceField.NAME to ValidationReason.REQUIRED
+            SavePlace.Error.Name.TooLong -> PlaceField.NAME to ValidationReason.TOO_LONG
+            SavePlace.Error.Description.Required -> PlaceField.DESCRIPTION to ValidationReason.REQUIRED
+            SavePlace.Error.Description.TooLong -> PlaceField.DESCRIPTION to ValidationReason.TOO_LONG
+            SavePlace.Error.Inhabitants.TooLong -> PlaceField.INHABITANTS to ValidationReason.TOO_LONG
+        }
+    return BusinessApiException(HttpStatusCode.UnprocessableEntity, PlacesSaveError.invalidField(field, reason))
 }
 
 private fun SavePlaceRequest.toCommand(): SavePlace =
@@ -86,28 +94,36 @@ private fun SavePlaceRequest.toCommand(): SavePlace =
         is ParseResult.Invalid -> throw result.error.toApiException()
     }
 
-private suspend fun ApplicationCall.respondToSave(result: SavePlaceResult, assetBaseUrl: String) {
+private suspend fun ApplicationCall.respondToSave(
+    result: SavePlaceResult,
+    assetBaseUrl: String,
+) {
     when (result) {
-        is SavePlaceResult.Created -> respond(
-            HttpStatusCode.Created,
-            CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl))
-        )
+        is SavePlaceResult.Created ->
+            respond(
+                HttpStatusCode.Created,
+                CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl)),
+            )
         SavePlaceResult.Updated -> respond(HttpStatusCode.NoContent)
-        SavePlaceResult.NotFound -> throw BusinessApiException(
-            HttpStatusCode.NotFound,
-            PlacesSaveError.NotFound
-        )
-        SavePlaceResult.Forbidden -> throw BusinessApiException(
-            HttpStatusCode.Forbidden,
-            PlacesSaveError.Forbidden
-        )
-        SavePlaceResult.IdempotencyConflict -> throw BusinessApiException(
-            HttpStatusCode.Conflict,
-            PlacesSaveError.IdempotencyConflict
-        )
-        SavePlaceResult.Conflict -> throw BusinessApiException(
-            HttpStatusCode.Conflict,
-            PlacesSaveError.Conflict
-        )
+        SavePlaceResult.NotFound ->
+            respondApiError(
+                HttpStatusCode.NotFound,
+                PlacesSaveError.NotFound,
+            )
+        SavePlaceResult.Forbidden ->
+            respondApiError(
+                HttpStatusCode.Forbidden,
+                PlacesSaveError.Forbidden,
+            )
+        SavePlaceResult.IdempotencyConflict ->
+            respondApiError(
+                HttpStatusCode.Conflict,
+                PlacesSaveError.IdempotencyConflict,
+            )
+        SavePlaceResult.Conflict ->
+            respondApiError(
+                HttpStatusCode.Conflict,
+                PlacesSaveError.Conflict,
+            )
     }
 }

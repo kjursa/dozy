@@ -18,6 +18,7 @@ import com.dozy.features.auth.application.VerifyResult
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.OWNER_AUTH
 import com.dozy.plugins.ownerId
+import com.dozy.plugins.respondApiError
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
@@ -38,20 +39,24 @@ fun Route.authV1Routes() {
         val service = call.application.dependencies.resolve<AuthService>()
         when (val result = service.requestCode(call.receive<RequestEmailCodeRequest>().email)) {
             is EmailRequest.Accepted -> call.respond(HttpStatusCode.Accepted, RequestEmailCodeResponse(result.sessionId.value))
-            EmailRequest.InvalidEmail -> throw BusinessApiException(HttpStatusCode.UnprocessableEntity, AuthError.InvalidEmail)
-            EmailRequest.RateLimited -> throw BusinessApiException(HttpStatusCode.TooManyRequests, AuthError.RateLimited)
+            EmailRequest.InvalidEmail -> call.respondApiError(HttpStatusCode.UnprocessableEntity, AuthError.InvalidEmail)
+            EmailRequest.RateLimited -> call.respondApiError(HttpStatusCode.TooManyRequests, AuthError.RateLimited)
         }
     }
     post("/auth/email/code") {
         val request = call.receive<VerifyEmailCodeRequest>()
         val service = call.application.dependencies.resolve<AuthService>()
-        val sessionId = EmailSessionId.parse(request.sessionId)
-            ?: throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
+        val sessionId =
+            EmailSessionId.parse(request.sessionId)
+                ?: throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
         when (val result = service.verify(sessionId, request.code)) {
-            is VerifyResult.Success -> result.tokens.let { call.respond(HttpStatusCode.OK, AuthTokensResponse(it.ownerId.value, it.accessToken, it.refreshToken.value)) }
-            VerifyResult.InvalidCode -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidCode)
-            VerifyResult.TooManyAttempts -> throw BusinessApiException(HttpStatusCode.TooManyRequests, AuthError.TooManyAttempts)
-            VerifyResult.SessionExpired -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
+            is VerifyResult.Success ->
+                result.tokens.let {
+                    call.respond(HttpStatusCode.OK, AuthTokensResponse(it.ownerId.value, it.accessToken, it.refreshToken.value))
+                }
+            VerifyResult.InvalidCode -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.InvalidCode)
+            VerifyResult.TooManyAttempts -> call.respondApiError(HttpStatusCode.TooManyRequests, AuthError.TooManyAttempts)
+            VerifyResult.SessionExpired -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
         }
     }
     post("/auth/refresh") {
@@ -64,7 +69,7 @@ fun Route.authV1Routes() {
         }
         when (val result = service.refresh(ownerId, refreshToken)) {
             is TokenResult.Valid -> call.respond(HttpStatusCode.OK, RefreshTokensResponse(result.accessToken, result.refreshToken.value))
-            TokenResult.Invalid -> throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
+            TokenResult.Invalid -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
         }
     }
     authenticate(OWNER_AUTH) {
