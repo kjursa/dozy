@@ -16,7 +16,6 @@ import com.dozy.features.characteravatar.domain.model.AvatarInput
 import com.dozy.features.characteravatar.domain.model.AvatarJob
 import com.dozy.features.characteravatar.domain.model.AvatarState
 import com.dozy.features.characteravatar.domain.repository.AvatarJobs
-import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.accepted
 import com.dozy.plugins.notFound
 import com.dozy.plugins.ok
@@ -24,7 +23,6 @@ import com.dozy.plugins.ownerId
 import com.dozy.plugins.unprocessableEntity
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respondBytes
@@ -41,25 +39,20 @@ fun Route.avatarV1Routes(jobs: AvatarJobs) {
             val input =
                 when (val parsed = AvatarInput.parse(request.type, request.personality, request.appearance)) {
                     is AvatarInput.Result.Valid -> parsed.input
-                    is AvatarInput.Result.Invalid -> {
-                        call.unprocessableEntity(
+                    is AvatarInput.Result.Invalid ->
+                        return@post call.unprocessableEntity(
                             AvatarStartError.invalidField(
                                 AvatarField.valueOf(parsed.field.name),
                                 ValidationReason.valueOf(parsed.reason.name),
                             ),
                         )
-                        return@post
-                    }
                 }
             call.accepted(jobs.create(ownerId, input).toDto())
         }
         get("/{jobId}") {
             val job =
                 AvatarJobId.parse(call.parameters["jobId"])?.let { jobs.find(call.ownerId(), it) }
-                    ?: run {
-                        call.notFound(AvatarStatusError.NotFound)
-                        return@get
-                    }
+                    ?: return@get call.notFound(AvatarStatusError.NotFound)
             call.ok(job.toDto())
         }
     }
@@ -68,12 +61,9 @@ fun Route.avatarV1Routes(jobs: AvatarJobs) {
 fun Route.avatarAssetRoutes(repository: AssetRepository) {
     get("/assets/{assetId}") {
         val bytes = AssetId.parse(call.parameters["assetId"])?.let { repository.read(call.ownerId(), it) }
-        if (bytes == null) {
-            call.notFound()
-        } else {
-            call.response.headers.append(HttpHeaders.CacheControl, "private, no-store")
-            call.respondBytes(bytes, ContentType.Image.PNG)
-        }
+        if (bytes == null) return@get call.notFound()
+        call.response.headers.append(HttpHeaders.CacheControl, "private, no-store")
+        call.respondBytes(bytes, ContentType.Image.PNG)
     }
 }
 

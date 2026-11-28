@@ -1,6 +1,7 @@
 package com.dozy.features.place.api.v1
 
 import com.dozy.api.contracts.v1.ApiErrorCode
+import com.dozy.api.contracts.v1.ApiErrorResponse
 import com.dozy.api.contracts.v1.ValidationReason
 import com.dozy.api.contracts.v1.place.CreatedPlaceResponse
 import com.dozy.api.contracts.v1.place.PlaceField
@@ -13,8 +14,7 @@ import com.dozy.features.place.domain.model.ParseResult
 import com.dozy.features.place.domain.model.Place
 import com.dozy.features.place.domain.model.SavePlace
 import com.dozy.features.place.domain.model.SavePlaceResult
-import com.dozy.plugins.ApiException
-import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.badRequest
 import com.dozy.plugins.collectionRevalidation
 import com.dozy.plugins.conflict
 import com.dozy.plugins.created
@@ -24,7 +24,7 @@ import com.dozy.plugins.noContent
 import com.dozy.plugins.notFound
 import com.dozy.plugins.ownerId
 import com.dozy.plugins.respondVersionedCollection
-import io.ktor.http.HttpStatusCode
+import com.dozy.plugins.unprocessableEntity
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.http.content.staticResources
@@ -55,11 +55,18 @@ fun Route.placeV1Routes(
         }
         post {
             val ownerId = call.ownerId()
-            val requestKey = call.idempotencyKey()
+            val requestKey =
+                call.idempotencyKey {
+                    return@post call.badRequest(ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
+                }
+            val command =
+                call.receive<SavePlaceRequest>().parseCommand { error ->
+                    return@post call.unprocessableEntity(error)
+                }
             call.respondToSave(
                 service.create(
                     ownerId,
-                    call.receive<SavePlaceRequest>().toCommand(),
+                    command,
                     requestKey,
                 ),
                 assetBaseUrl,
@@ -67,19 +74,22 @@ fun Route.placeV1Routes(
         }
         put("/{id}") {
             val ownerId = call.ownerId()
-            val id = requirePlaceId(call.parameters["id"])
+            val id =
+                PlaceId.parse(call.parameters["id"])
+                    ?: return@put call.badRequest(ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
+            val command =
+                call.receive<SavePlaceRequest>().parseCommand { error ->
+                    return@put call.unprocessableEntity(error)
+                }
             call.respondToSave(
-                service.save(ownerId, id, call.receive<SavePlaceRequest>().toCommand()),
+                service.save(ownerId, id, command),
                 assetBaseUrl,
             )
         }
     }
 }
 
-private fun requirePlaceId(path: String?): PlaceId =
-    PlaceId.parse(path) ?: throw ApiException(HttpStatusCode.BadRequest, ApiErrorCode.INVALID_REQUEST)
-
-private fun SavePlace.Error.toApiException(): BusinessApiException {
+private fun SavePlace.Error.toApiError(): PlacesSaveError {
     val (field, reason) =
         when (this) {
             SavePlace.Error.Name.Required -> PlaceField.NAME to ValidationReason.REQUIRED
@@ -88,13 +98,13 @@ private fun SavePlace.Error.toApiException(): BusinessApiException {
             SavePlace.Error.Description.TooLong -> PlaceField.DESCRIPTION to ValidationReason.TOO_LONG
             SavePlace.Error.Inhabitants.TooLong -> PlaceField.INHABITANTS to ValidationReason.TOO_LONG
         }
-    return BusinessApiException(HttpStatusCode.UnprocessableEntity, PlacesSaveError.invalidField(field, reason))
+    return PlacesSaveError.invalidField(field, reason)
 }
 
-private fun SavePlaceRequest.toCommand(): SavePlace =
+private inline fun SavePlaceRequest.parseCommand(onInvalid: (PlacesSaveError) -> Nothing): SavePlace =
     when (val result = SavePlace.parse(name, description, inhabitants)) {
         is ParseResult.Valid -> result.value
-        is ParseResult.Invalid -> throw result.error.toApiException()
+        is ParseResult.Invalid -> onInvalid(result.error.toApiError())
     }
 
 private suspend fun ApplicationCall.respondToSave(
@@ -102,11 +112,16 @@ private suspend fun ApplicationCall.respondToSave(
     assetBaseUrl: String,
 ) {
     when (result) {
-        is SavePlaceResult.Created -> created(CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl)))
+        is SavePlaceResult.Created ->
+            created(CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl)))
         SavePlaceResult.Updated -> noContent()
-        SavePlaceResult.NotFound -> notFound(PlacesSaveError.NotFound)
-        SavePlaceResult.Forbidden -> forbidden(PlacesSaveError.Forbidden)
-        SavePlaceResult.IdempotencyConflict -> conflict(PlacesSaveError.IdempotencyConflict)
-        SavePlaceResult.Conflict -> conflict(PlacesSaveError.Conflict)
+        SavePlaceResult.NotFound ->
+            notFound(PlacesSaveError.NotFound)
+        SavePlaceResult.Forbidden ->
+            forbidden(PlacesSaveError.Forbidden)
+        SavePlaceResult.IdempotencyConflict ->
+            conflict(PlacesSaveError.IdempotencyConflict)
+        SavePlaceResult.Conflict ->
+            conflict(PlacesSaveError.Conflict)
     }
 }

@@ -23,29 +23,8 @@ suspend fun ApplicationCall.respondApiError(
     )
 }
 
-class ApiException(
-    val status: HttpStatusCode,
-    val code: ApiErrorCode,
-    val field: String? = null,
-    val reason: String? = null,
-) : RuntimeException()
-
-class BusinessApiException(
-    val status: HttpStatusCode,
-    val error: ApiBusinessError,
-) : RuntimeException()
-
 fun Application.configureErrors() {
     install(StatusPages) {
-        exception<BusinessApiException> { call, failure ->
-            call.respondApiError(failure.status, failure.error)
-        }
-        exception<ApiException> { call, failure ->
-            call.respond(
-                failure.status,
-                ApiErrorResponse(failure.code.value, failure.field, failure.reason),
-            )
-        }
         exception<BadRequestException> { call, _ ->
             call.badRequest(ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
         }

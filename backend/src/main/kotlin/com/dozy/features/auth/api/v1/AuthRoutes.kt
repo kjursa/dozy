@@ -15,7 +15,6 @@ import com.dozy.features.auth.application.AuthService
 import com.dozy.features.auth.application.EmailRequest
 import com.dozy.features.auth.application.TokenResult
 import com.dozy.features.auth.application.VerifyResult
-import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.OWNER_AUTH
 import com.dozy.plugins.accepted
 import com.dozy.plugins.created
@@ -25,7 +24,6 @@ import com.dozy.plugins.ownerId
 import com.dozy.plugins.tooManyRequests
 import com.dozy.plugins.unauthorized
 import com.dozy.plugins.unprocessableEntity
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.di.dependencies
@@ -53,7 +51,7 @@ fun Route.authV1Routes() {
         val service = call.application.dependencies.resolve<AuthService>()
         val sessionId =
             EmailSessionId.parse(request.sessionId)
-                ?: throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
+                ?: return@post call.unauthorized(AuthError.SessionExpired)
         when (val result = service.verify(sessionId, request.code)) {
             is VerifyResult.Success ->
                 result.tokens.let {
@@ -70,7 +68,7 @@ fun Route.authV1Routes() {
         val ownerId = OwnerId.parse(request.ownerId)
         val refreshToken = RefreshToken.parse(request.refreshToken)
         if (ownerId == null || refreshToken == null) {
-            throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
+            return@post call.unauthorized(AuthError.InvalidRefreshToken)
         }
         when (val result = service.refresh(ownerId, refreshToken)) {
             is TokenResult.Valid -> call.ok(RefreshTokensResponse(result.accessToken, result.refreshToken.value))
