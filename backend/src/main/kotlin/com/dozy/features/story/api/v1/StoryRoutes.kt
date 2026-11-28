@@ -15,13 +15,16 @@ import com.dozy.features.story.application.StoryService
 import com.dozy.features.story.domain.model.RetrySubmission
 import com.dozy.features.story.domain.model.Submission
 import com.dozy.plugins.BusinessApiException
+import com.dozy.plugins.accepted
+import com.dozy.plugins.conflict
 import com.dozy.plugins.idempotencyKey
+import com.dozy.plugins.notFound
+import com.dozy.plugins.ok
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondApiError
+import com.dozy.plugins.unprocessableEntity
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
-import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -34,18 +37,10 @@ fun Route.storyV1Routes(service: StoryService) {
         val body = call.receive<JsonObject>()
         val command = body.command()
         when (val result = service.start(ownerId, key, canonicalJson(body), command)) {
-            is Submission.Accepted ->
-                call.respond(
-                    HttpStatusCode.Accepted,
-                    GenerationAcceptedDto(result.job.id.value, result.job.stage.name),
-                )
-            Submission.IdempotencyConflict -> call.respondApiError(HttpStatusCode.Conflict, GenerationStartError.IdempotencyConflict)
-            Submission.ActiveJobExists -> call.respondApiError(HttpStatusCode.Conflict, GenerationStartError.ActiveJobExists)
-            Submission.ReferenceUnavailable ->
-                call.respondApiError(
-                    HttpStatusCode.UnprocessableEntity,
-                    GenerationStartError.ReferenceUnavailable,
-                )
+            is Submission.Accepted -> call.accepted(GenerationAcceptedDto(result.job.id.value, result.job.stage.name))
+            Submission.IdempotencyConflict -> call.conflict(GenerationStartError.IdempotencyConflict)
+            Submission.ActiveJobExists -> call.conflict(GenerationStartError.ActiveJobExists)
+            Submission.ReferenceUnavailable -> call.unprocessableEntity(GenerationStartError.ReferenceUnavailable)
         }
     }
     post("/story-generations/{id}/retry") {
@@ -55,24 +50,20 @@ fun Route.storyV1Routes(service: StoryService) {
             JobId.parse(call.parameters["id"])
                 ?: throw BusinessApiException(HttpStatusCode.NotFound, GenerationRetryError.JobNotFound)
         when (val result = service.retry(ownerId, id, key)) {
-            is RetrySubmission.Accepted ->
-                call.respond(
-                    HttpStatusCode.Accepted,
-                    GenerationAcceptedDto(result.job.id.value, result.job.stage.name),
-                )
-            RetrySubmission.JobNotFound -> call.respondApiError(HttpStatusCode.NotFound, GenerationRetryError.JobNotFound)
-            RetrySubmission.JobNotFailed -> call.respondApiError(HttpStatusCode.Conflict, GenerationRetryError.JobNotFailed)
-            RetrySubmission.ActiveJobExists -> call.respondApiError(HttpStatusCode.Conflict, GenerationRetryError.ActiveJobExists)
-            RetrySubmission.IdempotencyConflict -> call.respondApiError(HttpStatusCode.Conflict, GenerationRetryError.IdempotencyConflict)
+            is RetrySubmission.Accepted -> call.accepted(GenerationAcceptedDto(result.job.id.value, result.job.stage.name))
+            RetrySubmission.JobNotFound -> call.notFound(GenerationRetryError.JobNotFound)
+            RetrySubmission.JobNotFailed -> call.conflict(GenerationRetryError.JobNotFailed)
+            RetrySubmission.ActiveJobExists -> call.conflict(GenerationRetryError.ActiveJobExists)
+            RetrySubmission.IdempotencyConflict -> call.conflict(GenerationRetryError.IdempotencyConflict)
         }
     }
     get("/story-generations/{id}") {
         val status = JobId.parse(call.parameters["id"])?.let { service.status(call.ownerId(), it) }
         if (status == null) {
-            call.respondApiError(HttpStatusCode.NotFound, GenerationStatusError.NotFound)
+            call.notFound(GenerationStatusError.NotFound)
             return@get
         }
-        call.respond(status.toDto())
+        call.ok(status.toDto())
     }
     get("/stories") {
         val ownerId = call.ownerId()
@@ -94,21 +85,21 @@ fun Route.storyV1Routes(service: StoryService) {
         val page =
             service.list(ownerId, limit, cursor)
                 ?: throw BusinessApiException(HttpStatusCode.BadRequest, StoryListError.InvalidCursor)
-        call.respond(page.toDto())
+        call.ok(page.toDto())
     }
     get("/stories/sync") {
         val ownerId = call.ownerId()
         val revisions = call.request.queryParameters.getAll("after")
         val after = if (revisions == null) 0L else revisions.singleOrNull()?.toLongOrNull()?.takeIf { it >= 0 }
         if (after == null) throw BusinessApiException(HttpStatusCode.BadRequest, StorySyncError.InvalidRevision)
-        call.respond(service.sync(ownerId, after).toDto())
+        call.ok(service.sync(ownerId, after).toDto())
     }
     get("/stories/{id}") {
         val story = StoryId.parse(call.parameters["id"])?.let { service.read(call.ownerId(), it) }
         if (story == null) {
-            call.respondApiError(HttpStatusCode.NotFound, StoryReadError.NotFound)
+            call.notFound(StoryReadError.NotFound)
             return@get
         }
-        call.respond(story.toDto())
+        call.ok(story.toDto())
     }
 }

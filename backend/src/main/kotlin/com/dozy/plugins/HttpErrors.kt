@@ -47,13 +47,13 @@ fun Application.configureErrors() {
             )
         }
         exception<BadRequestException> { call, _ ->
-            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
+            call.badRequest(ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
         }
         exception<ContentTransformationException> { call, _ ->
-            call.respond(HttpStatusCode.BadRequest, ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
+            call.badRequest(ApiErrorResponse(ApiErrorCode.INVALID_REQUEST.value))
         }
         exception<SQLException> { call, _ ->
-            call.respond(HttpStatusCode.ServiceUnavailable, ApiErrorResponse(ApiErrorCode.UNAVAILABLE.value))
+            call.serviceUnavailable(ApiErrorResponse(ApiErrorCode.UNAVAILABLE.value))
         }
     }
 }

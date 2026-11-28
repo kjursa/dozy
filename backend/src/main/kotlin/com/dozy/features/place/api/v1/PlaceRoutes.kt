@@ -16,16 +16,19 @@ import com.dozy.features.place.domain.model.SavePlaceResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.conflict
+import com.dozy.plugins.created
+import com.dozy.plugins.forbidden
 import com.dozy.plugins.idempotencyKey
+import com.dozy.plugins.noContent
+import com.dozy.plugins.notFound
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondApiError
 import com.dozy.plugins.respondVersionedCollection
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receive
-import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -99,31 +102,11 @@ private suspend fun ApplicationCall.respondToSave(
     assetBaseUrl: String,
 ) {
     when (result) {
-        is SavePlaceResult.Created ->
-            respond(
-                HttpStatusCode.Created,
-                CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl)),
-            )
-        SavePlaceResult.Updated -> respond(HttpStatusCode.NoContent)
-        SavePlaceResult.NotFound ->
-            respondApiError(
-                HttpStatusCode.NotFound,
-                PlacesSaveError.NotFound,
-            )
-        SavePlaceResult.Forbidden ->
-            respondApiError(
-                HttpStatusCode.Forbidden,
-                PlacesSaveError.Forbidden,
-            )
-        SavePlaceResult.IdempotencyConflict ->
-            respondApiError(
-                HttpStatusCode.Conflict,
-                PlacesSaveError.IdempotencyConflict,
-            )
-        SavePlaceResult.Conflict ->
-            respondApiError(
-                HttpStatusCode.Conflict,
-                PlacesSaveError.Conflict,
-            )
+        is SavePlaceResult.Created -> created(CreatedPlaceResponse(result.id.value, Place.Thumbnail.COTTAGE.imageUrl(assetBaseUrl)))
+        SavePlaceResult.Updated -> noContent()
+        SavePlaceResult.NotFound -> notFound(PlacesSaveError.NotFound)
+        SavePlaceResult.Forbidden -> forbidden(PlacesSaveError.Forbidden)
+        SavePlaceResult.IdempotencyConflict -> conflict(PlacesSaveError.IdempotencyConflict)
+        SavePlaceResult.Conflict -> conflict(PlacesSaveError.Conflict)
     }
 }

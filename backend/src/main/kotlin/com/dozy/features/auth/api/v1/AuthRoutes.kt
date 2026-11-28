@@ -17,15 +17,20 @@ import com.dozy.features.auth.application.TokenResult
 import com.dozy.features.auth.application.VerifyResult
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.OWNER_AUTH
+import com.dozy.plugins.accepted
+import com.dozy.plugins.created
+import com.dozy.plugins.noContent
+import com.dozy.plugins.ok
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondApiError
+import com.dozy.plugins.tooManyRequests
+import com.dozy.plugins.unauthorized
+import com.dozy.plugins.unprocessableEntity
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.plugins.di.resolve
 import io.ktor.server.request.receive
-import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 
@@ -33,14 +38,14 @@ fun Route.authV1Routes() {
     post("/auth/anonymous") {
         val service = call.application.dependencies.resolve<AuthService>()
         val tokens = service.anonymous()
-        call.respond(HttpStatusCode.Created, AnonymousOwnerResponse(tokens.ownerId.value, tokens.accessToken, tokens.refreshToken.value))
+        call.created(AnonymousOwnerResponse(tokens.ownerId.value, tokens.accessToken, tokens.refreshToken.value))
     }
     post("/auth/email") {
         val service = call.application.dependencies.resolve<AuthService>()
         when (val result = service.requestCode(call.receive<RequestEmailCodeRequest>().email)) {
-            is EmailRequest.Accepted -> call.respond(HttpStatusCode.Accepted, RequestEmailCodeResponse(result.sessionId.value))
-            EmailRequest.InvalidEmail -> call.respondApiError(HttpStatusCode.UnprocessableEntity, AuthError.InvalidEmail)
-            EmailRequest.RateLimited -> call.respondApiError(HttpStatusCode.TooManyRequests, AuthError.RateLimited)
+            is EmailRequest.Accepted -> call.accepted(RequestEmailCodeResponse(result.sessionId.value))
+            EmailRequest.InvalidEmail -> call.unprocessableEntity(AuthError.InvalidEmail)
+            EmailRequest.RateLimited -> call.tooManyRequests(AuthError.RateLimited)
         }
     }
     post("/auth/email/code") {
@@ -52,11 +57,11 @@ fun Route.authV1Routes() {
         when (val result = service.verify(sessionId, request.code)) {
             is VerifyResult.Success ->
                 result.tokens.let {
-                    call.respond(HttpStatusCode.OK, AuthTokensResponse(it.ownerId.value, it.accessToken, it.refreshToken.value))
+                    call.ok(AuthTokensResponse(it.ownerId.value, it.accessToken, it.refreshToken.value))
                 }
-            VerifyResult.InvalidCode -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.InvalidCode)
-            VerifyResult.TooManyAttempts -> call.respondApiError(HttpStatusCode.TooManyRequests, AuthError.TooManyAttempts)
-            VerifyResult.SessionExpired -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.SessionExpired)
+            VerifyResult.InvalidCode -> call.unauthorized(AuthError.InvalidCode)
+            VerifyResult.TooManyAttempts -> call.tooManyRequests(AuthError.TooManyAttempts)
+            VerifyResult.SessionExpired -> call.unauthorized(AuthError.SessionExpired)
         }
     }
     post("/auth/refresh") {
@@ -68,15 +73,15 @@ fun Route.authV1Routes() {
             throw BusinessApiException(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
         }
         when (val result = service.refresh(ownerId, refreshToken)) {
-            is TokenResult.Valid -> call.respond(HttpStatusCode.OK, RefreshTokensResponse(result.accessToken, result.refreshToken.value))
-            TokenResult.Invalid -> call.respondApiError(HttpStatusCode.Unauthorized, AuthError.InvalidRefreshToken)
+            is TokenResult.Valid -> call.ok(RefreshTokensResponse(result.accessToken, result.refreshToken.value))
+            TokenResult.Invalid -> call.unauthorized(AuthError.InvalidRefreshToken)
         }
     }
     authenticate(OWNER_AUTH) {
         post("/auth/logout") {
             val service = call.application.dependencies.resolve<AuthService>()
             service.logout(call.ownerId())
-            call.respond(HttpStatusCode.NoContent)
+            call.noContent()
         }
     }
 }

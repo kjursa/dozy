@@ -19,16 +19,19 @@ import com.dozy.features.character.domain.model.SaveCharacterResult
 import com.dozy.plugins.ApiException
 import com.dozy.plugins.BusinessApiException
 import com.dozy.plugins.collectionRevalidation
+import com.dozy.plugins.conflict
+import com.dozy.plugins.created
 import com.dozy.plugins.idempotencyKey
+import com.dozy.plugins.noContent
+import com.dozy.plugins.notFound
 import com.dozy.plugins.ownerId
-import com.dozy.plugins.respondApiError
 import com.dozy.plugins.respondVersionedCollection
+import com.dozy.plugins.unprocessableEntity
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.plugins.di.dependencies
 import io.ktor.server.request.receive
-import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.application
 import io.ktor.server.routing.delete
@@ -65,10 +68,10 @@ fun Route.characterV1Routes() {
         delete("/{id}") {
             val ownerId = call.ownerId()
             if (!service.delete(ownerId, requireCharacterId(call.parameters["id"]))) {
-                call.respondApiError(HttpStatusCode.NotFound, CharactersDeleteError.NotFound)
+                call.notFound(CharactersDeleteError.NotFound)
                 return@delete
             }
-            call.respond(HttpStatusCode.NoContent)
+            call.noContent()
         }
     }
 }
@@ -97,32 +100,12 @@ private fun SaveCharacterRequest.toCommand(): SaveCharacter =
 
 private suspend fun ApplicationCall.respondToSave(result: SaveCharacterResult) {
     when (result) {
-        is SaveCharacterResult.Created ->
-            respond(
-                HttpStatusCode.Created,
-                CreatedCharacterResponse(result.id.value),
-            )
-        SaveCharacterResult.Updated -> respond(HttpStatusCode.NoContent)
-        SaveCharacterResult.NotFound ->
-            respondApiError(
-                HttpStatusCode.NotFound,
-                CharactersSaveError.NotFound,
-            )
-        SaveCharacterResult.IdempotencyConflict ->
-            respondApiError(
-                HttpStatusCode.Conflict,
-                CharactersSaveError.IdempotencyConflict,
-            )
-        SaveCharacterResult.Conflict ->
-            respondApiError(
-                HttpStatusCode.Conflict,
-                CharactersSaveError.Conflict,
-            )
-        SaveCharacterResult.ReferenceUnavailable ->
-            respondApiError(
-                HttpStatusCode.UnprocessableEntity,
-                CharactersSaveError.ReferenceUnavailable,
-            )
+        is SaveCharacterResult.Created -> created(CreatedCharacterResponse(result.id.value))
+        SaveCharacterResult.Updated -> noContent()
+        SaveCharacterResult.NotFound -> notFound(CharactersSaveError.NotFound)
+        SaveCharacterResult.IdempotencyConflict -> conflict(CharactersSaveError.IdempotencyConflict)
+        SaveCharacterResult.Conflict -> conflict(CharactersSaveError.Conflict)
+        SaveCharacterResult.ReferenceUnavailable -> unprocessableEntity(CharactersSaveError.ReferenceUnavailable)
     }
 }
 
